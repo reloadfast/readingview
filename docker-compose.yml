@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  shelf:
+    build: .
+    container_name: shelf
+    ports:
+      - "8501:8501"
+    environment:
+      # Required: Audiobookshelf connection
+      - ABS_URL=${ABS_URL}
+      - ABS_TOKEN=${ABS_TOKEN}
+      
+      # Optional: Application settings
+      - APP_TITLE=${APP_TITLE:-Shelf}
+      - CACHE_TTL=${CACHE_TTL:-300}
+      - ITEMS_PER_ROW=${ITEMS_PER_ROW:-5}
+      - THEME=${THEME:-dark}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
