@@ -27,7 +27,8 @@ def render_statistics_view(api: AudiobookshelfAPI):
     with st.spinner("Loading statistics..."):
         sessions = api.get_user_listening_sessions()
         listening_stats = api.get_user_listening_stats()
-    
+        progress_map = api.get_media_progress_map()
+
     if not sessions and not listening_stats:
         st.info("No listening data available yet. Start listening to build your statistics!")
         return
@@ -67,25 +68,34 @@ def render_statistics_view(api: AudiobookshelfAPI):
         </style>
     """, unsafe_allow_html=True)
     
-    # Calculate statistics
+    # Calculate statistics from sessions (for charts)
     completion_stats = calculate_completion_stats(sessions)
     monthly_counts = get_monthly_completion_counts(sessions)
     yearly_counts = get_yearly_completion_counts(sessions)
-    
+
+    # Use server data for overview stats
+    if listening_stats:
+        total_time_hours = listening_stats.get('totalTime', 0) / 3600
+    else:
+        total_time_hours = completion_stats['total_time_hours']
+
+    # Count finished books from /me mediaProgress (reliable source)
+    books_finished = sum(1 for p in progress_map.values() if p.get('isFinished'))
+
     # Overall Stats Row
     st.markdown("#### Overview")
     cols = st.columns(3)
-    
+
     with cols[0]:
         st.markdown(f"""
             <div class="stat-card">
-                <div class="stat-value">{completion_stats['total_completed']}</div>
+                <div class="stat-value">{books_finished}</div>
                 <div class="stat-label">Books Completed</div>
             </div>
         """, unsafe_allow_html=True)
-    
+
     with cols[1]:
-        hours = int(completion_stats['total_time_hours'])
+        hours = int(total_time_hours)
         st.markdown(f"""
             <div class="stat-card">
                 <div class="stat-value">{hours}</div>
@@ -96,7 +106,7 @@ def render_statistics_view(api: AudiobookshelfAPI):
     with cols[2]:
         # Calculate average per month
         if monthly_counts:
-            avg_per_month = completion_stats['total_completed'] / len(monthly_counts)
+            avg_per_month = books_finished / len(monthly_counts)
             st.markdown(f"""
                 <div class="stat-card">
                     <div class="stat-value">{avg_per_month:.1f}</div>
@@ -167,17 +177,24 @@ def render_statistics_view(api: AudiobookshelfAPI):
     if listening_stats:
         st.markdown("---")
         st.markdown("#### Additional Insights")
-        
+
+        items_stats = listening_stats.get('items', {})
+        total_items = len(items_stats) if isinstance(items_stats, dict) else 0
+        unique_authors: set[str] = set()
+        if isinstance(items_stats, dict):
+            for item in items_stats.values():
+                for author in item.get('mediaMetadata', {}).get('authors', []):
+                    name = author.get('name')
+                    if name:
+                        unique_authors.add(name)
+
         cols = st.columns(2)
-        
+
         with cols[0]:
-            total_items = listening_stats.get('totalItems', 0)
-            st.metric("Total Library Items", total_items)
-        
+            st.metric("Books Listened To", total_items)
+
         with cols[1]:
-            if 'totalAuthors' in listening_stats:
-                total_authors = listening_stats['totalAuthors']
-                st.metric("Unique Authors", total_authors)
+            st.metric("Unique Authors", len(unique_authors))
     
     # Footer
     st.markdown("---")

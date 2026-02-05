@@ -66,6 +66,24 @@ class AudiobookshelfAPI:
             logger.error(f"Connection test failed: {e}")
             return False
     
+    def get_media_progress_map(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get all user media progress keyed by libraryItemId.
+
+        Returns:
+            Dict mapping libraryItemId to progress data
+        """
+        result = self._make_request('/me')
+        if not result:
+            return {}
+        progress_list = result.get('mediaProgress', [])
+        progress_map: Dict[str, Dict[str, Any]] = {}
+        for p in progress_list:
+            lid = p.get('libraryItemId')
+            if lid:
+                progress_map[lid] = p
+        return progress_map
+
     def get_libraries(self) -> List[Dict[str, Any]]:
         """
         Get all libraries.
@@ -91,13 +109,31 @@ class AudiobookshelfAPI:
     
     def get_user_listening_sessions(self) -> List[Dict[str, Any]]:
         """
-        Get user's listening sessions.
-        
+        Get all user's listening sessions (handles pagination).
+
         Returns:
             List of listening session objects
         """
-        result = self._make_request('/me/listening-sessions')
-        return result.get('sessions', []) if result else []
+        all_sessions: List[Dict[str, Any]] = []
+        page = 0
+        items_per_page = 100
+
+        while True:
+            result = self._make_request(
+                f'/me/listening-sessions?itemsPerPage={items_per_page}&page={page}'
+            )
+            if not result:
+                break
+
+            sessions = result.get('sessions', [])
+            all_sessions.extend(sessions)
+
+            total = result.get('total', 0)
+            if len(all_sessions) >= total or not sessions:
+                break
+            page += 1
+
+        return all_sessions
     
     def get_user_listening_stats(self) -> Optional[Dict[str, Any]]:
         """

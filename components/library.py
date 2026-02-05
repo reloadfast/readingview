@@ -18,10 +18,11 @@ def render_library_view(api: AudiobookshelfAPI):
     """
     st.markdown("### 📚 Library")
     
-    # Fetch in-progress items
+    # Fetch in-progress items and progress data
     with st.spinner("Loading your audiobooks..."):
         items = api.get_user_items_in_progress()
-    
+        progress_map = api.get_media_progress_map()
+
     if not items:
         st.info("No audiobooks in progress. Start listening to see them here!")
         return
@@ -110,17 +111,26 @@ def render_library_view(api: AudiobookshelfAPI):
     with col2:
         sort_by = st.selectbox(
             "Sort by",
-            ["Progress (Ascending)", "Progress (Descending)", "Recently Updated", "Title (A-Z)"],
+            ["Recently Updated", "Progress (Ascending)", "Progress (Descending)", "Title (A-Z)"],
             label_visibility="collapsed"
         )
     
+    def _get_progress(item: Dict[str, Any]) -> Dict[str, Any]:
+        """Look up progress from the progress map, falling back to inline fields."""
+        return (
+            progress_map.get(item.get('id', ''))
+            or item.get('userMediaProgress')
+            or item.get('mediaProgress')
+            or {}
+        )
+
     # Sort items
     if sort_by == "Progress (Ascending)":
-        items.sort(key=lambda x: x.get('userMediaProgress', {}).get('progress', 0))
+        items.sort(key=lambda x: _get_progress(x).get('progress', 0))
     elif sort_by == "Progress (Descending)":
-        items.sort(key=lambda x: x.get('userMediaProgress', {}).get('progress', 0), reverse=True)
+        items.sort(key=lambda x: _get_progress(x).get('progress', 0), reverse=True)
     elif sort_by == "Recently Updated":
-        items.sort(key=lambda x: x.get('userMediaProgress', {}).get('lastUpdate', 0), reverse=True)
+        items.sort(key=lambda x: _get_progress(x).get('lastUpdate', 0), reverse=True)
     elif sort_by == "Title (A-Z)":
         items.sort(key=lambda x: x.get('media', {}).get('metadata', {}).get('title', ''))
     
@@ -139,7 +149,7 @@ def render_library_view(api: AudiobookshelfAPI):
             
             item = items[item_idx]
             metadata = AudiobookData.extract_metadata(item)
-            progress_data = item.get('userMediaProgress', {})
+            progress_data = _get_progress(item)
             progress_info = AudiobookData.calculate_progress(
                 progress_data, 
                 metadata['duration']

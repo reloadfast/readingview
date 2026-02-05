@@ -8,6 +8,10 @@ from config import config
 from api.audiobookshelf import AudiobookshelfAPI
 from components.library import render_library_view
 from components.statistics import render_statistics_view
+from components.release_tracker import render_release_tracker_view
+from components.authors import render_authors_view
+from components.notifications import render_notification_settings, render_notification_status_badge
+from database.db import ReleaseTrackerDB
 from utils.helpers import display_error
 
 
@@ -136,14 +140,14 @@ def show_configuration_guide():
     st.markdown("""
     Welcome to **ReadingView**! To get started, you need to configure your Audiobookshelf connection.
     
-    ### Required Environment Variables
+    ### Required Configuration
     
-    Set the following environment variables:
+    Create a `.env` file in the project directory with:
     """)
     
     st.code("""
-export ABS_URL=https://your-audiobookshelf-url
-export ABS_TOKEN=your_api_token
+ABS_URL=https://your-audiobookshelf-url
+ABS_TOKEN=your_api_token
     """, language="bash")
     
     st.markdown("""
@@ -153,7 +157,7 @@ export ABS_TOKEN=your_api_token
     2. Go to **Settings** → **Users**
     3. Click on your user
     4. Generate a new **API token**
-    5. Copy the token
+    5. Copy the token and paste it in your `.env` file
     
     ### Docker Example
     
@@ -162,11 +166,11 @@ export ABS_TOKEN=your_api_token
     
     st.code("""
 docker run -d \\
-  --name shelf \\
+  --name readingview \\
   -p 8501:8501 \\
   -e ABS_URL=https://your-audiobookshelf-url \\
   -e ABS_TOKEN=your_api_token \\
-  shelf:latest
+  readingview:latest
     """, language="bash")
     
     st.markdown("""
@@ -176,9 +180,9 @@ docker run -d \\
     st.code("""
 version: '3.8'
 services:
-  shelf:
-    image: shelf:latest
-    container_name: shelf
+  readingview:
+    image: readingview:latest
+    container_name: readingview
     ports:
       - "8501:8501"
     environment:
@@ -187,7 +191,7 @@ services:
     restart: unless-stopped
     """, language="yaml")
     
-    st.info("After setting environment variables, restart the application.")
+    st.info("💡 After creating the `.env` file, restart the application.")
 
 
 def main():
@@ -224,14 +228,41 @@ def main():
     st.markdown("Your personal audiobook statistics dashboard")
     st.markdown("---")
     
+    # Initialize database for release tracker
+    db = None
+    if config.ENABLE_RELEASE_TRACKER:
+        try:
+            db = ReleaseTrackerDB()
+        except Exception as e:
+            st.warning(f"⚠️ Release tracker unavailable: {e}")
+
+    # Notification status badge in sidebar
+    if db:
+        render_notification_status_badge()
+
     # Navigation tabs
-    tab1, tab2 = st.tabs(["📚 Library", "📊 Statistics"])
-    
-    with tab1:
-        render_library_view(api)
-    
-    with tab2:
-        render_statistics_view(api)
+    if config.ENABLE_RELEASE_TRACKER and db:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(
+            ["📚 Library", "📊 Statistics", "👤 Authors", "📅 Release Tracker", "🔔 Notifications"]
+        )
+        with tab1:
+            render_library_view(api)
+        with tab2:
+            render_statistics_view(api)
+        with tab3:
+            render_authors_view(api, db)
+        with tab4:
+            render_release_tracker_view(api, db)
+        with tab5:
+            render_notification_settings(db)
+    else:
+        tab1, tab2, tab3 = st.tabs(["📚 Library", "📊 Statistics", "👤 Authors"])
+        with tab1:
+            render_library_view(api)
+        with tab2:
+            render_statistics_view(api)
+        with tab3:
+            render_authors_view(api)
 
 
 if __name__ == "__main__":
