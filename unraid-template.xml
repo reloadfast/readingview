@@ -1,0 +1,57 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <n>ReadingView</n>
+  <Repository>yourusername/readingview:latest</Repository>
+  <Registry>https://hub.docker.com/r/yourusername/readingview</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/yourusername/readingview/issues</Support>
+  <Project>https://github.com/yourusername/readingview</Project>
+  <Overview>
+    ReadingView is a self-hosted dashboard for visualizing audiobook listening statistics from Audiobookshelf.
+    
+    &#xD;
+    Features:&#xD;
+    - Library view with bookshelf-style grid&#xD;
+    - Progress tracking for in-progress audiobooks&#xD;
+    - Statistics and visualizations&#xD;
+    - Direct Audiobookshelf API integration&#xD;
+    &#xD;
+    After installation, access the dashboard at http://[IP]:[PORT:8501]&#xD;
+    &#xD;
+    REQUIRED SETUP:&#xD;
+    1. Enter your Audiobookshelf server URL&#xD;
+    2. Generate an API token: Audiobookshelf Settings → Users → Your User → Generate API Token&#xD;
+    3. Enter the API token in the configuration below&#xD;
+  </Overview>
+  <Category>MediaApp:Other</Category>
+  <WebUI>http://[IP]:[PORT:8501]</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/yourusername/readingview/main/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/yourusername/readingview/main/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  
+  <!-- Port Configuration -->
+  <Config Name="WebUI Port" Target="8501" Default="8501" Mode="tcp" Description="Port for accessing the web interface. Default is 8501." Type="Port" Display="always" Required="true" Mask="false">8501</Config>
+  
+  <!-- Required Environment Variables -->
+  <Config Name="Audiobookshelf URL" Target="ABS_URL" Default="" Mode="" Description="REQUIRED: URL of your Audiobookshelf server (e.g., https://audiobookshelf.example.com or http://192.168.1.100:13378). Do NOT include a trailing slash." Type="Variable" Display="always" Required="true" Mask="false"></Config>
+  
+  <Config Name="Audiobookshelf API Token" Target="ABS_TOKEN" Default="" Mode="" Description="REQUIRED: API token from Audiobookshelf. Get this from: Audiobookshelf → Settings → Users → [Your User] → Generate API Token. Keep this secret!" Type="Variable" Display="always" Required="true" Mask="true"></Config>
+  
+  <!-- Optional Environment Variables -->
+  <Config Name="Application Title" Target="APP_TITLE" Default="ReadingView" Mode="" Description="OPTIONAL: Custom title for the dashboard. Default: ReadingView" Type="Variable" Display="advanced" Required="false" Mask="false">ReadingView</Config>
+  
+  <Config Name="Cache TTL (seconds)" Target="CACHE_TTL" Default="300" Mode="" Description="OPTIONAL: Cache duration in seconds. Lower = more up-to-date data, higher = less load on server. Default: 300 (5 minutes)" Type="Variable" Display="advanced" Required="false" Mask="false">300</Config>
+  
+  <Config Name="Items Per Row" Target="ITEMS_PER_ROW" Default="5" Mode="" Description="OPTIONAL: Number of audiobooks to display per row in the library grid. Adjust based on screen size. Default: 5" Type="Variable" Display="advanced" Required="false" Mask="false">5</Config>
+  
+  <Config Name="Theme" Target="THEME" Default="dark" Mode="" Description="OPTIONAL: UI theme. Options: dark or light. Default: dark" Type="Variable" Display="advanced" Required="false" Mask="false">dark</Config>
+</Container>
