@@ -12,6 +12,51 @@ from database.db import ReleaseTrackerDB
 
 logger = logging.getLogger(__name__)
 
+# Map Apprise URL scheme prefixes to friendly display names
+SCHEME_NAMES: dict[str, str] = {
+    "tgram": "Telegram",
+    "discord": "Discord",
+    "slack": "Slack",
+    "mailto": "Email",
+    "gotify": "Gotify",
+    "pover": "Pushover",
+    "ntfy": "ntfy",
+    "json": "JSON/Webhook",
+    "xml": "XML",
+    "msteams": "Microsoft Teams",
+    "matrix": "Matrix",
+    "signal": "Signal",
+    "rocket": "Rocket.Chat",
+    "pbul": "Pushbullet",
+}
+
+
+def get_configured_services(api_url: str, key: str) -> tuple[bool, list[str]]:
+    """
+    Query Apprise for the notification URLs configured under a key.
+
+    Returns:
+        (success, list_of_friendly_service_names)
+    """
+    url = f"{api_url.rstrip('/')}/json/urls/{key}"
+    try:
+        resp = requests.get(url, params={"privacy": 1}, timeout=10)
+        if not resp.ok:
+            return False, []
+
+        data = resp.json()
+        urls = data.get("urls", [])
+        names = []
+        for entry in urls:
+            raw_url = entry.get("url", "")
+            scheme = raw_url.split("://", 1)[0].lower() if "://" in raw_url else ""
+            name = SCHEME_NAMES.get(scheme, scheme.capitalize() if scheme else "Unknown")
+            if name not in names:
+                names.append(name)
+        return True, names
+    except (requests.exceptions.RequestException, ValueError):
+        return False, []
+
 
 def test_apprise_connection(api_url: str, key: str) -> tuple[bool, str]:
     """

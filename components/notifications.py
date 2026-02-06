@@ -8,6 +8,7 @@ from database.db import ReleaseTrackerDB
 from utils.notifications import (
     check_apprise_health,
     test_apprise_connection,
+    get_configured_services,
     get_releases_due_soon,
     build_release_digest,
     send_notification,
@@ -25,6 +26,21 @@ def render_notification_settings(db: ReleaseTrackerDB):
 
     # --- Connection Status ---
     _render_connection_status()
+
+    # --- Configured Services ---
+    if config.APPRISE_API_URL and config.APPRISE_NOTIFICATION_KEY:
+        ok, services = get_configured_services(
+            config.APPRISE_API_URL, config.APPRISE_NOTIFICATION_KEY
+        )
+        if ok and services:
+            st.markdown(
+                f"**Configured services:** {', '.join(services)}"
+            )
+        elif ok:
+            st.info(
+                "No notification services configured yet. "
+                "See [NOTIFICATIONS.md](NOTIFICATIONS.md) for setup instructions."
+            )
 
     if not config.APPRISE_API_URL or not config.APPRISE_NOTIFICATION_KEY:
         st.warning(

@@ -41,6 +41,7 @@ Get your API token: Audiobookshelf → Settings → Users → Generate API Token
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Docker, Docker Compose, Unraid, reverse proxy, local dev
 - **[GITHUB_ACTIONS_SETUP.md](GITHUB_ACTIONS_SETUP.md)** — CI/CD pipeline setup
+- **[NOTIFICATIONS.md](NOTIFICATIONS.md)** — Apprise notification setup (Telegram, Discord, etc.)
 - **[OPEN_LIBRARY_USER_GUIDE.md](OPEN_LIBRARY_USER_GUIDE.md)** — Release tracker search guide
 
 ## License

@@ -38,7 +38,7 @@ class Config:
     # Database Configuration
     DB_PATH: str = os.getenv("DB_PATH", "/app/data/release_tracker.db")
 
-    # Notification Configuration (Future use)
+    # Notification Configuration
     APPRISE_API_URL: str = os.getenv("APPRISE_API_URL", "")  # Your Apprise API endpoint
     APPRISE_NOTIFICATION_KEY: str = os.getenv("APPRISE_NOTIFICATION_KEY", "")
     ENABLE_NOTIFICATIONS: bool = (
