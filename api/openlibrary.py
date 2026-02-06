@@ -193,6 +193,97 @@ class OpenLibraryAPI:
             return f"{self.COVERS_URL}/b/olid/{olid}-{size}.jpg"
         return None
 
+    def get_work_editions(
+        self, work_key: str, limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        """
+        Get all editions for a work.
+
+        Args:
+            work_key: Work key (e.g., "OL45804W" or "/works/OL45804W")
+            limit: Maximum editions to return
+
+        Returns:
+            List of edition entries
+        """
+        if not work_key.startswith("/works/"):
+            work_key = f"/works/{work_key}"
+
+        url = f"{self.BASE_URL}{work_key}/editions.json"
+
+        try:
+            response = self.session.get(
+                url, params={"limit": limit}, timeout=15
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data.get("entries", [])
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to get work editions: {e}")
+            return []
+
+    @staticmethod
+    def select_default_edition(
+        editions: List[Dict[str, Any]],
+    ) -> tuple[List[Dict[str, Any]], int]:
+        """
+        Normalize raw edition entries and pick the best default.
+
+        Returns:
+            (normalized_list, default_index) where default is the most
+            recent paperback/softcover, falling back to most recent overall.
+        """
+        import re
+
+        normalized: List[Dict[str, Any]] = []
+
+        for ed in editions:
+            isbn = None
+            isbn_13 = ed.get("isbn_13", [])
+            isbn_10 = ed.get("isbn_10", [])
+            if isbn_13:
+                isbn = isbn_13[0]
+            elif isbn_10:
+                isbn = isbn_10[0]
+
+            fmt = (ed.get("physical_format") or "").strip()
+            publish_date = (ed.get("publish_date") or "").strip()
+
+            # Extract a 4-digit year from publish_date
+            year = None
+            m = re.search(r"\b(\d{4})\b", publish_date)
+            if m:
+                year = int(m.group(1))
+
+            publishers = ed.get("publishers", [])
+            covers = ed.get("covers", [])
+            cover_id = covers[0] if covers else None
+
+            normalized.append({
+                "edition_key": ed.get("key", ""),
+                "title": ed.get("title", ""),
+                "format": fmt,
+                "publish_date": publish_date,
+                "year": year,
+                "publishers": publishers,
+                "isbn": isbn,
+                "pages": ed.get("number_of_pages"),
+                "cover_id": cover_id,
+            })
+
+        # Sort by year descending (None last)
+        normalized.sort(key=lambda e: (e["year"] is not None, e["year"] or 0), reverse=True)
+
+        # Find best default: most recent paperback/softcover
+        default_idx = 0
+        paperback_keywords = {"paperback", "softcover", "trade paperback"}
+        for i, ed in enumerate(normalized):
+            if ed["format"].lower() in paperback_keywords:
+                default_idx = i
+                break
+
+        return normalized, default_idx
+
     def search_for_next_in_series(
         self, series_name: str, author_name: str, last_book_number: Optional[int] = None
     ) -> List[Dict[str, Any]]:

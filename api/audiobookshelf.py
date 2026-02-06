@@ -219,6 +219,8 @@ class AudiobookData:
             'published_year': metadata.get('publishedYear'),
             'description': metadata.get('description'),
             'series': metadata.get('series', []),
+            'isbn': metadata.get('isbn'),
+            'asin': metadata.get('asin'),
         }
     
     @staticmethod

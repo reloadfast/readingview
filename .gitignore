@@ -60,6 +60,7 @@ temp/
 
 # Unraid template (local only)
 unraid-template.xml
+unraid-template_custom.xml
 
 # Setup script (local only)
 setup_github.sh

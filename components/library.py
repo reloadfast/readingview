@@ -5,8 +5,177 @@ Library view component - displays audiobooks in a bookshelf grid.
 import streamlit as st
 from typing import List, Dict, Any
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
+from api.openlibrary import OpenLibraryAPI
+from config.config import config
 from utils.helpers import format_date_short
+import logging
 import math
+
+logger = logging.getLogger(__name__)
+
+
+def _cleanup_dialog_state():
+    """Remove all _rec_* keys from session_state."""
+    keys = [k for k in st.session_state if k.startswith("_rec_")]
+    for k in keys:
+        del st.session_state[k]
+
+
+def _format_edition_label(ed: Dict[str, Any]) -> str:
+    """Build a human-readable label for the edition selectbox."""
+    parts = []
+    if ed["format"]:
+        parts.append(ed["format"])
+    if ed["publish_date"]:
+        parts.append(ed["publish_date"])
+    if ed["publishers"]:
+        parts.append(", ".join(ed["publishers"][:2]))
+    if ed["isbn"]:
+        parts.append(f"ISBN {ed['isbn']}")
+    if ed["pages"]:
+        parts.append(f"{ed['pages']}p")
+    return " | ".join(parts) if parts else ed.get("edition_key", "Unknown edition")
+
+
+@st.dialog("Add to Recommender")
+def _edition_picker_dialog():
+    """Two-phase dialog: OL lookup then edition selection."""
+    import book_recommender
+
+    book = st.session_state.get("_rec_add_book")
+    if not book:
+        st.warning("No book selected.")
+        if st.button("Close"):
+            _cleanup_dialog_state()
+            st.rerun()
+        return
+
+    st.markdown(f"**{book['title']}** by {book['author']}")
+
+    # Phase 1: OL lookup (cached in session_state)
+    if "_rec_editions" not in st.session_state:
+        with st.spinner("Searching Open Library..."):
+            ol = OpenLibraryAPI()
+            work_key = None
+            search_results = []
+
+            # Try ISBN first
+            isbn = book.get("isbn")
+            if isbn:
+                search_results = ol.search_books(query=f"isbn:{isbn}", limit=3)
+
+            # Fallback to title + author
+            if not search_results:
+                search_results = ol.search_books(
+                    title=book["title"], author=book["author"], limit=5
+                )
+
+            if search_results:
+                work_key = search_results[0].get("key")
+
+            if work_key:
+                editions_raw = ol.get_work_editions(work_key)
+                if editions_raw:
+                    editions, default_idx = ol.select_default_edition(editions_raw)
+                    st.session_state["_rec_work_key"] = work_key
+                    st.session_state["_rec_editions"] = editions
+                    st.session_state["_rec_default_idx"] = default_idx
+                else:
+                    # Work found but no editions — allow direct ingest
+                    st.session_state["_rec_work_key"] = work_key
+                    st.session_state["_rec_editions"] = []
+                    st.session_state["_rec_default_idx"] = 0
+            else:
+                # No work found — direct ingest by title/author
+                st.session_state["_rec_work_key"] = None
+                st.session_state["_rec_editions"] = []
+                st.session_state["_rec_default_idx"] = 0
+
+        st.rerun()
+
+    editions = st.session_state.get("_rec_editions", [])
+    work_key = st.session_state.get("_rec_work_key")
+    default_idx = st.session_state.get("_rec_default_idx", 0)
+
+    # Phase 2: Edition picker or direct ingest
+    if editions:
+        labels = [_format_edition_label(ed) for ed in editions]
+        selected_idx = st.selectbox(
+            "Select edition",
+            range(len(editions)),
+            index=default_idx,
+            format_func=lambda i: labels[i],
+        )
+
+        selected = editions[selected_idx]
+
+        # Show details for selected edition
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            if selected["cover_id"]:
+                ol = OpenLibraryAPI()
+                cover_url = ol.get_cover_url(cover_id=selected["cover_id"], size="M")
+                if cover_url:
+                    st.image(cover_url, width=120)
+        with col2:
+            if selected["format"]:
+                st.markdown(f"**Format:** {selected['format']}")
+            if selected["publish_date"]:
+                st.markdown(f"**Published:** {selected['publish_date']}")
+            if selected["publishers"]:
+                st.markdown(f"**Publisher:** {', '.join(selected['publishers'][:2])}")
+            if selected["isbn"]:
+                st.markdown(f"**ISBN:** {selected['isbn']}")
+            if selected["pages"]:
+                st.markdown(f"**Pages:** {selected['pages']}")
+
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("Confirm", type="primary", use_container_width=True):
+                with st.spinner("Ingesting..."):
+                    try:
+                        if selected["isbn"]:
+                            book_recommender.ingest(isbn=selected["isbn"])
+                        elif work_key:
+                            book_recommender.ingest(work_key=work_key)
+                        else:
+                            book_recommender.ingest(
+                                title=book["title"], author=book["author"]
+                            )
+                        st.success("Added to recommender!")
+                    except Exception as e:
+                        logger.error("Recommender ingest failed: %s", e)
+                        st.error(f"Failed: {e}")
+                _cleanup_dialog_state()
+        with btn_col2:
+            if st.button("Cancel", use_container_width=True):
+                _cleanup_dialog_state()
+                st.rerun()
+    else:
+        # No editions available — direct ingest
+        st.info("No editions found. Will ingest by title/author.")
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("Confirm", type="primary", use_container_width=True):
+                with st.spinner("Ingesting..."):
+                    try:
+                        if work_key:
+                            book_recommender.ingest(work_key=work_key)
+                        elif book.get("isbn"):
+                            book_recommender.ingest(isbn=book["isbn"])
+                        else:
+                            book_recommender.ingest(
+                                title=book["title"], author=book["author"]
+                            )
+                        st.success("Added to recommender!")
+                    except Exception as e:
+                        logger.error("Recommender ingest failed: %s", e)
+                        st.error(f"Failed: {e}")
+                _cleanup_dialog_state()
+        with btn_col2:
+            if st.button("Cancel", use_container_width=True):
+                _cleanup_dialog_state()
+                st.rerun()
 
 
 def render_library_view(api: AudiobookshelfAPI):
@@ -16,8 +185,12 @@ def render_library_view(api: AudiobookshelfAPI):
     Args:
         api: Audiobookshelf API client
     """
+    # Trigger edition picker dialog if a book was selected
+    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
+        _edition_picker_dialog()
+
     st.markdown("### 📚 Library")
-    
+
     # Fetch in-progress items and progress data
     with st.spinner("Loading your audiobooks..."):
         items = api.get_user_items_in_progress()
@@ -225,6 +398,13 @@ def render_library_view(api: AudiobookshelfAPI):
                         f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
                         unsafe_allow_html=True
                     )
+
+                    # Add to Recommender button (feature-gated)
+                    if config.has_book_recommender():
+                        if st.button("+ Recommender", key=f"rec_add_{item_idx}",
+                                     use_container_width=True):
+                            st.session_state["_rec_add_book"] = metadata
+                            st.rerun()
     
     # Display count
     st.markdown(f"---")
