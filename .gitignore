@@ -63,3 +63,6 @@ unraid-template.xml
 
 # Setup script (local only)
 setup_github.sh
+
+# Runtime database
+*.db

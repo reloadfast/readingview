@@ -1,97 +1,45 @@
 # Deployment Guide
 
-This guide covers various deployment options for Shelf.
+## Prerequisites
 
-## Table of Contents
-
-- [Docker (Recommended)](#docker-recommended)
-- [Docker Compose](#docker-compose)
-- [Unraid](#unraid)
-- [Local Development](#local-development)
-- [Production Considerations](#production-considerations)
+- **Docker** or **Python 3.11+**
+- Audiobookshelf instance running and accessible
+- Audiobookshelf API token (see [Getting Your API Token](#getting-your-api-token))
 
 ## Docker (Recommended)
 
-### Prerequisites
-- Docker installed and running
-- Audiobookshelf instance accessible
-- Audiobookshelf API token
-
-### Quick Start
-
 ```bash
 docker run -d \
-  --name shelf \
+  --name readingview \
   -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token \
-  shelf:latest
+  --restart unless-stopped \
+  readingview:latest
 ```
+
+Access at: **http://localhost:8506**
 
 ### Building from Source
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/shelf.git
-cd shelf
-
-# Build the image
-docker build -t shelf:latest .
-
-# Run the container
-docker run -d \
-  --name shelf \
-  -p 8506:8506 \
-  -e ABS_URL=https://your-audiobookshelf-url \
-  -e ABS_TOKEN=your_api_token \
-  shelf:latest
-```
-
-### Configuration Options
-
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `ABS_URL` | Audiobookshelf server URL | Yes | - |
-| `ABS_TOKEN` | Audiobookshelf API token | Yes | - |
-| `APP_TITLE` | Dashboard title | No | Shelf |
-| `CACHE_TTL` | Cache duration (seconds) | No | 300 |
-| `ITEMS_PER_ROW` | Books per row in grid | No | 5 |
-| `THEME` | UI theme (dark/light) | No | dark |
-
-### Accessing the Dashboard
-
-After starting the container, access Shelf at:
-```
-http://localhost:8506
-```
-
-Or if running on a server:
-```
-http://your-server-ip:8506
+git clone https://github.com/reloadfast/readingview.git
+cd readingview
+docker build -t readingview:latest .
 ```
 
 ## Docker Compose
 
-Docker Compose provides easier configuration management and multi-container orchestration.
-
-### Setup
-
-1. **Create a `docker-compose.yml` file:**
-
 ```yaml
 version: '3.8'
-
 services:
-  shelf:
-    image: shelf:latest
-    container_name: shelf
+  readingview:
+    image: readingview:latest
+    container_name: readingview
     ports:
       - "8506:8506"
-    environment:
-      - ABS_URL=https://your-audiobookshelf-url
-      - ABS_TOKEN=your_api_token
-      - APP_TITLE=My Audiobook Stats
-      - CACHE_TTL=300
+    env_file:
+      - .env
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8506/_stcore/health"]
@@ -100,156 +48,63 @@ services:
       retries: 3
 ```
 
-2. **Or use environment file:**
-
-Create a `.env` file:
-```env
-ABS_URL=https://your-audiobookshelf-url
-ABS_TOKEN=your_api_token
-APP_TITLE=Shelf
-```
-
-Update `docker-compose.yml`:
-```yaml
-version: '3.8'
-
-services:
-  shelf:
-    image: shelf:latest
-    container_name: shelf
-    ports:
-      - "8506:8506"
-    env_file:
-      - .env
-    restart: unless-stopped
-```
-
-3. **Start the service:**
-
 ```bash
+cp env.example .env   # edit with your credentials
 docker-compose up -d
 ```
 
-4. **View logs:**
-
-```bash
-docker-compose logs -f shelf
-```
-
-5. **Stop the service:**
-
-```bash
-docker-compose down
-```
-
-## Unraid
-
-Shelf includes a Community Applications template for easy installation on Unraid.
-
-### Installation
-
-1. **Navigate to Docker tab** in Unraid web interface
-2. **Click "Add Container"**
-3. **Select "Shelf" from template list** (if available)
-4. **Configure required fields:**
-   - **Audiobookshelf URL**: Your Audiobookshelf server URL
-   - **API Token**: Your Audiobookshelf API token
-   - **Port**: Default 8506 (change if needed)
-
-5. **Click "Apply"**
-
-### Manual Template Installation
-
-If the template isn't available:
-
-1. Click "Add Container"
-2. Switch to "Advanced View"
-3. Fill in the following:
-
-**Basic:**
-- Name: `shelf`
-- Repository: `shelf:latest`
-- Network Type: `bridge`
-- Port: `8506` → `8506`
-
-**Environment Variables:**
-- Key: `ABS_URL`, Value: `https://your-audiobookshelf-url`
-- Key: `ABS_TOKEN`, Value: `your_api_token`
-
-**Advanced:**
-- Privileged: `No`
-- Restart: `unless-stopped`
-
-4. Click "Apply"
-
-### Accessing on Unraid
-
-Navigate to: `http://[unraid-ip]:8506`
-
-Or add a custom icon link in your dashboard.
-
 ## Local Development
 
-For development and testing without Docker.
-
-### Prerequisites
-- Python 3.11 or higher
-- pip
-- Audiobookshelf instance
-
-### Setup
-
-1. **Clone the repository:**
 ```bash
-git clone https://github.com/yourusername/shelf.git
-cd shelf
-```
-
-2. **Create virtual environment:**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. **Install dependencies:**
-```bash
+git clone https://github.com/reloadfast/readingview.git
+cd readingview
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-```
-
-4. **Configure environment:**
-```bash
-# Copy example env file
-cp .env.example .env
-
-# Edit .env with your credentials
-nano .env  # or your preferred editor
-```
-
-5. **Run the application:**
-```bash
+cp env.example .env   # edit with your credentials
 streamlit run app.py
 ```
 
-The app will open automatically in your browser at `http://localhost:8506`.
+Streamlit auto-reloads on file changes.
 
-### Development Tips
+## Unraid
 
-- **Auto-reload**: Streamlit automatically reloads when you save changes
-- **Debug mode**: Set `STREAMLIT_DEBUG=1` for more verbose logging
-- **Cache clearing**: Click "Clear cache" in the Streamlit menu to force data refresh
+1. Go to **Docker** tab → **Add Container**
+2. Use template URL:
+   ```
+   https://raw.githubusercontent.com/reloadfast/readingview/main/unraid-template.xml
+   ```
+3. Configure `ABS_URL` and `ABS_TOKEN`
+4. Click **Apply**
 
-## Production Considerations
+Or set up manually: Repository `reloadfast/readingview:latest`, port `8506:8506`, add the two environment variables.
 
-### Reverse Proxy
+## Configuration
 
-Using a reverse proxy (Nginx, Caddy, Traefik) is recommended for production.
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `ABS_URL` | Yes | — | Audiobookshelf server URL |
+| `ABS_TOKEN` | Yes | — | API authentication token |
+| `APP_TITLE` | No | ReadingView | Dashboard title |
+| `CACHE_TTL` | No | 300 | Cache duration in seconds |
+| `ENABLE_RELEASE_TRACKER` | No | true | Enable release tracking features |
+| `DB_PATH` | No | database/release_tracker.db | SQLite database path |
 
-#### Nginx Example
+## Getting Your API Token
+
+1. Log into your Audiobookshelf instance
+2. Go to **Settings** → **Users** → click your username
+3. Scroll to **API Tokens** → **Generate Token**
+4. Copy the token (shown only once)
+
+## Reverse Proxy
+
+### Nginx
 
 ```nginx
 server {
     listen 80;
-    server_name shelf.yourdomain.com;
+    server_name readingview.yourdomain.com;
 
     location / {
         proxy_pass http://localhost:8506;
@@ -265,116 +120,35 @@ server {
 }
 ```
 
-#### Caddy Example
+### Caddy
 
 ```
-shelf.yourdomain.com {
+readingview.yourdomain.com {
     reverse_proxy localhost:8506
 }
 ```
 
-### HTTPS/SSL
+## Updating
 
-For secure connections:
-
-1. **Using Let's Encrypt with Caddy** (automatic):
-```
-shelf.yourdomain.com {
-    reverse_proxy localhost:8506
-}
-```
-
-2. **Using Let's Encrypt with Nginx**:
-```bash
-certbot --nginx -d shelf.yourdomain.com
-```
-
-### Performance Tuning
-
-1. **Adjust cache TTL** for your usage pattern:
-   - High traffic: Increase `CACHE_TTL` (e.g., 600 seconds)
-   - Real-time updates needed: Decrease `CACHE_TTL` (e.g., 60 seconds)
-
-2. **Resource limits** (Docker):
-```yaml
-services:
-  shelf:
-    # ... other config ...
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
-```
-
-### Monitoring
-
-Monitor container health:
 ```bash
 # Docker
-docker logs shelf
+docker pull readingview:latest
+docker stop readingview && docker rm readingview
+# Re-run with same settings
 
 # Docker Compose
-docker-compose logs -f shelf
+docker-compose pull && docker-compose up -d
 
-# Health check
-curl http://localhost:8506/_stcore/health
+# Local
+git pull && pip install -r requirements.txt
 ```
 
-### Backup
+## Troubleshooting
 
-No data is stored by Shelf itself. All data comes from Audiobookshelf. However, you may want to backup:
-- Configuration files (docker-compose.yml, .env)
-- Any customizations made to the code
+**Cannot connect to Audiobookshelf** — Verify `ABS_URL` is reachable (`curl $ABS_URL/api/ping`) and token is valid.
 
-### Updates
+**Port already in use** — Map to a different host port: `-p 8502:8506`
 
-#### Docker
-```bash
-# Pull latest image
-docker pull shelf:latest
+**Covers not loading** — Check that covers display in the Audiobookshelf web UI. Inspect browser console for CORS errors.
 
-# Recreate container
-docker stop shelf
-docker rm shelf
-docker run -d \
-  --name shelf \
-  -p 8506:8506 \
-  -e ABS_URL=https://your-audiobookshelf-url \
-  -e ABS_TOKEN=your_api_token \
-  shelf:latest
-```
-
-#### Docker Compose
-```bash
-docker-compose pull
-docker-compose up -d
-```
-
-### Troubleshooting
-
-**Cannot connect to Audiobookshelf:**
-- Verify `ABS_URL` is correct and accessible
-- Check if API token is valid
-- Ensure network connectivity between containers
-
-**Port already in use:**
-- Change the host port: `-p 8502:8506`
-
-**High memory usage:**
-- Reduce `CACHE_TTL` to clear cache more frequently
-- Decrease `ITEMS_PER_ROW` for less data processing
-
-**Slow loading:**
-- Increase `CACHE_TTL` to cache data longer
-- Check Audiobookshelf server response times
-- Ensure adequate resources allocated
-
-## Getting Help
-
-- Check the [README](README.md) for general information
-- Review [CONTRIBUTING](CONTRIBUTING.md) for development help
-- Open an issue on GitHub for bugs or feature requests
+**Slow performance** — Increase `CACHE_TTL` or check Audiobookshelf server response times.
