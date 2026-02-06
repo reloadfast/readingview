@@ -103,6 +103,24 @@ def render_library_view(api: AudiobookshelfAPI):
             border-radius: 4px;
             transition: width 0.3s ease;
         }
+
+        /* Author link button styled as text */
+        [data-testid="stElementContainer"]:has(.author-link) + [data-testid="stElementContainer"] button {
+            background: none !important;
+            border: none !important;
+            padding: 0 !important;
+            color: #a8a8a8 !important;
+            font-size: 14px !important;
+            min-height: 0 !important;
+            font-weight: normal !important;
+            text-align: left !important;
+            cursor: pointer !important;
+        }
+        [data-testid="stElementContainer"]:has(.author-link) + [data-testid="stElementContainer"] button:hover {
+            color: #4a9eff !important;
+            text-decoration: underline !important;
+            background: none !important;
+        }
         </style>
     """, unsafe_allow_html=True)
     
@@ -167,13 +185,14 @@ def render_library_view(api: AudiobookshelfAPI):
                     
                     # Title and author
                     st.markdown(
-                        f'<div class="book-title" title="{metadata["title"]}">{metadata["title"]}</div>',
+                        f'<div class="book-title" title="{metadata["title"]}">{metadata["title"]}</div>'
+                        f'<span class="author-link"></span>',
                         unsafe_allow_html=True
                     )
-                    st.markdown(
-                        f'<div class="book-author" title="{metadata["author"]}">{metadata["author"]}</div>',
-                        unsafe_allow_html=True
-                    )
+                    if st.button(metadata["author"], key=f"lib_author_{item_idx}"):
+                        st.session_state["selected_author"] = metadata["author"]
+                        st.session_state["navigate_to_authors"] = True
+                        st.rerun()
                     
                     # Progress percentage
                     progress_pct = progress_info['progress']

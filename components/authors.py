@@ -33,6 +33,7 @@ def render_authors_view(
         return
 
     sorted_names = sorted(authors_map.keys())
+    total_count = len(sorted_names)
 
     # Check if an author is selected
     selected = st.session_state.get("selected_author")
@@ -46,8 +47,13 @@ def render_authors_view(
         author_data = authors_map[selected]
         _render_author_detail(selected, author_data, ol_api, api, db)
     else:
+        # Search filter
+        search = st.text_input("Search authors", placeholder="Type to filter...", key="author_search")
+        if search:
+            sorted_names = [n for n in sorted_names if search.lower() in n.lower()]
+
         # Show clickable author grid
-        _render_author_grid(sorted_names, authors_map)
+        _render_author_grid(sorted_names, authors_map, total_count)
 
 
 def _collect_authors(api: AudiobookshelfAPI) -> Dict[str, Dict[str, Any]]:
@@ -80,7 +86,7 @@ def _collect_authors(api: AudiobookshelfAPI) -> Dict[str, Dict[str, Any]]:
     return authors
 
 
-def _render_author_grid(names: List[str], authors_map: Dict[str, Any]):
+def _render_author_grid(names: List[str], authors_map: Dict[str, Any], total_count: int = 0):
     """Show a clickable grid of all authors."""
     cols_per_row = 4
     for i in range(0, len(names), cols_per_row):
@@ -100,7 +106,10 @@ def _render_author_grid(names: List[str], authors_map: Dict[str, Any]):
                     st.session_state["selected_author"] = name
                     st.rerun()
 
-    st.caption(f"{len(names)} authors in your library")
+    if total_count and len(names) < total_count:
+        st.caption(f"Showing {len(names)} of {total_count} authors")
+    else:
+        st.caption(f"{len(names)} authors in your library")
 
 
 def _render_author_detail(

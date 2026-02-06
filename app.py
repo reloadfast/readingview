@@ -6,6 +6,7 @@ Main application entry point.
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 from config import config
 from api.audiobookshelf import AudiobookshelfAPI
 from components.library import render_library_view
@@ -265,6 +266,15 @@ def main():
             render_statistics_view(api)
         with tab3:
             render_authors_view(api)
+
+    # Switch to Authors tab when navigating from Library
+    if st.session_state.pop("navigate_to_authors", False):
+        components.html("""
+            <script>
+                const tabs = window.parent.document.querySelectorAll('button[data-baseweb="tab"]');
+                if (tabs.length > 2) tabs[2].click();
+            </script>
+        """, height=0)
 
 
 if __name__ == "__main__":
