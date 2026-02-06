@@ -23,11 +23,15 @@ def render_recommendations_view():
         client = OllamaClient(cfg.ollama_url, cfg.embed_model, cfg.llm_model)
         if not client.is_available():
             st.warning(
-                f"Ollama is not reachable at {cfg.ollama_url}. "
-                "Recommendations require a running Ollama instance."
+                f"Ollama is not reachable at `{cfg.ollama_url}`. "
+                "Recommendations require a running Ollama instance.\n\n"
+                "Set `BOOK_RECOMMENDER_LOG_LEVEL=DEBUG` for detailed diagnostics."
             )
-    except Exception:
-        pass
+    except Exception as e:
+        st.warning(
+            f"Could not check Ollama connectivity: {e}\n\n"
+            "Set `BOOK_RECOMMENDER_LOG_LEVEL=DEBUG` for detailed diagnostics."
+        )
 
     # --- Ingest section ---
     with st.expander("Add Books to Catalog", expanded=False):
@@ -61,6 +65,25 @@ def render_recommendations_view():
                             st.warning("No results found.")
                     except BookRecommenderConfigError as e:
                         st.error(str(e))
+
+    # --- Ingested books section ---
+    with st.expander("Ingested Books", expanded=False):
+        from book_recommender._db import RecommenderDB
+        rec_db = RecommenderDB(cfg.db_path)
+        all_books = rec_db.get_all_books()
+        if not all_books:
+            st.info("No books in the catalog yet. Use the section above to add some.")
+        else:
+            st.markdown(f"**{len(all_books)}** book(s) in the catalog.")
+            for book in all_books:
+                col_info, col_btn = st.columns([4, 1])
+                with col_info:
+                    authors_str = ", ".join(book.get("authors", []))
+                    st.markdown(f"**{book['title']}** — {authors_str}" if authors_str else f"**{book['title']}**")
+                with col_btn:
+                    if st.button("Remove", key=f"rec_remove_{book['id']}"):
+                        book_recommender.remove_book(book['id'])
+                        st.rerun()
 
     st.markdown("---")
 

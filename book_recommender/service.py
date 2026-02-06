@@ -39,12 +39,17 @@ def _ensure_initialized():
     _backend = create_backend(cfg.vector_backend)
     _ingester = MetadataIngester(_db)
     _initialized = True
+    logger.info(
+        "Recommender initialized: db=%s vector=%s embed_model=%s ollama=%s",
+        cfg.db_path, cfg.vector_backend, cfg.embed_model, cfg.ollama_url,
+    )
 
 
 def _embed_stale_books() -> int:
     """Embed books that need (re-)embedding. Returns count of newly embedded books."""
     cfg = get_config()
     stale = _db.get_stale_books(cfg.embed_model)
+    logger.debug("Stale books needing embedding: %d", len(stale))
     if not stale:
         return 0
 
@@ -62,6 +67,7 @@ def _embed_stale_books() -> int:
             content_hash=book["content_hash"],
         )
         count += 1
+    logger.info("Embedded %d/%d stale books", count, len(stale))
     return count
 
 
@@ -124,6 +130,9 @@ def recommend(
     if not liked_book_ids and not free_text_prompt:
         return []
 
+    logger.info("recommend() called: liked_book_ids=%s prompt_length=%d",
+                liked_book_ids, len(free_text_prompt or ""))
+
     # Rebuild index if embeddings changed (embedding happens at ingest time)
     _rebuild_index_if_needed()
 
@@ -176,6 +185,7 @@ def recommend(
 
         output.append(rec)
 
+    logger.info("recommend() returning %d results (searched %d candidates)", len(output), len(raw_results))
     return output
 
 
@@ -253,6 +263,7 @@ def ingest(
         BookRecommenderDisabled: If the feature is not enabled.
     """
     _ensure_initialized()
+    logger.info("ingest() called: isbn=%s title=%s author=%s work_key=%s", isbn, title, author, work_key)
 
     book_id = None
     if work_key:
@@ -266,3 +277,18 @@ def ingest(
         _embed_stale_books()
 
     return book_id
+
+
+def remove_book(book_id: str) -> bool:
+    """
+    Remove a book from the recommender catalog.
+
+    Returns:
+        True if the book was found and removed, False otherwise.
+
+    Raises:
+        BookRecommenderDisabled: If the feature is not enabled.
+    """
+    _ensure_initialized()
+    logger.info("remove_book() called: book_id=%s", book_id)
+    return _db.delete_book(book_id)

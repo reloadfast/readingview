@@ -896,6 +896,8 @@ def format_release_date(date_str: Optional[str]) -> str:
 
 def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
     """Inline form to quickly add a release for a specific author."""
+    tracked_series = db.get_tracked_series(author['id'])
+
     with st.form(f"quick_add_{author['id']}"):
         st.markdown(f"**New release for {author['author_name']}**")
 
@@ -909,6 +911,13 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
         with col2:
             date_confirmed = st.checkbox("Confirmed?", key=f"qa_conf_{author['id']}")
 
+        col_s, col_bn = st.columns(2)
+        with col_s:
+            series_options = ["-- No Series --"] + [s['series_name'] for s in tracked_series]
+            series_choice = st.selectbox("Series", series_options, key=f"qa_series_{author['id']}")
+        with col_bn:
+            book_number = st.text_input("Book Number (optional)", key=f"qa_booknum_{author['id']}")
+
         link_url = st.text_input("Book Link URL (optional)", key=f"qa_link_{author['id']}")
         notes = st.text_input("Notes (optional)", key=f"qa_notes_{author['id']}")
 
@@ -919,11 +928,19 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
             cancelled = st.form_submit_button("Cancel")
 
         if submitted and book_title:
+            series_id = None
+            if series_choice != "-- No Series --":
+                for s in tracked_series:
+                    if s['series_name'] == series_choice:
+                        series_id = s['id']
+                        break
             db.add_release(
                 book_title=book_title,
                 author_id=author['id'],
+                series_id=series_id,
                 release_date=release_date.isoformat() if release_date else None,
                 release_date_confirmed=date_confirmed,
+                book_number=book_number if book_number else None,
                 link_url=sanitize_url(link_url),
                 notes=notes if notes else None,
             )

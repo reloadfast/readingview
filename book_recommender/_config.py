@@ -1,11 +1,13 @@
 """Environment-based configuration for the book recommender module."""
 
+import logging
 import os
 from typing import Optional
 
 from ._exceptions import BookRecommenderConfigError
 
 _config_instance: Optional["RecommenderConfig"] = None
+_logging_configured = False
 
 
 class RecommenderConfig:
@@ -34,6 +36,7 @@ class RecommenderConfig:
         self.min_similarity: float = float(
             os.getenv("BOOK_RECOMMENDER_MIN_SIMILARITY", "0.2")
         )
+        self.log_level: str = os.getenv("BOOK_RECOMMENDER_LOG_LEVEL", "WARNING")
 
     def validate(self) -> tuple[bool, Optional[str]]:
         """Validate configuration. Returns (is_valid, error_message)."""
@@ -62,15 +65,35 @@ class RecommenderConfig:
             raise BookRecommenderConfigError(error)
 
 
+def configure_logging(level_name: str) -> None:
+    """Set up logging for the book_recommender hierarchy."""
+    global _logging_configured
+    if _logging_configured:
+        return
+    level = getattr(logging, level_name.upper(), logging.WARNING)
+    root_logger = logging.getLogger("book_recommender")
+    root_logger.setLevel(level)
+    if not root_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(
+            "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+        ))
+        root_logger.addHandler(handler)
+    _logging_configured = True
+
+
 def get_config() -> RecommenderConfig:
     """Return the lazy singleton config instance."""
     global _config_instance
     if _config_instance is None:
         _config_instance = RecommenderConfig()
+        if _config_instance.enabled:
+            configure_logging(_config_instance.log_level)
     return _config_instance
 
 
 def reset_config() -> None:
     """Reset the singleton (for testing or reload)."""
-    global _config_instance
+    global _config_instance, _logging_configured
     _config_instance = None
+    _logging_configured = False

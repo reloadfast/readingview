@@ -179,6 +179,17 @@ class RecommenderDB:
         )
         self.conn.commit()
 
+    def delete_book(self, book_id: str) -> bool:
+        """Delete a book and its embedding. Invalidates index state so vector index rebuilds."""
+        cur = self.conn.execute("SELECT 1 FROM books WHERE id = ?", (book_id,))
+        if cur.fetchone() is None:
+            return False
+        self.conn.execute("DELETE FROM embeddings WHERE book_id = ?", (book_id,))
+        self.conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+        self.conn.execute("DELETE FROM index_state WHERE id = 1")
+        self.conn.commit()
+        return True
+
     def compute_embeddings_hash(self) -> str:
         """Hash of all embedding content_hashes — detects when index needs rebuild."""
         cur = self.conn.execute(

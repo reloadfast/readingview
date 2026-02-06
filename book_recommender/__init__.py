@@ -7,6 +7,7 @@ All initialization is deferred to first use.
 Public API:
     recommend(liked_book_ids, free_text_prompt) -> list[dict]
     ingest(isbn, title, author, work_key) -> str | None
+    remove_book(book_id) -> bool
 """
 
 from ._exceptions import BookRecommenderDisabled, BookRecommenderConfigError
@@ -14,6 +15,7 @@ from ._exceptions import BookRecommenderDisabled, BookRecommenderConfigError
 __all__ = [
     "recommend",
     "ingest",
+    "remove_book",
     "BookRecommenderDisabled",
     "BookRecommenderConfigError",
 ]
@@ -41,3 +43,13 @@ def ingest(
     """
     from .service import ingest as _ingest
     return _ingest(isbn=isbn, title=title, author=author, work_key=work_key)
+
+
+def remove_book(book_id: str) -> bool:
+    """
+    Remove a book from the recommender catalog.
+
+    Raises BookRecommenderDisabled if the feature is not enabled.
+    """
+    from .service import remove_book as _remove_book
+    return _remove_book(book_id=book_id)
