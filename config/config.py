@@ -35,6 +35,9 @@ class Config:
     )
     GOODREADS_API_KEY: str = os.getenv("GOODREADS_API_KEY", "")  # Optional
 
+    # Database Configuration
+    DB_PATH: str = os.getenv("DB_PATH", "/app/data/release_tracker.db")
+
     # Notification Configuration (Future use)
     APPRISE_API_URL: str = os.getenv("APPRISE_API_URL", "")  # Your Apprise API endpoint
     APPRISE_NOTIFICATION_KEY: str = os.getenv("APPRISE_NOTIFICATION_KEY", "")
@@ -87,6 +90,7 @@ class Config:
         cls.GOODREADS_API_KEY = os.getenv("GOODREADS_API_KEY", "")
         cls.APPRISE_API_URL = os.getenv("APPRISE_API_URL", "")
         cls.APPRISE_NOTIFICATION_KEY = os.getenv("APPRISE_NOTIFICATION_KEY", "")
+        cls.DB_PATH = os.getenv("DB_PATH", "/app/data/release_tracker.db")
         cls.ENABLE_NOTIFICATIONS = (
             os.getenv("ENABLE_NOTIFICATIONS", "false").lower() == "true"
         )

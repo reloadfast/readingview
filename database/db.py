@@ -7,13 +7,14 @@ from pathlib import Path
 from typing import Any, Optional
 
 
-DB_PATH = Path(__file__).parent / "release_tracker.db"
+DB_PATH = Path("/app/data/release_tracker.db")
 
 
 class ReleaseTrackerDB:
     """SQLite-backed storage for tracked authors, series, and releases."""
 
     def __init__(self, db_path: Path = DB_PATH):
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._create_tables()

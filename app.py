@@ -3,6 +3,8 @@ ReadingView - Audiobook Statistics Dashboard
 Main application entry point.
 """
 
+from pathlib import Path
+
 import streamlit as st
 from config import config
 from api.audiobookshelf import AudiobookshelfAPI
@@ -232,7 +234,7 @@ def main():
     db = None
     if config.ENABLE_RELEASE_TRACKER:
         try:
-            db = ReleaseTrackerDB()
+            db = ReleaseTrackerDB(db_path=Path(config.DB_PATH))
         except Exception as e:
             st.warning(f"⚠️ Release tracker unavailable: {e}")
 

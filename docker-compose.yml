@@ -16,6 +16,8 @@ services:
       - CACHE_TTL=${CACHE_TTL:-300}
       - ITEMS_PER_ROW=${ITEMS_PER_ROW:-5}
       - THEME=${THEME:-dark}
+    volumes:
+      - ./data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8506/_stcore/health"]

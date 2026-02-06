@@ -25,6 +25,9 @@ COPY . .
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
 
+# Create data directory for SQLite database (separate from Python database/ package)
+RUN mkdir -p /app/data
+
 # Expose Streamlit port
 EXPOSE 8506
 
