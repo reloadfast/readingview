@@ -9,7 +9,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from config import config
 from api.audiobookshelf import AudiobookshelfAPI
-from components.library import render_library_view
+from components.library import render_library_view, render_in_progress_view
 from components.statistics import render_statistics_view
 from components.release_tracker import render_release_tracker_view
 from components.authors import render_authors_view
@@ -245,7 +245,7 @@ def main():
         render_notification_status_badge()
 
     # Build tab list dynamically
-    tab_names = ["📚 Library", "📊 Statistics", "👤 Authors"]
+    tab_names = ["📚 Library", "📖 In Progress", "📊 Statistics", "👤 Authors"]
     if config.ENABLE_RELEASE_TRACKER and db:
         tab_names.append("📅 Release Tracker")
         tab_names.append("🔔 Notifications")
@@ -257,6 +257,10 @@ def main():
 
     with tabs[tab_index]:
         render_library_view(api)
+    tab_index += 1
+
+    with tabs[tab_index]:
+        render_in_progress_view(api)
     tab_index += 1
 
     with tabs[tab_index]:
@@ -288,7 +292,7 @@ def main():
         components.html("""
             <script>
                 const tabs = window.parent.document.querySelectorAll('button[data-baseweb="tab"]');
-                if (tabs.length > 2) tabs[2].click();
+                if (tabs.length > 3) tabs[3].click();
             </script>
         """, height=0)
 

@@ -190,32 +190,18 @@ def _fetch_progress_map(base_url: str, token: str):
     return api.get_media_progress_map()
 
 
-def render_library_view(api: AudiobookshelfAPI):
-    """
-    Render the library view with bookshelf-style grid.
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_all_library_items(base_url: str, token: str):
+    """Fetch all items across all libraries."""
+    api = AudiobookshelfAPI(base_url, token)
+    items = []
+    for lib in api.get_libraries():
+        items.extend(api.get_library_items(lib["id"]))
+    return items
 
-    Args:
-        api: Audiobookshelf API client
-    """
-    # Trigger edition picker dialog if a book was selected
-    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
-        _edition_picker_dialog()
 
-    st.markdown("### 📚 Library")
-
-    # Fetch in-progress items and progress data (cached)
-    with st.spinner("Loading your audiobooks..."):
-        items = _fetch_items_in_progress(api.base_url, api.token)
-        progress_map = _fetch_progress_map(api.base_url, api.token)
-
-    if not items:
-        st.info("No audiobooks in progress. Start listening to see them here!")
-        return
-    
-    # Configuration
-    items_per_row = 5
-    
-    # Custom CSS for bookshelf styling
+def _inject_bookshelf_css():
+    """Inject shared CSS for bookshelf card styling."""
     st.markdown("""
         <style>
         .book-card {
@@ -227,19 +213,19 @@ def render_library_view(api: AudiobookshelfAPI):
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        
+
         .book-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
         }
-        
+
         .book-cover {
             width: 100%;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             margin-bottom: 12px;
         }
-        
+
         .book-title {
             font-size: 16px;
             font-weight: 600;
@@ -252,7 +238,7 @@ def render_library_view(api: AudiobookshelfAPI):
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
-        
+
         .book-author {
             font-size: 14px;
             color: #a8a8a8;
@@ -261,18 +247,18 @@ def render_library_view(api: AudiobookshelfAPI):
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        
+
         .book-stat {
             font-size: 13px;
             color: #c0c0c0;
             margin-bottom: 4px;
         }
-        
+
         .book-stat-label {
             color: #808080;
             font-weight: 500;
         }
-        
+
         .progress-bar-container {
             width: 100%;
             height: 8px;
@@ -281,7 +267,7 @@ def render_library_view(api: AudiobookshelfAPI):
             overflow: hidden;
             margin-top: 8px;
         }
-        
+
         .progress-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #4a9eff 0%, #7b68ee 100%);
@@ -308,6 +294,102 @@ def render_library_view(api: AudiobookshelfAPI):
         }
         </style>
     """, unsafe_allow_html=True)
+
+
+def _render_book_card(api, metadata, progress_info, key_suffix):
+    """Render a single book card in the bookshelf grid.
+
+    Args:
+        api: Audiobookshelf API client (for cover URLs)
+        metadata: Book metadata dict from AudiobookData.extract_metadata()
+        progress_info: Progress dict from AudiobookData.calculate_progress()
+        key_suffix: Unique suffix for Streamlit widget keys
+    """
+    with st.container():
+        # Cover image
+        cover_url = api.get_cover_url(metadata['id'])
+        st.markdown(
+            f'<img src="{cover_url}" class="book-cover" alt="{metadata["title"]}">',
+            unsafe_allow_html=True
+        )
+
+        # Title and author
+        st.markdown(
+            f'<div class="book-title" title="{metadata["title"]}">{metadata["title"]}</div>'
+            f'<span class="author-link"></span>',
+            unsafe_allow_html=True
+        )
+        if st.button(metadata["author"], key=f"author_{key_suffix}"):
+            st.session_state["selected_author"] = metadata["author"]
+            st.session_state["navigate_to_authors"] = True
+            st.rerun()
+
+        # Progress percentage
+        progress_pct = progress_info['progress']
+        st.markdown(
+            f'<div class="book-stat"><span class="book-stat-label">Progress:</span> {progress_pct:.1f}%</div>',
+            unsafe_allow_html=True
+        )
+
+        # Progress bar
+        st.markdown(
+            f'''
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" style="width: {progress_pct}%;"></div>
+            </div>
+            ''',
+            unsafe_allow_html=True
+        )
+
+        # Date started
+        if progress_info['started_at']:
+            date_started = format_date_short(progress_info['started_at'])
+            st.markdown(
+                f'<div class="book-stat" style="margin-top: 8px;"><span class="book-stat-label">Started:</span> {date_started}</div>',
+                unsafe_allow_html=True
+            )
+
+        # Time remaining
+        time_remaining = AudiobookData.format_duration(progress_info['time_remaining'])
+        st.markdown(
+            f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
+            unsafe_allow_html=True
+        )
+
+        # Add to Recommender button (feature-gated)
+        if config.has_book_recommender():
+            if st.button("+ Recommender", key=f"rec_{key_suffix}",
+                         use_container_width=True):
+                st.session_state["_rec_add_book"] = metadata
+                st.rerun()
+
+
+def render_in_progress_view(api: AudiobookshelfAPI):
+    """
+    Render the in-progress books view with bookshelf-style grid.
+
+    Args:
+        api: Audiobookshelf API client
+    """
+    # Trigger edition picker dialog if a book was selected
+    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
+        _edition_picker_dialog()
+
+    st.markdown("### 📖 In Progress")
+
+    # Fetch in-progress items and progress data (cached)
+    with st.spinner("Loading your audiobooks..."):
+        items = _fetch_items_in_progress(api.base_url, api.token)
+        progress_map = _fetch_progress_map(api.base_url, api.token)
+
+    if not items:
+        st.info("No audiobooks in progress. Start listening to see them here!")
+        return
+    
+    # Configuration
+    items_per_row = 5
+
+    _inject_bookshelf_css()
     
     # Display filter options
     col1, col2 = st.columns([3, 1])
@@ -359,65 +441,166 @@ def render_library_view(api: AudiobookshelfAPI):
             )
             
             with cols[col_idx]:
-                # Book card
-                with st.container():
-                    # Cover image
-                    cover_url = api.get_cover_url(metadata['id'])
-                    st.markdown(
-                        f'<img src="{cover_url}" class="book-cover" alt="{metadata["title"]}">',
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Title and author
-                    st.markdown(
-                        f'<div class="book-title" title="{metadata["title"]}">{metadata["title"]}</div>'
-                        f'<span class="author-link"></span>',
-                        unsafe_allow_html=True
-                    )
-                    if st.button(metadata["author"], key=f"lib_author_{item_idx}"):
-                        st.session_state["selected_author"] = metadata["author"]
-                        st.session_state["navigate_to_authors"] = True
-                        st.rerun()
-                    
-                    # Progress percentage
-                    progress_pct = progress_info['progress']
-                    st.markdown(
-                        f'<div class="book-stat"><span class="book-stat-label">Progress:</span> {progress_pct:.1f}%</div>',
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Progress bar
-                    st.markdown(
-                        f'''
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {progress_pct}%;"></div>
-                        </div>
-                        ''',
-                        unsafe_allow_html=True
-                    )
-                    
-                    # Date started
-                    if progress_info['started_at']:
-                        date_started = format_date_short(progress_info['started_at'])
-                        st.markdown(
-                            f'<div class="book-stat" style="margin-top: 8px;"><span class="book-stat-label">Started:</span> {date_started}</div>',
-                            unsafe_allow_html=True
-                        )
-                    
-                    # Time remaining
-                    time_remaining = AudiobookData.format_duration(progress_info['time_remaining'])
-                    st.markdown(
-                        f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
-                        unsafe_allow_html=True
-                    )
-
-                    # Add to Recommender button (feature-gated)
-                    if config.has_book_recommender():
-                        if st.button("+ Recommender", key=f"rec_add_{item_idx}",
-                                     use_container_width=True):
-                            st.session_state["_rec_add_book"] = metadata
-                            st.rerun()
+                _render_book_card(api, metadata, progress_info, f"ip_{item_idx}")
     
     # Display count
     st.markdown(f"---")
     st.caption(f"Showing {len(items)} audiobook{'s' if len(items) != 1 else ''} in progress")
+
+
+def render_library_view(api: AudiobookshelfAPI):
+    """
+    Render the full library view with search, pagination, and bookshelf grid.
+
+    Args:
+        api: Audiobookshelf API client
+    """
+    # Trigger edition picker dialog if a book was selected
+    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
+        _edition_picker_dialog()
+
+    st.markdown("### 📚 Library")
+
+    # Fetch all library items and progress data (cached)
+    with st.spinner("Loading your library..."):
+        items = _fetch_all_library_items(api.base_url, api.token)
+        progress_map = _fetch_progress_map(api.base_url, api.token)
+
+    if not items:
+        st.info("No audiobooks found in your library.")
+        return
+
+    items_per_row = 5
+
+    _inject_bookshelf_css()
+
+    def _get_progress(item: Dict[str, Any]) -> Dict[str, Any]:
+        """Look up progress from the progress map, falling back to inline fields."""
+        return (
+            progress_map.get(item.get('id', ''))
+            or item.get('userMediaProgress')
+            or item.get('mediaProgress')
+            or {}
+        )
+
+    # Controls row: search, items per page, sort
+    ctrl1, ctrl2, ctrl3 = st.columns([3, 1, 1])
+    with ctrl1:
+        search_query = st.text_input(
+            "Search",
+            placeholder="Search by title, author, or series...",
+            label_visibility="collapsed",
+            key="lib_search",
+        )
+    with ctrl2:
+        per_page = st.selectbox(
+            "Per page",
+            [10, 20, 50, 100],
+            index=1,
+            label_visibility="collapsed",
+            key="lib_per_page",
+        )
+    with ctrl3:
+        sort_by = st.selectbox(
+            "Sort by",
+            ["Recently Updated", "Progress (Ascending)", "Progress (Descending)", "Title (A-Z)"],
+            label_visibility="collapsed",
+            key="lib_sort",
+        )
+
+    # Client-side search filtering
+    if search_query:
+        query_lower = search_query.lower()
+        filtered = []
+        for item in items:
+            meta = item.get('media', {}).get('metadata', {})
+            title = (meta.get('title') or '').lower()
+            author = (meta.get('authorName') or '').lower()
+            series_names = ' '.join(
+                (s.get('name') or '') for s in (meta.get('series') or [])
+            ).lower()
+            if query_lower in title or query_lower in author or query_lower in series_names:
+                filtered.append(item)
+        items = filtered
+
+    # Sort items
+    if sort_by == "Progress (Ascending)":
+        items.sort(key=lambda x: _get_progress(x).get('progress', 0))
+    elif sort_by == "Progress (Descending)":
+        items.sort(key=lambda x: _get_progress(x).get('progress', 0), reverse=True)
+    elif sort_by == "Recently Updated":
+        items.sort(key=lambda x: _get_progress(x).get('lastUpdate', 0), reverse=True)
+    elif sort_by == "Title (A-Z)":
+        items.sort(key=lambda x: x.get('media', {}).get('metadata', {}).get('title', ''))
+
+    # Pagination state
+    total_items = len(items)
+    total_pages = max(1, math.ceil(total_items / per_page))
+
+    if "lib_page" not in st.session_state:
+        st.session_state["lib_page"] = 0
+
+    # Reset page if out of bounds (e.g. after search narrows results)
+    if st.session_state["lib_page"] >= total_pages:
+        st.session_state["lib_page"] = 0
+
+    current_page = st.session_state["lib_page"]
+    start_idx = current_page * per_page
+    end_idx = min(start_idx + per_page, total_items)
+    page_items = items[start_idx:end_idx]
+
+    # Pagination controls (top)
+    def _render_pagination(position):
+        pcol1, pcol2, pcol3 = st.columns([1, 2, 1])
+        with pcol1:
+            if st.button("Previous", key=f"lib_prev_{position}", disabled=current_page == 0,
+                         use_container_width=True):
+                st.session_state["lib_page"] = current_page - 1
+                st.rerun()
+        with pcol2:
+            if total_items > 0:
+                st.markdown(
+                    f'<div style="text-align: center; color: #a8a8a8; padding: 8px 0;">'
+                    f'Showing {start_idx + 1}–{end_idx} of {total_items} books'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    '<div style="text-align: center; color: #a8a8a8; padding: 8px 0;">No books match your search</div>',
+                    unsafe_allow_html=True,
+                )
+        with pcol3:
+            if st.button("Next", key=f"lib_next_{position}", disabled=current_page >= total_pages - 1,
+                         use_container_width=True):
+                st.session_state["lib_page"] = current_page + 1
+                st.rerun()
+
+    _render_pagination("top")
+
+    # Grid rendering
+    if page_items:
+        num_rows = math.ceil(len(page_items) / items_per_row)
+        for row in range(num_rows):
+            cols = st.columns(items_per_row)
+            for col_idx in range(items_per_row):
+                item_idx = row * items_per_row + col_idx
+                if item_idx >= len(page_items):
+                    break
+
+                item = page_items[item_idx]
+                metadata = AudiobookData.extract_metadata(item)
+                progress_data = _get_progress(item)
+                progress_info = AudiobookData.calculate_progress(
+                    progress_data,
+                    metadata['duration']
+                )
+
+                # Use global index for unique keys
+                global_idx = start_idx + item_idx
+                with cols[col_idx]:
+                    _render_book_card(api, metadata, progress_info, f"lib_{global_idx}")
+
+    # Pagination controls (bottom)
+    st.markdown("---")
+    _render_pagination("bottom")
