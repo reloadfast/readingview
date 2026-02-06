@@ -55,7 +55,7 @@ See [Getting Your API Token](#getting-your-api-token) section below.
 ```bash
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token_here \
   --restart unless-stopped \
@@ -66,7 +66,7 @@ docker run -d \
 
 ### Step 3: Access Shelf
 
-Open your browser to: **http://localhost:8501**
+Open your browser to: **http://localhost:8506**
 
 That's it! You should see your audiobook library.
 
@@ -77,7 +77,7 @@ Add optional environment variables:
 ```bash
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token_here \
   -e APP_TITLE="My Audiobook Stats" \
@@ -137,7 +137,7 @@ docker-compose up -d
 
 ### Step 5: Access Shelf
 
-Open your browser to: **http://localhost:8501**
+Open your browser to: **http://localhost:8506**
 
 ### Useful Commands
 
@@ -209,7 +209,7 @@ export ABS_TOKEN=your_api_token_here
 streamlit run app.py
 ```
 
-Shelf will open automatically in your browser, or visit: **http://localhost:8501**
+Shelf will open automatically in your browser, or visit: **http://localhost:8506**
 
 ### Development Tips
 
@@ -336,12 +336,12 @@ docker logs shelf
 
 ### Port Already in Use
 
-**Error:** Port 8501 already in use
+**Error:** Port 8506 already in use
 
 **Solution:** Use a different port
 ```bash
 # Docker
-docker run -p 8502:8501 ...
+docker run -p 8502:8506 ...
 
 # Access at http://localhost:8502
 ```
@@ -421,7 +421,7 @@ docker build --no-cache -t shelf .
    - Configure in UI
 
 3. **Monitoring**
-   - Check health: `http://localhost:8501/_stcore/health`
+   - Check health: `http://localhost:8506/_stcore/health`
    - View logs: `docker logs shelf`
 
 ### Get Help
@@ -466,7 +466,7 @@ pip install -r requirements.txt
 ```bash
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://abs.example.com \
   -e ABS_TOKEN=your_token \
   --restart unless-stopped \
@@ -480,7 +480,7 @@ services:
   shelf:
     image: shelf:latest
     ports:
-      - "8501:8501"
+      - "8506:8506"
     environment:
       - ABS_URL=https://abs.example.com
       - ABS_TOKEN=your_token
@@ -497,8 +497,8 @@ services:
 | `ITEMS_PER_ROW` | No | `5` |
 
 ### Access URLs
-- **Web Interface**: http://localhost:8501
-- **Health Check**: http://localhost:8501/_stcore/health
+- **Web Interface**: http://localhost:8506
+- **Health Check**: http://localhost:8506/_stcore/health
 
 ### Useful Commands
 ```bash

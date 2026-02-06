@@ -167,7 +167,7 @@ ABS_TOKEN=your_api_token
     st.code("""
 docker run -d \\
   --name readingview \\
-  -p 8501:8501 \\
+  -p 8506:8506 \\
   -e ABS_URL=https://your-audiobookshelf-url \\
   -e ABS_TOKEN=your_api_token \\
   readingview:latest
@@ -184,7 +184,7 @@ services:
     image: readingview:latest
     container_name: readingview
     ports:
-      - "8501:8501"
+      - "8506:8506"
     environment:
       - ABS_URL=https://your-audiobookshelf-url
       - ABS_TOKEN=your_api_token

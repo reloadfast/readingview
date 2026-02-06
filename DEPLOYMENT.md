@@ -22,7 +22,7 @@ This guide covers various deployment options for Shelf.
 ```bash
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token \
   shelf:latest
@@ -41,7 +41,7 @@ docker build -t shelf:latest .
 # Run the container
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token \
   shelf:latest
@@ -62,12 +62,12 @@ docker run -d \
 
 After starting the container, access Shelf at:
 ```
-http://localhost:8501
+http://localhost:8506
 ```
 
 Or if running on a server:
 ```
-http://your-server-ip:8501
+http://your-server-ip:8506
 ```
 
 ## Docker Compose
@@ -86,7 +86,7 @@ services:
     image: shelf:latest
     container_name: shelf
     ports:
-      - "8501:8501"
+      - "8506:8506"
     environment:
       - ABS_URL=https://your-audiobookshelf-url
       - ABS_TOKEN=your_api_token
@@ -94,7 +94,7 @@ services:
       - CACHE_TTL=300
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8506/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -118,7 +118,7 @@ services:
     image: shelf:latest
     container_name: shelf
     ports:
-      - "8501:8501"
+      - "8506:8506"
     env_file:
       - .env
     restart: unless-stopped
@@ -154,7 +154,7 @@ Shelf includes a Community Applications template for easy installation on Unraid
 4. **Configure required fields:**
    - **Audiobookshelf URL**: Your Audiobookshelf server URL
    - **API Token**: Your Audiobookshelf API token
-   - **Port**: Default 8501 (change if needed)
+   - **Port**: Default 8506 (change if needed)
 
 5. **Click "Apply"**
 
@@ -170,7 +170,7 @@ If the template isn't available:
 - Name: `shelf`
 - Repository: `shelf:latest`
 - Network Type: `bridge`
-- Port: `8501` → `8501`
+- Port: `8506` → `8506`
 
 **Environment Variables:**
 - Key: `ABS_URL`, Value: `https://your-audiobookshelf-url`
@@ -184,7 +184,7 @@ If the template isn't available:
 
 ### Accessing on Unraid
 
-Navigate to: `http://[unraid-ip]:8501`
+Navigate to: `http://[unraid-ip]:8506`
 
 Or add a custom icon link in your dashboard.
 
@@ -230,7 +230,7 @@ nano .env  # or your preferred editor
 streamlit run app.py
 ```
 
-The app will open automatically in your browser at `http://localhost:8501`.
+The app will open automatically in your browser at `http://localhost:8506`.
 
 ### Development Tips
 
@@ -252,7 +252,7 @@ server {
     server_name shelf.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8501;
+        proxy_pass http://localhost:8506;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -269,7 +269,7 @@ server {
 
 ```
 shelf.yourdomain.com {
-    reverse_proxy localhost:8501
+    reverse_proxy localhost:8506
 }
 ```
 
@@ -280,7 +280,7 @@ For secure connections:
 1. **Using Let's Encrypt with Caddy** (automatic):
 ```
 shelf.yourdomain.com {
-    reverse_proxy localhost:8501
+    reverse_proxy localhost:8506
 }
 ```
 
@@ -321,7 +321,7 @@ docker logs shelf
 docker-compose logs -f shelf
 
 # Health check
-curl http://localhost:8501/_stcore/health
+curl http://localhost:8506/_stcore/health
 ```
 
 ### Backup
@@ -342,7 +342,7 @@ docker stop shelf
 docker rm shelf
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-audiobookshelf-url \
   -e ABS_TOKEN=your_api_token \
   shelf:latest
@@ -362,7 +362,7 @@ docker-compose up -d
 - Ensure network connectivity between containers
 
 **Port already in use:**
-- Change the host port: `-p 8502:8501`
+- Change the host port: `-p 8502:8506`
 
 **High memory usage:**
 - Reduce `CACHE_TTL` to clear cache more frequently

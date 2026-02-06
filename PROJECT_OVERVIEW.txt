@@ -120,12 +120,12 @@ Docker (Fastest):
 ────────────────
 docker run -d \
   --name shelf \
-  -p 8501:8501 \
+  -p 8506:8506 \
   -e ABS_URL=https://your-abs-url \
   -e ABS_TOKEN=your_token \
   shelf:latest
 
-Then open: http://localhost:8501
+Then open: http://localhost:8506
 
 Docker Compose:
 ───────────────

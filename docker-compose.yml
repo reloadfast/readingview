@@ -5,7 +5,7 @@ services:
     build: .
     container_name: shelf
     ports:
-      - "8501:8501"
+      - "8506:8506"
     environment:
       # Required: Audiobookshelf connection
       - ABS_URL=${ABS_URL}
@@ -18,7 +18,7 @@ services:
       - THEME=${THEME:-dark}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8506/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
