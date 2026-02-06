@@ -178,10 +178,22 @@ def _edition_picker_dialog():
                 st.rerun()
 
 
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_items_in_progress(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    return api.get_user_items_in_progress()
+
+
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_progress_map(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    return api.get_media_progress_map()
+
+
 def render_library_view(api: AudiobookshelfAPI):
     """
     Render the library view with bookshelf-style grid.
-    
+
     Args:
         api: Audiobookshelf API client
     """
@@ -191,10 +203,10 @@ def render_library_view(api: AudiobookshelfAPI):
 
     st.markdown("### 📚 Library")
 
-    # Fetch in-progress items and progress data
+    # Fetch in-progress items and progress data (cached)
     with st.spinner("Loading your audiobooks..."):
-        items = api.get_user_items_in_progress()
-        progress_map = api.get_media_progress_map()
+        items = _fetch_items_in_progress(api.base_url, api.token)
+        progress_map = _fetch_progress_map(api.base_url, api.token)
 
     if not items:
         st.info("No audiobooks in progress. Start listening to see them here!")

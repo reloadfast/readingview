@@ -2,11 +2,11 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     tags:
       - "v*"
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 env:
   IMAGE_NAME: readingview

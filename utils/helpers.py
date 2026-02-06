@@ -4,8 +4,27 @@ Utility functions for the Shelf application.
 
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse
 import streamlit as st
 from collections import defaultdict
+
+
+def sanitize_url(url: Optional[str]) -> Optional[str]:
+    """
+    Sanitize a user-supplied URL for safe storage and rendering.
+
+    Returns the cleaned URL if it uses http/https, or None otherwise.
+    """
+    if not url or not url.strip():
+        return None
+    url = url.strip()
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return None
+    # Escape double-quotes to prevent HTML attribute injection
+    # (used in unsafe_allow_html <a href="..."> contexts)
+    url = url.replace('"', "%22")
+    return url
 
 
 def format_date(timestamp: Optional[int]) -> str:

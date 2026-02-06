@@ -9,6 +9,7 @@ from datetime import datetime
 from database.db import ReleaseTrackerDB
 from api.audiobookshelf import AudiobookshelfAPI
 from api.openlibrary import OpenLibraryAPI
+from utils.helpers import sanitize_url
 
 
 def render_release_tracker_view(api: AudiobookshelfAPI, db: ReleaseTrackerDB):
@@ -56,8 +57,9 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
         for release in next_releases:
             with st.container():
                 title_text = release['book_title']
-                if release.get('link_url'):
-                    title_html = f'<a href="{release["link_url"]}" target="_blank" style="color: #4a9eff; text-decoration: none;">{title_text}</a>'
+                safe_link = sanitize_url(release.get('link_url'))
+                if safe_link:
+                    title_html = f'<a href="{safe_link}" target="_blank" style="color: #4a9eff; text-decoration: none;">{title_text}</a>'
                 else:
                     title_html = title_text
                 series_info = f" - {release['series_name']}" if release.get('series_name') else ""
@@ -123,8 +125,17 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
         sort_by=sort_map[sort_by]
     )
     
+    # Paginate releases
+    releases_per_page = 10
+    total_release_pages = max(1, -(-len(filtered_releases) // releases_per_page))
+    release_page = st.session_state.get("release_list_page", 1)
+    release_page = min(release_page, total_release_pages)
+    r_start = (release_page - 1) * releases_per_page
+    r_end = min(r_start + releases_per_page, len(filtered_releases))
+    page_releases = filtered_releases[r_start:r_end]
+
     # Display releases in a table-like format
-    for release in filtered_releases:
+    for release in page_releases:
         with st.expander(
             f"📖 {release['book_title']} - {format_release_date(release['release_date']) if release['release_date'] else 'TBD'}",
             expanded=st.session_state.get(f'edit_release_{release["id"]}', False)
@@ -181,6 +192,23 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
                         st.success("Release deleted!")
                         st.rerun()
 
+    # Pagination controls
+    if total_release_pages > 1:
+        nav_cols = st.columns([1, 2, 1])
+        with nav_cols[0]:
+            if st.button("Previous", disabled=release_page <= 1, key="release_prev"):
+                st.session_state["release_list_page"] = release_page - 1
+                st.rerun()
+        with nav_cols[1]:
+            st.markdown(
+                f"<div style='text-align:center;color:#a8a8a8;'>Page {release_page} of {total_release_pages}</div>",
+                unsafe_allow_html=True,
+            )
+        with nav_cols[2]:
+            if st.button("Next", disabled=release_page >= total_release_pages, key="release_next"):
+                st.session_state["release_list_page"] = release_page + 1
+                st.rerun()
+
 
 def render_add_tracking(api: AudiobookshelfAPI, db: ReleaseTrackerDB, ol_api: OpenLibraryAPI):
     """Add authors/series to track."""
@@ -206,26 +234,28 @@ def render_search_open_library(db: ReleaseTrackerDB, ol_api: OpenLibraryAPI):
     """Search and add books from Open Library."""
     
     st.markdown("Search the Open Library database for books to track")
-    
-    # Search form
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        search_query = st.text_input(
-            "Search for a book",
-            placeholder="e.g., Wind and Truth, Stormlight Archive, Brandon Sanderson",
-            help="Search by title, author, or series name"
-        )
-    
-    with col2:
-        search_type = st.selectbox(
-            "Search by",
-            ["General", "Author", "Title", "Series"],
-            help="Choose what you're searching for"
-        )
-    
-    # Search button
-    if st.button("🔍 Search", type="primary", disabled=not search_query):
+
+    # Search form — wrapped in st.form so reruns only happen on submit
+    with st.form("ol_search_form"):
+        col1, col2 = st.columns([2, 1])
+
+        with col1:
+            search_query = st.text_input(
+                "Search for a book",
+                placeholder="e.g., Wind and Truth, Stormlight Archive, Brandon Sanderson",
+                help="Search by title, author, or series name"
+            )
+
+        with col2:
+            search_type = st.selectbox(
+                "Search by",
+                ["General", "Author", "Title", "Series"],
+                help="Choose what you're searching for"
+            )
+
+        submitted = st.form_submit_button("Search", type="primary")
+
+    if submitted and search_query:
         with st.spinner("Searching Open Library..."):
             # Perform search based on type
             if search_type == "Author":
@@ -234,7 +264,7 @@ def render_search_open_library(db: ReleaseTrackerDB, ol_api: OpenLibraryAPI):
                 results = ol_api.search_books(title=search_query, limit=20)
             else:
                 results = ol_api.search_books(query=search_query, limit=20)
-            
+
             # Store results in session state
             st.session_state['ol_search_results'] = results
             st.session_state['search_query'] = search_query
@@ -502,9 +532,9 @@ def render_add_from_open_library_result(
                     release_date=release_date.isoformat() if release_date else None,
                     release_date_confirmed=date_confirmed,
                     book_number=book_number if book_number else None,
-                    link_url=link_url if link_url else None,
-                    goodreads_url=goodreads_url if goodreads_url else None,
-                    amazon_url=amazon_url if amazon_url else None,
+                    link_url=sanitize_url(link_url),
+                    goodreads_url=sanitize_url(goodreads_url),
+                    amazon_url=sanitize_url(amazon_url),
                     notes=notes if notes else None,
                     source="openlibrary"
                 )
@@ -692,9 +722,9 @@ def render_manual_add(db: ReleaseTrackerDB):
                     release_date=release_date.isoformat() if release_date else None,
                     release_date_confirmed=date_confirmed,
                     book_number=book_number,
-                    link_url=link_url if link_url else None,
-                    goodreads_url=goodreads_url if goodreads_url else None,
-                    amazon_url=amazon_url if amazon_url else None,
+                    link_url=sanitize_url(link_url),
+                    goodreads_url=sanitize_url(goodreads_url),
+                    amazon_url=sanitize_url(amazon_url),
                     notes=notes if notes else None
                 )
                 
@@ -821,9 +851,9 @@ def show_edit_release_form(db: ReleaseTrackerDB, release: Dict[str, Any]):
                 release_date=release_date.isoformat() if release_date else None,
                 release_date_confirmed=int(date_confirmed),
                 book_number=book_number if book_number else None,
-                link_url=link_url if link_url else None,
-                goodreads_url=goodreads_url if goodreads_url else None,
-                amazon_url=amazon_url if amazon_url else None,
+                link_url=sanitize_url(link_url),
+                goodreads_url=sanitize_url(goodreads_url),
+                amazon_url=sanitize_url(amazon_url),
                 notes=notes if notes else None
             )
             st.success("Release updated!")
@@ -894,7 +924,7 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
                 author_id=author['id'],
                 release_date=release_date.isoformat() if release_date else None,
                 release_date_confirmed=date_confirmed,
-                link_url=link_url if link_url else None,
+                link_url=sanitize_url(link_url),
                 notes=notes if notes else None,
             )
             st.session_state.pop('manage_add_release_author', None)

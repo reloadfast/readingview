@@ -6,6 +6,7 @@ and a Year in Recap feature.
 import streamlit as st
 from typing import Dict, Any, List
 from api.audiobookshelf import AudiobookshelfAPI
+from config.config import config
 from utils.helpers import (
     get_finished_books,
     group_finished_by_month,
@@ -17,13 +18,25 @@ from datetime import datetime
 from collections import Counter
 
 
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_listening_stats(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    return api.get_user_listening_stats()
+
+
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_progress_map(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    return api.get_media_progress_map()
+
+
 def render_statistics_view(api: AudiobookshelfAPI):
     """Render the statistics view with charts, book breakdowns, and Year in Recap."""
     st.markdown("### Statistics")
 
     with st.spinner("Loading statistics..."):
-        listening_stats = api.get_user_listening_stats()
-        progress_map = api.get_media_progress_map()
+        listening_stats = _fetch_listening_stats(api.base_url, api.token)
+        progress_map = _fetch_progress_map(api.base_url, api.token)
 
     if not listening_stats and not progress_map:
         st.info("No listening data available yet. Start listening to build your statistics!")
@@ -159,9 +172,35 @@ def _render_monthly_breakdown(
 # Book list rendering (shared)
 # ---------------------------------------------------------------------------
 
-def _render_book_list(books: List[Dict[str, Any]], api: AudiobookshelfAPI):
+def _render_book_list(books: List[Dict[str, Any]], api: AudiobookshelfAPI, page_size: int = 10):
     """Render a list of finished books with cover, title, author, and dates."""
-    for book in books:
+    if len(books) > page_size:
+        page_key = f"stats_bl_{id(books)}"
+        total_pages = max(1, -(-len(books) // page_size))
+        page = st.session_state.get(page_key, 1)
+        page = min(page, total_pages)
+        start = (page - 1) * page_size
+        visible = books[start:start + page_size]
+
+        if total_pages > 1:
+            nav_cols = st.columns([1, 2, 1])
+            with nav_cols[0]:
+                if st.button("Previous", disabled=page <= 1, key=f"{page_key}_prev"):
+                    st.session_state[page_key] = page - 1
+                    st.rerun()
+            with nav_cols[1]:
+                st.markdown(
+                    f"<div style='text-align:center;color:#a8a8a8;'>Page {page}/{total_pages}</div>",
+                    unsafe_allow_html=True,
+                )
+            with nav_cols[2]:
+                if st.button("Next", disabled=page >= total_pages, key=f"{page_key}_next"):
+                    st.session_state[page_key] = page + 1
+                    st.rerun()
+    else:
+        visible = books
+
+    for book in visible:
         col_cover, col_info = st.columns([1, 4])
         with col_cover:
             cover_url = api.get_cover_url(book['library_item_id'])

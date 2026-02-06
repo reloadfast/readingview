@@ -71,3 +71,9 @@ setup_github.sh
 
 # Claude requirements
 CLAUDE.md
+
+# Internal roadmap
+ROADMAP.md
+
+# Setup guide (local only)
+GITHUB_ACTIONS_SETUP.md

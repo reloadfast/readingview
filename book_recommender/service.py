@@ -124,8 +124,7 @@ def recommend(
     if not liked_book_ids and not free_text_prompt:
         return []
 
-    # Ensure all embeddings are up-to-date and index is fresh
-    _embed_stale_books()
+    # Rebuild index if embeddings changed (embedding happens at ingest time)
     _rebuild_index_if_needed()
 
     query_vector = _compute_query_vector(liked_book_ids, free_text_prompt)
@@ -244,6 +243,8 @@ def ingest(
     Ingest a book into the recommender database.
 
     Provide one of: isbn, title (+optional author), or work_key.
+    Embeddings are computed immediately after ingestion so that
+    subsequent recommend() calls stay fast.
 
     Returns:
         The book_id of the ingested book, or None on failure.
@@ -253,11 +254,15 @@ def ingest(
     """
     _ensure_initialized()
 
+    book_id = None
     if work_key:
-        return _ingester.ingest_by_work_key(work_key)
-    if isbn:
-        return _ingester.ingest_by_isbn(isbn)
-    if title:
-        return _ingester.ingest_by_title(title, author)
+        book_id = _ingester.ingest_by_work_key(work_key)
+    elif isbn:
+        book_id = _ingester.ingest_by_isbn(isbn)
+    elif title:
+        book_id = _ingester.ingest_by_title(title, author)
 
-    return None
+    if book_id is not None:
+        _embed_stale_books()
+
+    return book_id
