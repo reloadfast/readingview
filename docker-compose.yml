@@ -16,6 +16,11 @@ services:
       - CACHE_TTL=${CACHE_TTL:-300}
       - ITEMS_PER_ROW=${ITEMS_PER_ROW:-5}
       - THEME=${THEME:-dark}
+
+      # Optional: Notifications (via Apprise)
+      - ENABLE_NOTIFICATIONS=${ENABLE_NOTIFICATIONS:-false}
+      - APPRISE_API_URL=${APPRISE_API_URL:-}
+      - APPRISE_NOTIFICATION_KEY=${APPRISE_NOTIFICATION_KEY:-}
     volumes:
       - ./data:/app/data
     restart: unless-stopped
