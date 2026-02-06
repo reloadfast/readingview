@@ -1,0 +1,93 @@
+"""UI component for the book recommender tab."""
+
+import streamlit as st
+
+
+def render_recommendations_view():
+    """Render the Recommendations tab."""
+    import book_recommender
+    from book_recommender._config import get_config
+    from book_recommender._exceptions import BookRecommenderConfigError
+
+    st.header("Book Recommendations")
+
+    cfg = get_config()
+    is_valid, error = cfg.validate()
+    if not is_valid:
+        st.error(f"Recommender misconfigured: {error}")
+        return
+
+    # Check Ollama connectivity
+    try:
+        from book_recommender._ollama import OllamaClient
+        client = OllamaClient(cfg.ollama_url, cfg.embed_model, cfg.llm_model)
+        if not client.is_available():
+            st.warning(
+                f"Ollama is not reachable at {cfg.ollama_url}. "
+                "Recommendations require a running Ollama instance."
+            )
+    except Exception:
+        pass
+
+    # --- Ingest section ---
+    with st.expander("Add Books to Catalog", expanded=False):
+        st.markdown("Add books so the recommender has a catalog to search through.")
+        col1, col2 = st.columns(2)
+        with col1:
+            isbn_input = st.text_input("ISBN", key="rec_isbn")
+            if st.button("Ingest by ISBN", key="rec_isbn_btn") and isbn_input:
+                with st.spinner("Fetching metadata..."):
+                    try:
+                        book_id = book_recommender.ingest(isbn=isbn_input)
+                        if book_id:
+                            st.success(f"Ingested: {book_id}")
+                        else:
+                            st.warning("No results found for that ISBN.")
+                    except BookRecommenderConfigError as e:
+                        st.error(str(e))
+        with col2:
+            title_input = st.text_input("Title", key="rec_title")
+            author_input = st.text_input("Author (optional)", key="rec_author")
+            if st.button("Ingest by Title", key="rec_title_btn") and title_input:
+                with st.spinner("Fetching metadata..."):
+                    try:
+                        book_id = book_recommender.ingest(
+                            title=title_input,
+                            author=author_input or None,
+                        )
+                        if book_id:
+                            st.success(f"Ingested: {book_id}")
+                        else:
+                            st.warning("No results found.")
+                    except BookRecommenderConfigError as e:
+                        st.error(str(e))
+
+    st.markdown("---")
+
+    # --- Recommend section ---
+    st.subheader("Get Recommendations")
+
+    prompt_input = st.text_area(
+        "Describe what you're looking for",
+        placeholder="e.g., epic fantasy with complex magic systems and political intrigue",
+        key="rec_prompt",
+    )
+
+    if st.button("Recommend", key="rec_go"):
+        if not prompt_input.strip():
+            st.info("Enter a description of what you'd like to read.")
+            return
+        with st.spinner("Generating recommendations..."):
+            results = book_recommender.recommend(free_text_prompt=prompt_input)
+        if not results:
+            st.info("No recommendations found. Try adding more books to the catalog first.")
+        else:
+            for rec in results:
+                with st.container():
+                    st.markdown(f"**{rec['title']}** — {', '.join(rec.get('authors', []))}")
+                    if rec.get("description"):
+                        st.caption(rec["description"][:300] + ("..." if len(rec["description"] or "") > 300 else ""))
+                    st.progress(min(rec["score"], 1.0), text=f"Score: {rec['score']:.2f}")
+                    if rec.get("explanation"):
+                        st.markdown(f"*{rec['explanation']}*")
+                    st.markdown("---")

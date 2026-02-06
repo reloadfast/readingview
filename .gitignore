@@ -66,3 +66,7 @@ setup_github.sh
 
 # Runtime database
 *.db
+
+
+# Claude requirements
+CLAUDE.md

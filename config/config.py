@@ -45,6 +45,11 @@ class Config:
         os.getenv("ENABLE_NOTIFICATIONS", "false").lower() == "true"
     )
 
+    # Book Recommender
+    BOOK_RECOMMENDER_ENABLED: bool = (
+        os.getenv("BOOK_RECOMMENDER_ENABLED", "false").lower() == "true"
+    )
+
     @classmethod
     def validate(cls) -> tuple[bool, Optional[str]]:
         """
@@ -74,6 +79,11 @@ class Config:
         return bool(cls.APPRISE_API_URL and cls.ENABLE_NOTIFICATIONS)
 
     @classmethod
+    def has_book_recommender(cls) -> bool:
+        """Check if the book recommender feature is enabled."""
+        return cls.BOOK_RECOMMENDER_ENABLED
+
+    @classmethod
     def reload(cls):
         """Reload configuration from .env file."""
         load_dotenv(dotenv_path=env_path, override=True)
@@ -93,6 +103,9 @@ class Config:
         cls.DB_PATH = os.getenv("DB_PATH", "/app/data/release_tracker.db")
         cls.ENABLE_NOTIFICATIONS = (
             os.getenv("ENABLE_NOTIFICATIONS", "false").lower() == "true"
+        )
+        cls.BOOK_RECOMMENDER_ENABLED = (
+            os.getenv("BOOK_RECOMMENDER_ENABLED", "false").lower() == "true"
         )
 
 

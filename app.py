@@ -16,6 +16,7 @@ from components.authors import render_authors_view
 from components.notifications import render_notification_settings, render_notification_status_badge
 from database.db import ReleaseTrackerDB
 from utils.helpers import display_error
+from components.recommendations import render_recommendations_view
 
 
 # Page configuration
@@ -243,29 +244,44 @@ def main():
     if db:
         render_notification_status_badge()
 
-    # Navigation tabs
+    # Build tab list dynamically
+    tab_names = ["📚 Library", "📊 Statistics", "👤 Authors"]
     if config.ENABLE_RELEASE_TRACKER and db:
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(
-            ["📚 Library", "📊 Statistics", "👤 Authors", "📅 Release Tracker", "🔔 Notifications"]
-        )
-        with tab1:
-            render_library_view(api)
-        with tab2:
-            render_statistics_view(api)
-        with tab3:
+        tab_names.append("📅 Release Tracker")
+        tab_names.append("🔔 Notifications")
+    if config.has_book_recommender():
+        tab_names.append("💡 Recommendations")
+
+    tabs = st.tabs(tab_names)
+    tab_index = 0
+
+    with tabs[tab_index]:
+        render_library_view(api)
+    tab_index += 1
+
+    with tabs[tab_index]:
+        render_statistics_view(api)
+    tab_index += 1
+
+    with tabs[tab_index]:
+        if config.ENABLE_RELEASE_TRACKER and db:
             render_authors_view(api, db)
-        with tab4:
-            render_release_tracker_view(api, db)
-        with tab5:
-            render_notification_settings(db)
-    else:
-        tab1, tab2, tab3 = st.tabs(["📚 Library", "📊 Statistics", "👤 Authors"])
-        with tab1:
-            render_library_view(api)
-        with tab2:
-            render_statistics_view(api)
-        with tab3:
+        else:
             render_authors_view(api)
+    tab_index += 1
+
+    if config.ENABLE_RELEASE_TRACKER and db:
+        with tabs[tab_index]:
+            render_release_tracker_view(api, db)
+        tab_index += 1
+        with tabs[tab_index]:
+            render_notification_settings(db)
+        tab_index += 1
+
+    if config.has_book_recommender():
+        with tabs[tab_index]:
+            render_recommendations_view()
+        tab_index += 1
 
     # Switch to Authors tab when navigating from Library
     if st.session_state.pop("navigate_to_authors", False):
