@@ -70,87 +70,76 @@ def group_sessions_by_month(sessions: List[Dict[str, Any]]) -> Dict[str, List[Di
     return dict(grouped)
 
 
-def calculate_completion_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
+def get_finished_books(
+    progress_map: Dict[str, Dict[str, Any]],
+    stats_items: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """
-    Calculate completion statistics from listening sessions.
-    
+    Build list of finished books with metadata.
+
+    Joins mediaProgress (from /api/me) with listening-stats items
+    (from /api/me/listening-stats) to get both completion dates and
+    book metadata.
+
     Args:
-        sessions: List of session objects
-        
+        progress_map: Dict mapping libraryItemId to progress data
+        stats_items: The 'items' dict from listening-stats endpoint
+
     Returns:
-        Statistics dictionary
+        List of finished book dicts sorted by finishedAt ascending
     """
-    completed_books = set()
-    total_time = 0
-    
-    for session in sessions:
-        if session.get('mediaProgress', {}).get('isFinished'):
-            completed_books.add(session.get('libraryItemId'))
-        total_time += session.get('timeListening', 0)
-    
-    return {
-        'total_completed': len(completed_books),
-        'total_time_seconds': total_time,
-        'total_time_hours': total_time / 3600
-    }
+    finished: List[Dict[str, Any]] = []
+
+    for lib_item_id, progress in progress_map.items():
+        if not progress.get('isFinished'):
+            continue
+
+        stats_item = stats_items.get(lib_item_id, {})
+        metadata = stats_item.get('mediaMetadata', {})
+
+        authors = metadata.get('authors', [])
+        author_str = ', '.join(a.get('name', '') for a in authors) if authors else 'Unknown Author'
+
+        finished.append({
+            'library_item_id': lib_item_id,
+            'title': metadata.get('title', 'Unknown Title'),
+            'author': author_str,
+            'series': metadata.get('series', []),
+            'narrator': ', '.join(metadata.get('narrators', [])),
+            'finished_at': progress.get('finishedAt'),
+            'started_at': progress.get('startedAt'),
+            'duration': progress.get('duration', 0),
+            'time_listening': stats_item.get('timeListening', 0),
+        })
+
+    finished.sort(key=lambda x: x.get('finished_at') or 0)
+    return finished
 
 
-def get_monthly_completion_counts(sessions: List[Dict[str, Any]]) -> Dict[str, int]:
-    """
-    Get count of completed books per month.
-    
-    Args:
-        sessions: List of session objects
-        
-    Returns:
-        Dictionary with month keys and completion counts
-    """
-    monthly_counts = defaultdict(int)
-    completed_books_by_month = defaultdict(set)
-    
-    for session in sessions:
-        if session.get('mediaProgress', {}).get('isFinished'):
-            timestamp = session.get('finishedAt') or session.get('updatedAt')
-            if timestamp:
-                dt = datetime.fromtimestamp(timestamp / 1000)
-                month_key = dt.strftime("%Y-%m")
-                book_id = session.get('libraryItemId')
-                completed_books_by_month[month_key].add(book_id)
-    
-    # Convert sets to counts
-    for month, books in completed_books_by_month.items():
-        monthly_counts[month] = len(books)
-    
-    return dict(monthly_counts)
+def group_finished_by_month(
+    finished_books: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Group finished books by month (YYYY-MM key)."""
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for book in finished_books:
+        ts = book.get('finished_at')
+        if ts:
+            dt = datetime.fromtimestamp(ts / 1000)
+            grouped[dt.strftime("%Y-%m")].append(book)
+    return dict(sorted(grouped.items()))
 
 
-def get_yearly_completion_counts(sessions: List[Dict[str, Any]]) -> Dict[str, int]:
-    """
-    Get count of completed books per year.
-    
-    Args:
-        sessions: List of session objects
-        
-    Returns:
-        Dictionary with year keys and completion counts
-    """
-    yearly_counts = defaultdict(int)
-    completed_books_by_year = defaultdict(set)
-    
-    for session in sessions:
-        if session.get('mediaProgress', {}).get('isFinished'):
-            timestamp = session.get('finishedAt') or session.get('updatedAt')
-            if timestamp:
-                dt = datetime.fromtimestamp(timestamp / 1000)
-                year_key = str(dt.year)
-                book_id = session.get('libraryItemId')
-                completed_books_by_year[year_key].add(book_id)
-    
-    # Convert sets to counts
-    for year, books in completed_books_by_year.items():
-        yearly_counts[year] = len(books)
-    
-    return dict(yearly_counts)
+def group_finished_by_year(
+    finished_books: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Group finished books by year."""
+    grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    for book in finished_books:
+        ts = book.get('finished_at')
+        if ts:
+            dt = datetime.fromtimestamp(ts / 1000)
+            grouped[str(dt.year)].append(book)
+    return dict(sorted(grouped.items()))
 
 
 @st.cache_data(ttl=300)

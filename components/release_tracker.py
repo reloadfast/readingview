@@ -4,8 +4,8 @@ Now with Open Library integration for automatic book lookup!
 """
 
 import streamlit as st
-from typing import Dict, Any, List, Optional
-from datetime import datetime, date
+from typing import Dict, Any, Optional
+from datetime import datetime
 from database.db import ReleaseTrackerDB
 from api.audiobookshelf import AudiobookshelfAPI
 from api.openlibrary import OpenLibraryAPI
@@ -55,34 +55,38 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
         
         for release in next_releases:
             with st.container():
-                st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); 
-                                border-radius: 12px; padding: 20px; margin-bottom: 16px;
-                                border: 2px solid #4a9eff;">
-                        <h3 style="color: #4a9eff; margin-bottom: 8px;">
-                            {release['book_title']}
-                        </h3>
-                        <p style="color: #a8a8a8; margin-bottom: 4px;">
-                            by {release['author_name']}
-                            {f" - {release['series_name']}" if release['series_name'] else ""}
-                            {f" #{release['book_number']}" if release['book_number'] else ""}
-                        </p>
-                        <p style="color: #e8e8e8; font-size: 18px; margin-bottom: 4px;">
-                            📅 {format_release_date(release['release_date'])}
-                            {' ✓' if release['release_date_confirmed'] else ' (tentative)'}
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                title_text = release['book_title']
+                if release.get('link_url'):
+                    title_html = f'<a href="{release["link_url"]}" target="_blank" style="color: #4a9eff; text-decoration: none;">{title_text}</a>'
+                else:
+                    title_html = title_text
+                series_info = f" - {release['series_name']}" if release.get('series_name') else ""
+                book_num = f" #{release['book_number']}" if release.get('book_number') else ""
+                date_text = format_release_date(release['release_date'])
+                confirmed = ' ✓' if release.get('release_date_confirmed') else ' (tentative)'
+                st.markdown(
+                    f'<div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 2px solid #4a9eff;">'
+                    f'<h3 style="color: #4a9eff; margin-bottom: 8px;">{title_html}</h3>'
+                    f'<p style="color: #a8a8a8; margin-bottom: 4px;">by {release["author_name"]}{series_info}{book_num}</p>'
+                    f'<p style="color: #e8e8e8; font-size: 18px; margin-bottom: 4px;">📅 {date_text}{confirmed}</p>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+
                 # Action buttons
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    if release.get('goodreads_url'):
-                        st.link_button("Goodreads", release['goodreads_url'])
-                with col2:
-                    if release.get('amazon_url'):
-                        st.link_button("Amazon", release['amazon_url'])
-                with col3:
+                link_cols = []
+                if release.get('link_url'):
+                    link_cols.append(('link_url', 'Book Page', release['link_url']))
+                if release.get('goodreads_url'):
+                    link_cols.append(('goodreads', 'Goodreads', release['goodreads_url']))
+                if release.get('amazon_url'):
+                    link_cols.append(('amazon', 'Amazon', release['amazon_url']))
+
+                btn_cols = st.columns(max(len(link_cols) + 1, 3))
+                for i, (_, label, url) in enumerate(link_cols):
+                    with btn_cols[i]:
+                        st.link_button(label, url)
+                with btn_cols[-1]:
                     if st.button("Edit", key=f"edit_next_{release['id']}"):
                         st.session_state[f'edit_release_{release["id"]}'] = True
         
@@ -125,45 +129,57 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
             f"📖 {release['book_title']} - {format_release_date(release['release_date']) if release['release_date'] else 'TBD'}",
             expanded=st.session_state.get(f'edit_release_{release["id"]}', False)
         ):
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown(f"**Author:** {release['author_name']}")
-                if release['series_name']:
-                    book_num = f"#{release['book_number']}" if release['book_number'] else ""
-                    st.markdown(f"**Series:** {release['series_name']} {book_num}")
-                if release['notes']:
-                    st.markdown(f"**Notes:** {release['notes']}")
-            
-            with col2:
-                if release['release_date']:
-                    st.markdown(f"**Release:** {format_release_date(release['release_date'])}")
-                    if release['release_date_confirmed']:
-                        st.markdown("✅ Confirmed")
-                    else:
-                        st.markdown("⚠️ Tentative")
-            
-            # Links
-            if release.get('goodreads_url') or release.get('amazon_url'):
-                st.markdown("**Links:**")
-                lcol1, lcol2 = st.columns(2)
-                with lcol1:
-                    if release.get('goodreads_url'):
-                        st.link_button("📚 Goodreads", release['goodreads_url'], use_container_width=True)
-                with lcol2:
-                    if release.get('amazon_url'):
-                        st.link_button("🛒 Amazon", release['amazon_url'], use_container_width=True)
-            
-            # Edit/Delete buttons
-            ecol1, ecol2 = st.columns(2)
-            with ecol1:
-                if st.button("✏️ Edit", key=f"edit_btn_{release['id']}", use_container_width=True):
-                    show_edit_release_form(db, release)
-            with ecol2:
-                if st.button("🗑️ Delete", key=f"delete_{release['id']}", use_container_width=True):
-                    db.delete_release(release['id'])
-                    st.success("Release deleted!")
-                    st.rerun()
+            # Check if we should show the edit form
+            if st.session_state.get(f'edit_release_{release["id"]}'):
+                show_edit_release_form(db, release)
+            else:
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
+                    if release.get('link_url'):
+                        st.markdown(f"**Title:** [{release['book_title']}]({release['link_url']})")
+                    st.markdown(f"**Author:** {release['author_name']}")
+                    if release.get('series_name'):
+                        book_num = f"#{release['book_number']}" if release.get('book_number') else ""
+                        st.markdown(f"**Series:** {release['series_name']} {book_num}")
+                    if release.get('notes'):
+                        st.markdown(f"**Notes:** {release['notes']}")
+
+                with col2:
+                    if release.get('release_date'):
+                        st.markdown(f"**Release:** {format_release_date(release['release_date'])}")
+                        if release.get('release_date_confirmed'):
+                            st.markdown("Confirmed")
+                        else:
+                            st.markdown("Tentative")
+
+                # Links
+                link_items = []
+                if release.get('link_url'):
+                    link_items.append(('Book Page', release['link_url']))
+                if release.get('goodreads_url'):
+                    link_items.append(('Goodreads', release['goodreads_url']))
+                if release.get('amazon_url'):
+                    link_items.append(('Amazon', release['amazon_url']))
+
+                if link_items:
+                    st.markdown("**Links:**")
+                    lcols = st.columns(len(link_items))
+                    for i, (label, url) in enumerate(link_items):
+                        with lcols[i]:
+                            st.link_button(label, url, use_container_width=True)
+
+                # Edit/Delete buttons
+                ecol1, ecol2 = st.columns(2)
+                with ecol1:
+                    if st.button("Edit", key=f"edit_btn_{release['id']}", use_container_width=True):
+                        st.session_state[f'edit_release_{release["id"]}'] = True
+                        st.rerun()
+                with ecol2:
+                    if st.button("Delete", key=f"delete_{release['id']}", use_container_width=True):
+                        db.delete_release(release['id'])
+                        st.success("Release deleted!")
+                        st.rerun()
 
 
 def render_add_tracking(api: AudiobookshelfAPI, db: ReleaseTrackerDB, ol_api: OpenLibraryAPI):
@@ -413,7 +429,7 @@ def render_add_from_open_library_result(
         book_title = st.text_input(
             "Book Title",
             value=book_info['title']
-        )
+        ) or book_info['title']
         
         # Release information
         col1, col2 = st.columns(2)
@@ -430,16 +446,17 @@ def render_add_from_open_library_result(
             )
         
         # Links
-        ol_url = st.text_input(
-            "Open Library URL",
-            value=f"https://openlibrary.org{book_info['work_key']}"
+        link_url = st.text_input(
+            "Book Link URL",
+            value=f"https://openlibrary.org{book_info['work_key']}",
+            help="Clicking the book title will open this URL"
         )
-        
+
         goodreads_url = st.text_input(
             "Goodreads URL (optional)",
             placeholder="https://www.goodreads.com/book/show/..."
         )
-        
+
         amazon_url = st.text_input(
             "Amazon URL (optional)",
             placeholder="https://www.amazon.com/..."
@@ -459,34 +476,38 @@ def render_add_from_open_library_result(
             cancelled = st.form_submit_button("❌ Cancel")
         
         if submitted:
-            # Add author if new
+            # Resolve author ID
+            resolved_author_id: Optional[int] = author_id
             if new_author:
-                author_id = db.add_tracked_author(
+                resolved_author_id = db.add_tracked_author(
                     new_author,
                     book_info['author_keys'][0] if book_info['author_keys'] else None
                 )
-            
-            # Add series if new
-            if use_series and series_name and not series_id:
-                author_id_for_series = author_id if author_id else \
-                    next((a['id'] for a in existing_authors if a['author_name'] == author_choice), None)
-                if author_id_for_series:
-                    series_id = db.add_tracked_series(series_name, author_id_for_series)
-            
-            # Add release
-            db.add_release(
-                book_title=book_title,
-                author_id=author_id if author_id else \
-                    next((a['id'] for a in existing_authors if a['author_name'] == author_choice), None),
-                series_id=series_id if use_series else None,
-                release_date=release_date.isoformat() if release_date else None,
-                release_date_confirmed=date_confirmed,
-                book_number=book_number if book_number else None,
-                goodreads_url=goodreads_url if goodreads_url else None,
-                amazon_url=amazon_url if amazon_url else None,
-                notes=notes if notes else None,
-                source="openlibrary"
-            )
+            if not resolved_author_id:
+                resolved_author_id = next(
+                    (a['id'] for a in existing_authors if a['author_name'] == author_choice), None
+                )
+            if not resolved_author_id:
+                st.error("Could not resolve author.")
+            else:
+                # Add series if new
+                if use_series and series_name and not series_id:
+                    series_id = db.add_tracked_series(series_name, resolved_author_id)
+
+                # Add release
+                db.add_release(
+                    book_title=book_title,
+                    author_id=resolved_author_id,
+                    series_id=series_id if use_series else None,
+                    release_date=release_date.isoformat() if release_date else None,
+                    release_date_confirmed=date_confirmed,
+                    book_number=book_number if book_number else None,
+                    link_url=link_url if link_url else None,
+                    goodreads_url=goodreads_url if goodreads_url else None,
+                    amazon_url=amazon_url if amazon_url else None,
+                    notes=notes if notes else None,
+                    source="openlibrary"
+                )
             
             st.success(f"✅ Added '{book_title}' to tracker!")
             # Clear the form state
@@ -603,8 +624,9 @@ def render_manual_add(db: ReleaseTrackerDB):
         # Series (optional)
         use_series = st.checkbox("Part of a series?")
         series_id = None
+        series_name: Optional[str] = None
         book_number = None
-        
+
         if use_series:
             existing_series: list[Dict[str, Any]] = []
             if author_id:
@@ -620,7 +642,7 @@ def render_manual_add(db: ReleaseTrackerDB):
             else:
                 series_name = series_choice
                 series_id = next((s['id'] for s in existing_series if s['series_name'] == series_name), None)
-            
+
             book_number = st.text_input("Book Number", placeholder="e.g., 5")
         
         # Book details
@@ -643,33 +665,34 @@ def render_manual_add(db: ReleaseTrackerDB):
             date_confirmed = st.checkbox("Date Confirmed?")
         
         # Links
+        link_url = st.text_input("Book Link URL (optional)", placeholder="https://...", help="Clicking the book title will open this URL")
         goodreads_url = st.text_input("Goodreads URL (optional)", placeholder="https://www.goodreads.com/book/show/...")
         amazon_url = st.text_input("Amazon URL (optional)", placeholder="https://www.amazon.com/...")
-        
+
         notes = st.text_area("Notes (optional)", placeholder="Additional information...")
-        
+
         submitted = st.form_submit_button("Add Release", type="primary")
-        
+
         if submitted:
             if not author_name or not book_title:
                 st.error("Author name and book title are required!")
             else:
                 # Add author if new
-                if not author_id:
-                    author_id = db.add_tracked_author(author_name)
-                
+                resolved_author_id: int = author_id if author_id else db.add_tracked_author(author_name)
+
                 # Add series if new
                 if use_series and series_name and not series_id:
-                    series_id = db.add_tracked_series(series_name, author_id)
-                
+                    series_id = db.add_tracked_series(series_name, resolved_author_id)
+
                 # Add release
                 db.add_release(
                     book_title=book_title,
-                    author_id=author_id,
+                    author_id=resolved_author_id,
                     series_id=series_id if use_series else None,
                     release_date=release_date.isoformat() if release_date else None,
                     release_date_confirmed=date_confirmed,
                     book_number=book_number,
+                    link_url=link_url if link_url else None,
                     goodreads_url=goodreads_url if goodreads_url else None,
                     amazon_url=amazon_url if amazon_url else None,
                     notes=notes if notes else None
@@ -721,7 +744,29 @@ def render_manage_tracking(db: ReleaseTrackerDB):
             # Get releases for this author
             releases = db.get_upcoming_releases(author_id=author['id'])
             if releases:
-                st.markdown(f"**Upcoming Releases:** {len(releases)}")
+                st.markdown(f"**Tracked Releases ({len(releases)}):**")
+                for rel in releases:
+                    r_col1, r_col2, r_col3 = st.columns([3, 1, 1])
+                    with r_col1:
+                        title_display = rel['book_title']
+                        if rel.get('link_url'):
+                            title_display = f"[{title_display}]({rel['link_url']})"
+                        date_display = format_release_date(rel['release_date']) if rel.get('release_date') else 'TBD'
+                        st.markdown(f"{title_display} — {date_display}")
+                    with r_col2:
+                        if st.button("Edit", key=f"manage_edit_rel_{rel['id']}", use_container_width=True):
+                            st.session_state[f'manage_edit_release_{rel["id"]}'] = True
+                            st.rerun()
+                    with r_col3:
+                        if st.button("Delete", key=f"manage_del_rel_{rel['id']}", use_container_width=True):
+                            db.delete_release(rel['id'])
+                            st.success(f"Deleted '{rel['book_title']}'")
+                            st.rerun()
+                    # Inline edit form
+                    if st.session_state.get(f'manage_edit_release_{rel["id"]}'):
+                        show_edit_release_form(db, rel)
+            else:
+                st.markdown("*No releases tracked yet.*")
 
             # Add release for this author
             if st.button(
@@ -749,32 +794,45 @@ def show_edit_release_form(db: ReleaseTrackerDB, release: Dict[str, Any]):
     
     with st.form(f"edit_form_{release['id']}"):
         book_title = st.text_input("Book Title", value=release['book_title'])
-        
+
         col1, col2 = st.columns(2)
         with col1:
             current_date = datetime.strptime(release['release_date'], '%Y-%m-%d').date() if release['release_date'] else None
             release_date = st.date_input("Release Date", value=current_date)
         with col2:
             date_confirmed = st.checkbox("Confirmed?", value=bool(release['release_date_confirmed']))
-        
-        book_number = st.text_input("Book Number", value=release['book_number'] or "")
-        goodreads_url = st.text_input("Goodreads URL", value=release['goodreads_url'] or "")
-        amazon_url = st.text_input("Amazon URL", value=release['amazon_url'] or "")
-        notes = st.text_area("Notes", value=release['notes'] or "")
-        
-        if st.form_submit_button("Update Release"):
+
+        book_number = st.text_input("Book Number", value=release.get('book_number') or "")
+        link_url = st.text_input("Book Link URL", value=release.get('link_url') or "", help="Clicking the book title will open this URL")
+        goodreads_url = st.text_input("Goodreads URL", value=release.get('goodreads_url') or "")
+        amazon_url = st.text_input("Amazon URL", value=release.get('amazon_url') or "")
+        notes = st.text_area("Notes", value=release.get('notes') or "")
+
+        col_save, col_cancel = st.columns(2)
+        with col_save:
+            save_clicked = st.form_submit_button("Update Release", type="primary")
+        with col_cancel:
+            cancel_clicked = st.form_submit_button("Cancel")
+
+        if save_clicked:
             db.update_release(
                 release['id'],
                 book_title=book_title,
                 release_date=release_date.isoformat() if release_date else None,
                 release_date_confirmed=int(date_confirmed),
                 book_number=book_number if book_number else None,
+                link_url=link_url if link_url else None,
                 goodreads_url=goodreads_url if goodreads_url else None,
                 amazon_url=amazon_url if amazon_url else None,
                 notes=notes if notes else None
             )
             st.success("Release updated!")
             st.session_state[f'edit_release_{release["id"]}'] = False
+            st.session_state.pop(f'manage_edit_release_{release["id"]}', None)
+            st.rerun()
+        if cancel_clicked:
+            st.session_state[f'edit_release_{release["id"]}'] = False
+            st.session_state.pop(f'manage_edit_release_{release["id"]}', None)
             st.rerun()
 
 
@@ -802,7 +860,7 @@ def format_release_date(date_str: Optional[str]) -> str:
             return f"{formatted} (In {days_until} days)"
         else:
             return formatted
-    except:
+    except (ValueError, TypeError):
         return date_str
 
 
@@ -821,6 +879,7 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
         with col2:
             date_confirmed = st.checkbox("Confirmed?", key=f"qa_conf_{author['id']}")
 
+        link_url = st.text_input("Book Link URL (optional)", key=f"qa_link_{author['id']}")
         notes = st.text_input("Notes (optional)", key=f"qa_notes_{author['id']}")
 
         col_sub, col_cancel = st.columns(2)
@@ -835,6 +894,7 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
                 author_id=author['id'],
                 release_date=release_date.isoformat() if release_date else None,
                 release_date_confirmed=date_confirmed,
+                link_url=link_url if link_url else None,
                 notes=notes if notes else None,
             )
             st.session_state.pop('manage_add_release_author', None)

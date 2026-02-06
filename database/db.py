@@ -154,7 +154,7 @@ class ReleaseTrackerDB:
             """
             SELECT r.id, r.book_title, a.author_name, s.series_name,
                    r.book_number, r.release_date, r.release_date_confirmed,
-                   r.goodreads_url, r.amazon_url, r.notes
+                   r.link_url, r.goodreads_url, r.amazon_url, r.notes
             FROM releases r
             JOIN tracked_authors a ON r.author_id = a.id
             LEFT JOIN tracked_series s ON r.series_id = s.id
@@ -174,6 +174,7 @@ class ReleaseTrackerDB:
         release_date: Optional[str] = None,
         release_date_confirmed: bool = False,
         book_number: Optional[str] = None,
+        link_url: Optional[str] = None,
         goodreads_url: Optional[str] = None,
         amazon_url: Optional[str] = None,
         notes: Optional[str] = None,
@@ -184,12 +185,12 @@ class ReleaseTrackerDB:
             """
             INSERT INTO releases
                 (book_title, author_id, series_id, release_date, release_date_confirmed,
-                 book_number, goodreads_url, amazon_url, notes, source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 book_number, link_url, goodreads_url, amazon_url, notes, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 book_title, author_id, series_id, release_date,
-                int(release_date_confirmed), book_number,
+                int(release_date_confirmed), book_number, link_url,
                 goodreads_url, amazon_url, notes, source,
             ),
         )

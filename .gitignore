@@ -39,6 +39,7 @@ config.txt
 diagnostics.py
 *.encrypted
 *.decrypted
+.opencode.json
 
 # Reports and logs
 reports/
