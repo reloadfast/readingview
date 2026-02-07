@@ -143,17 +143,25 @@ def recommend(
     # Search with extra margin for filtering
     raw_results = _backend.search(query_vector, cfg.top_k + len(liked_book_ids or []))
 
+    # Apply feedback adjustments
+    feedback_scores = _db.get_feedback_scores()
+
     # Filter by min similarity and exclude input books
     exclude = set(liked_book_ids or [])
     results = []
     for book_id, score in raw_results:
         if book_id in exclude:
             continue
-        if score < cfg.min_similarity:
+        # Adjust score based on feedback: boost positives, penalize negatives
+        fb = feedback_scores.get(book_id, 0)
+        adjusted_score = score + (fb * 0.05)
+        if adjusted_score < cfg.min_similarity:
             continue
-        results.append((book_id, score))
-        if len(results) >= cfg.top_k:
-            break
+        results.append((book_id, adjusted_score))
+
+    # Re-sort by adjusted score and take top_k
+    results.sort(key=lambda x: x[1], reverse=True)
+    results = results[:cfg.top_k]
 
     # Build output with book metadata
     output = []
@@ -277,6 +285,29 @@ def ingest(
         _embed_stale_books()
 
     return book_id
+
+
+def submit_feedback(
+    book_id: str,
+    rating: int,
+    source_book_ids: Optional[list[str]] = None,
+    source_prompt: Optional[str] = None,
+) -> None:
+    """
+    Submit user feedback for a recommendation.
+
+    Args:
+        book_id: The recommended book's ID.
+        rating: +1 for positive (thumbs up), -1 for negative (thumbs down).
+        source_book_ids: The liked book IDs that generated this recommendation.
+        source_prompt: The free-text prompt used.
+
+    Raises:
+        BookRecommenderDisabled: If the feature is not enabled.
+    """
+    _ensure_initialized()
+    logger.info("submit_feedback() called: book_id=%s rating=%d", book_id, rating)
+    _db.add_feedback(book_id, rating, source_book_ids, source_prompt)
 
 
 def remove_book(book_id: str) -> bool:

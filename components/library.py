@@ -178,6 +178,67 @@ def _edition_picker_dialog():
                 st.rerun()
 
 
+@st.dialog("Similar Books")
+def _similar_book_dialog():
+    """Show instant recommendations similar to the selected book."""
+    import book_recommender
+
+    book = st.session_state.get("_similar_book")
+    if not book:
+        st.warning("No book selected.")
+        if st.button("Close"):
+            del st.session_state["_similar_book"]
+            st.rerun()
+        return
+
+    st.markdown(f"**Books similar to:** {book['title']} by {book['author']}")
+
+    # Check if this book is in the recommender catalog
+    from book_recommender._config import get_config
+    from book_recommender._db import RecommenderDB
+    cfg = get_config()
+    rec_db = RecommenderDB(cfg.db_path)
+
+    # Try to find by title match in the catalog
+    all_books = rec_db.get_all_books()
+    matched_id = None
+    for b in all_books:
+        if b["title"].lower() == book["title"].lower():
+            matched_id = b["id"]
+            break
+
+    if matched_id:
+        with st.spinner("Finding similar books..."):
+            results = book_recommender.recommend(liked_book_ids=[matched_id])
+    else:
+        # Book not in catalog — use title + description as free-text prompt
+        prompt_parts = [book["title"]]
+        if book.get("author"):
+            prompt_parts.append(f"by {book['author']}")
+        if book.get("description"):
+            prompt_parts.append(book["description"][:200])
+        with st.spinner("Finding similar books..."):
+            results = book_recommender.recommend(
+                free_text_prompt=" — ".join(prompt_parts)
+            )
+
+    if not results:
+        st.info("No similar books found. Try adding more books to the catalog first.")
+    else:
+        for rec in results[:5]:
+            st.markdown(f"**{rec['title']}** — {', '.join(rec.get('authors', []))}")
+            if rec.get("description"):
+                st.caption(rec["description"][:200] + ("..." if len(rec["description"] or "") > 200 else ""))
+            st.progress(min(rec["score"], 1.0), text=f"Similarity: {rec['score']:.0%}")
+            if rec.get("explanation"):
+                st.markdown(f"*{rec['explanation']}*")
+            st.markdown("---")
+
+    if st.button("Close", use_container_width=True):
+        del st.session_state["_similar_book"]
+        st.rerun()
+
+
 @st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
 def _fetch_items_in_progress(base_url: str, token: str):
     api = AudiobookshelfAPI(base_url, token)
@@ -349,19 +410,92 @@ def _render_book_card(api, metadata, progress_info, key_suffix):
                 unsafe_allow_html=True
             )
 
-        # Time remaining
-        time_remaining = AudiobookData.format_duration(progress_info['time_remaining'])
-        st.markdown(
-            f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
-            unsafe_allow_html=True
-        )
+        # Finished date or time remaining
+        if progress_info['is_finished'] and progress_info.get('finished_at'):
+            date_finished = format_date_short(progress_info['finished_at'])
+            st.markdown(
+                f'<div class="book-stat"><span class="book-stat-label">Finished:</span> {date_finished}</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            time_remaining = AudiobookData.format_duration(progress_info['time_remaining'])
+            st.markdown(
+                f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
+                unsafe_allow_html=True
+            )
 
-        # Add to Recommender button (feature-gated)
+        # Action buttons (feature-gated)
         if config.has_book_recommender():
-            if st.button("+ Recommender", key=f"rec_{key_suffix}",
-                         use_container_width=True):
-                st.session_state["_rec_add_book"] = metadata
-                st.rerun()
+            btn_cols = st.columns(2)
+            with btn_cols[0]:
+                if st.button("+ Recommender", key=f"rec_{key_suffix}",
+                             use_container_width=True):
+                    st.session_state["_rec_add_book"] = metadata
+                    st.rerun()
+            with btn_cols[1]:
+                if st.button("Similar", key=f"sim_{key_suffix}",
+                             use_container_width=True):
+                    st.session_state["_similar_book"] = metadata
+                    st.rerun()
+
+
+def _render_bulk_ingest(items: List[Dict[str, Any]], progress_map: Dict[str, Any]):
+    """Render bulk ingest section allowing multi-select book addition to recommender."""
+    import book_recommender
+
+    with st.expander("Bulk Add to Recommender"):
+        st.markdown("Select multiple books to add to the recommender catalog at once.")
+
+        # Build book list with checkboxes
+        book_list = []
+        for item in items:
+            meta = AudiobookData.extract_metadata(item)
+            book_list.append({
+                "title": meta["title"],
+                "author": meta["author"],
+                "isbn": meta.get("isbn"),
+                "id": meta["id"],
+            })
+
+        if not book_list:
+            st.info("No books available.")
+            return
+
+        # Use a form to batch the checkbox interactions
+        with st.form("bulk_ingest_form"):
+            selected = []
+            for i, book in enumerate(book_list):
+                label = f"{book['title']} — {book['author']}"
+                if st.checkbox(label, key=f"bulk_{i}"):
+                    selected.append(book)
+
+            submitted = st.form_submit_button(
+                f"Add Selected to Recommender",
+                type="primary",
+            )
+
+        if submitted and selected:
+            progress_bar = st.progress(0, text="Ingesting books...")
+            success_count = 0
+            for i, book in enumerate(selected):
+                try:
+                    if book.get("isbn"):
+                        book_recommender.ingest(isbn=book["isbn"])
+                    else:
+                        book_recommender.ingest(
+                            title=book["title"],
+                            author=book["author"],
+                        )
+                    success_count += 1
+                except Exception as e:
+                    logger.error("Bulk ingest failed for %s: %s", book["title"], e)
+                progress_bar.progress(
+                    (i + 1) / len(selected),
+                    text=f"Ingesting {i + 1}/{len(selected)}...",
+                )
+            st.success(f"Added {success_count}/{len(selected)} books to the recommender.")
+        elif submitted:
+            st.warning("No books selected.")
 
 
 def render_in_progress_view(api: AudiobookshelfAPI):
@@ -374,6 +508,10 @@ def render_in_progress_view(api: AudiobookshelfAPI):
     # Trigger edition picker dialog if a book was selected
     if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
         _edition_picker_dialog()
+
+    # Similar-book recommendation dialog
+    if config.has_book_recommender() and st.session_state.get("_similar_book"):
+        _similar_book_dialog()
 
     st.markdown("### 📖 In Progress")
 
@@ -451,6 +589,7 @@ def render_in_progress_view(api: AudiobookshelfAPI):
 def render_library_view(api: AudiobookshelfAPI):
     """
     Render the full library view with search, pagination, and bookshelf grid.
+    Includes a toggle to show all books or only finished books.
 
     Args:
         api: Audiobookshelf API client
@@ -458,6 +597,10 @@ def render_library_view(api: AudiobookshelfAPI):
     # Trigger edition picker dialog if a book was selected
     if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
         _edition_picker_dialog()
+
+    # Similar-book recommendation dialog
+    if config.has_book_recommender() and st.session_state.get("_similar_book"):
+        _similar_book_dialog()
 
     st.markdown("### 📚 Library")
 
@@ -483,7 +626,29 @@ def render_library_view(api: AudiobookshelfAPI):
             or {}
         )
 
+    # View filter: All / Finished
+    view_mode = st.radio(
+        "View",
+        ["All Books", "Finished"],
+        horizontal=True,
+        key="lib_view_mode",
+        label_visibility="collapsed",
+    )
+
+    if view_mode == "Finished":
+        items = [
+            item for item in items
+            if _get_progress(item).get('isFinished', False)
+        ]
+        if not items:
+            st.info("No finished books found.")
+            return
+
     # Controls row: search, items per page, sort
+    sort_options = ["Recently Updated", "Progress (Ascending)", "Progress (Descending)", "Title (A-Z)"]
+    if view_mode == "Finished":
+        sort_options = ["Recently Finished", "Title (A-Z)", "Progress (Ascending)", "Progress (Descending)"]
+
     ctrl1, ctrl2, ctrl3 = st.columns([3, 1, 1])
     with ctrl1:
         search_query = st.text_input(
@@ -503,7 +668,7 @@ def render_library_view(api: AudiobookshelfAPI):
     with ctrl3:
         sort_by = st.selectbox(
             "Sort by",
-            ["Recently Updated", "Progress (Ascending)", "Progress (Descending)", "Title (A-Z)"],
+            sort_options,
             label_visibility="collapsed",
             key="lib_sort",
         )
@@ -530,6 +695,8 @@ def render_library_view(api: AudiobookshelfAPI):
         items.sort(key=lambda x: _get_progress(x).get('progress', 0), reverse=True)
     elif sort_by == "Recently Updated":
         items.sort(key=lambda x: _get_progress(x).get('lastUpdate', 0), reverse=True)
+    elif sort_by == "Recently Finished":
+        items.sort(key=lambda x: _get_progress(x).get('finishedAt', 0), reverse=True)
     elif sort_by == "Title (A-Z)":
         items.sort(key=lambda x: x.get('media', {}).get('metadata', {}).get('title', ''))
 
@@ -604,3 +771,7 @@ def render_library_view(api: AudiobookshelfAPI):
     # Pagination controls (bottom)
     st.markdown("---")
     _render_pagination("bottom")
+
+    # Bulk ingest to recommender (feature-gated)
+    if config.has_book_recommender():
+        _render_bulk_ingest(items, progress_map)

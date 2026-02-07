@@ -13,6 +13,12 @@ from utils.notifications import (
     build_release_digest,
     send_notification,
 )
+from utils.scheduler import (
+    start_scheduler,
+    stop_scheduler,
+    is_scheduler_running,
+    get_next_run_time,
+)
 
 
 def render_notification_settings(db: ReleaseTrackerDB):
@@ -148,6 +154,47 @@ def render_notification_settings(db: ReleaseTrackerDB):
     if releases:
         with st.expander(f"Preview: {len(releases)} release(s) in the next {current_days} days"):
             st.text(build_release_digest(releases))
+
+    st.markdown("---")
+
+    # --- Scheduled Digests ---
+    st.markdown("#### Scheduled Digests")
+    st.caption(
+        "Automatically send release digests on a schedule. "
+        "Daily runs at 9:00 AM, weekly runs Monday at 9:00 AM."
+    )
+
+    running = is_scheduler_running()
+
+    if running:
+        next_run = get_next_run_time()
+        st.markdown(
+            f'<span style="color:#00cc66;">&#x25cf;</span> '
+            f"**Scheduler:** Running (next run: {next_run or 'unknown'})",
+            unsafe_allow_html=True,
+        )
+        if st.button("Stop Scheduler"):
+            stop_scheduler()
+            st.rerun()
+    else:
+        st.markdown(
+            '<span style="color:#808080;">&#x25cf;</span> '
+            "**Scheduler:** Not running",
+            unsafe_allow_html=True,
+        )
+        sched_freq = st.radio(
+            "Schedule frequency",
+            ["daily", "weekly"],
+            index=0 if frequency == "daily" else 1,
+            horizontal=True,
+            key="sched_freq",
+        )
+        if st.button("Start Scheduler", type="primary"):
+            ok = start_scheduler(frequency=sched_freq)
+            if ok:
+                st.success(f"Scheduler started ({sched_freq}).")
+            else:
+                st.error("Failed to start scheduler. Check logs for details.")
 
 
 def _render_connection_status():

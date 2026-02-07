@@ -105,12 +105,40 @@ def render_recommendations_view():
         if not results:
             st.info("No recommendations found. Try adding more books to the catalog first.")
         else:
-            for rec in results:
-                with st.container():
-                    st.markdown(f"**{rec['title']}** — {', '.join(rec.get('authors', []))}")
-                    if rec.get("description"):
-                        st.caption(rec["description"][:300] + ("..." if len(rec["description"] or "") > 300 else ""))
-                    st.progress(min(rec["score"], 1.0), text=f"Score: {rec['score']:.2f}")
-                    if rec.get("explanation"):
-                        st.markdown(f"*{rec['explanation']}*")
-                    st.markdown("---")
+            # Store results in session state for feedback
+            st.session_state["_rec_results"] = results
+            st.session_state["_rec_prompt_used"] = prompt_input
+
+    # Render results (persisted in session state across reruns)
+    results = st.session_state.get("_rec_results", [])
+    prompt_used = st.session_state.get("_rec_prompt_used", "")
+
+    if results:
+        for i, rec in enumerate(results):
+            with st.container():
+                st.markdown(f"**{rec['title']}** — {', '.join(rec.get('authors', []))}")
+                if rec.get("description"):
+                    st.caption(rec["description"][:300] + ("..." if len(rec["description"] or "") > 300 else ""))
+                st.progress(min(rec["score"], 1.0), text=f"Score: {rec['score']:.2f}")
+                if rec.get("explanation"):
+                    st.markdown(f"*{rec['explanation']}*")
+
+                # Feedback buttons
+                fb_col1, fb_col2, fb_col3 = st.columns([1, 1, 6])
+                with fb_col1:
+                    if st.button("👍", key=f"rec_up_{i}"):
+                        book_recommender.submit_feedback(
+                            book_id=rec["book_id"],
+                            rating=1,
+                            source_prompt=prompt_used or None,
+                        )
+                        st.toast(f"Positive feedback recorded for {rec['title']}")
+                with fb_col2:
+                    if st.button("👎", key=f"rec_down_{i}"):
+                        book_recommender.submit_feedback(
+                            book_id=rec["book_id"],
+                            rating=-1,
+                            source_prompt=prompt_used or None,
+                        )
+                        st.toast(f"Negative feedback recorded for {rec['title']}")
+                st.markdown("---")

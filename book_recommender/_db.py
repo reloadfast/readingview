@@ -44,6 +44,16 @@ class RecommenderDB:
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 last_rebuild_hash TEXT
             );
+
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id TEXT NOT NULL,
+                rating INTEGER NOT NULL,
+                source_book_ids TEXT,
+                source_prompt TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (book_id) REFERENCES books(id)
+            );
         """)
         self.conn.commit()
 
@@ -189,6 +199,49 @@ class RecommenderDB:
         self.conn.execute("DELETE FROM index_state WHERE id = 1")
         self.conn.commit()
         return True
+
+    # --- Feedback ---
+
+    def add_feedback(
+        self,
+        book_id: str,
+        rating: int,
+        source_book_ids: Optional[list[str]] = None,
+        source_prompt: Optional[str] = None,
+    ) -> None:
+        """Store user feedback for a recommendation. rating: +1 (positive) or -1 (negative)."""
+        self.conn.execute(
+            """INSERT INTO feedback (book_id, rating, source_book_ids, source_prompt)
+               VALUES (?, ?, ?, ?)""",
+            (
+                book_id,
+                rating,
+                json.dumps(source_book_ids) if source_book_ids else None,
+                source_prompt,
+            ),
+        )
+        self.conn.commit()
+
+    def get_feedback_scores(self) -> dict[str, int]:
+        """Return aggregated feedback scores per book_id (sum of ratings)."""
+        cur = self.conn.execute(
+            "SELECT book_id, SUM(rating) as score FROM feedback GROUP BY book_id"
+        )
+        return {row["book_id"]: row["score"] for row in cur.fetchall()}
+
+    def get_positive_book_ids(self) -> list[str]:
+        """Return book_ids with net positive feedback."""
+        cur = self.conn.execute(
+            "SELECT book_id FROM feedback GROUP BY book_id HAVING SUM(rating) > 0"
+        )
+        return [row["book_id"] for row in cur.fetchall()]
+
+    def get_negative_book_ids(self) -> list[str]:
+        """Return book_ids with net negative feedback."""
+        cur = self.conn.execute(
+            "SELECT book_id FROM feedback GROUP BY book_id HAVING SUM(rating) < 0"
+        )
+        return [row["book_id"] for row in cur.fetchall()]
 
     def compute_embeddings_hash(self) -> str:
         """Hash of all embedding content_hashes — detects when index needs rebuild."""

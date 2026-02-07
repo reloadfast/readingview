@@ -17,6 +17,7 @@ from components.notifications import render_notification_settings, render_notifi
 from database.db import ReleaseTrackerDB
 from utils.helpers import display_error
 from components.recommendations import render_recommendations_view
+from components.series_tracker import render_series_tracker
 
 
 # Page configuration
@@ -245,7 +246,7 @@ def main():
         render_notification_status_badge()
 
     # Build tab list dynamically
-    tab_names = ["📚 Library", "📖 In Progress", "📊 Statistics", "👤 Authors"]
+    tab_names = ["📚 Library", "📖 In Progress", "📊 Statistics", "👤 Authors", "📖 Series"]
     if config.ENABLE_RELEASE_TRACKER and db:
         tab_names.append("📅 Release Tracker")
         tab_names.append("🔔 Notifications")
@@ -274,6 +275,10 @@ def main():
             render_authors_view(api)
     tab_index += 1
 
+    with tabs[tab_index]:
+        render_series_tracker(api)
+    tab_index += 1
+
     if config.ENABLE_RELEASE_TRACKER and db:
         with tabs[tab_index]:
             render_release_tracker_view(api, db)
@@ -287,7 +292,7 @@ def main():
             render_recommendations_view()
         tab_index += 1
 
-    # Switch to Authors tab when navigating from Library
+    # Switch to Authors tab when navigating from Library (Authors is at index 3)
     if st.session_state.pop("navigate_to_authors", False):
         components.html("""
             <script>

@@ -16,6 +16,7 @@ __all__ = [
     "recommend",
     "ingest",
     "remove_book",
+    "submit_feedback",
     "BookRecommenderDisabled",
     "BookRecommenderConfigError",
 ]
@@ -53,3 +54,23 @@ def remove_book(book_id: str) -> bool:
     """
     from .service import remove_book as _remove_book
     return _remove_book(book_id=book_id)
+
+
+def submit_feedback(
+    book_id: str,
+    rating: int,
+    source_book_ids: list[str] | None = None,
+    source_prompt: str | None = None,
+) -> None:
+    """
+    Submit user feedback for a recommendation (+1 thumbs up, -1 thumbs down).
+
+    Raises BookRecommenderDisabled if the feature is not enabled.
+    """
+    from .service import submit_feedback as _submit_feedback
+    _submit_feedback(
+        book_id=book_id,
+        rating=rating,
+        source_book_ids=source_book_ids,
+        source_prompt=source_prompt,
+    )
