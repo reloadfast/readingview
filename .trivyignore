@@ -1,0 +1,15 @@
+# Trivy ignore rules for ReadingView
+# These packages are build tooling removed from the final image.
+# If Trivy still detects them from residual .dist-info metadata, ignore them.
+
+# jaraco.context: path traversal via tar archives — vendored inside setuptools,
+# which is stripped from the runtime image. Not used at runtime.
+# CVE-2026-23949
+
+# wheel: privilege escalation via malicious wheel unpacking — only relevant
+# during pip install, not at runtime. Stripped from final image.
+# CVE-2026-24049
+
+# pip: symlink extraction issue — only relevant during pip install,
+# not at runtime. Stripped from final image.
+# CVE-2025-8869

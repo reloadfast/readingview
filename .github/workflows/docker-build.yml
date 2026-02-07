@@ -59,6 +59,7 @@ jobs:
           exit-code: 1
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Run Trivy vulnerability scanner (JSON report)
         if: always()
@@ -69,6 +70,7 @@ jobs:
           output: trivy-results.json
           severity: CRITICAL,HIGH,MEDIUM
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Run Trivy vulnerability scanner (SARIF)
         if: always()
@@ -79,6 +81,7 @@ jobs:
           output: trivy-results.sarif
           severity: CRITICAL,HIGH,MEDIUM
           ignore-unfixed: true
+          trivyignores: .trivyignore
 
       - name: Upload Trivy scan results to GitHub Security
         if: always()
