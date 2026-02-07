@@ -9,7 +9,7 @@ from datetime import datetime
 from database.db import ReleaseTrackerDB
 from api.audiobookshelf import AudiobookshelfAPI
 from api.openlibrary import OpenLibraryAPI
-from utils.helpers import sanitize_url
+from utils.helpers import sanitize_url, format_date_obj
 
 
 def render_release_tracker_view(api: AudiobookshelfAPI, db: ReleaseTrackerDB):
@@ -869,19 +869,19 @@ def show_edit_release_form(db: ReleaseTrackerDB, release: Dict[str, Any]):
 
 
 def format_release_date(date_str: Optional[str]) -> str:
-    """Format release date for display."""
+    """Format release date for display using the configured date format."""
     if not date_str:
         return "TBD"
-    
+
     try:
         date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-        
+
         # Calculate days until release
         today = datetime.now()
         days_until = (date_obj - today).days
-        
-        formatted = date_obj.strftime('%B %d, %Y')
-        
+
+        formatted = format_date_obj(date_obj)
+
         if days_until < 0:
             return f"{formatted} (Past)"
         elif days_until == 0:

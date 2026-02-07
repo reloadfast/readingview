@@ -9,7 +9,7 @@ from typing import Dict, List, Any
 
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
 from config.config import config
-from utils.helpers import render_skeleton_list
+from utils.helpers import render_skeleton_list, render_empty_state
 
 import logging
 
@@ -96,7 +96,11 @@ def render_series_tracker(api: AudiobookshelfAPI):
     _sk.empty()
 
     if not series_map:
-        st.info("No series found in your library.")
+        render_empty_state(
+            "No series found",
+            "Your audiobooks need series metadata to appear here. Check your Audiobookshelf library.",
+            icon="📖",
+        )
         return
 
     # Sort options

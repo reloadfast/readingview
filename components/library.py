@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
 from api.openlibrary import OpenLibraryAPI
 from config.config import config
-from utils.helpers import format_date_short, render_skeleton_grid
+from utils.helpers import format_date_short, render_skeleton_grid, render_empty_state
 import logging
 import math
 
@@ -418,7 +418,7 @@ def _inject_bookshelf_css():
     """, unsafe_allow_html=True)
 
 
-def _render_book_card(api, metadata, progress_info, key_suffix):
+def _render_book_card(api, metadata, progress_info, key_suffix, db=None):
     """Render a single book card in the bookshelf grid.
 
     Args:
@@ -426,6 +426,7 @@ def _render_book_card(api, metadata, progress_info, key_suffix):
         metadata: Book metadata dict from AudiobookData.extract_metadata()
         progress_info: Progress dict from AudiobookData.calculate_progress()
         key_suffix: Unique suffix for Streamlit widget keys
+        db: Optional ReleaseTrackerDB for book notes
     """
     with st.container():
         # Cover image
@@ -484,6 +485,45 @@ def _render_book_card(api, metadata, progress_info, key_suffix):
                 f'<div class="book-stat"><span class="book-stat-label">Remaining:</span> {time_remaining}</div>',
                 unsafe_allow_html=True
             )
+
+        # Book note indicator / toggle
+        if db:
+            note = db.get_book_note(metadata["id"])
+            note_key = f"note_edit_{key_suffix}"
+            if note:
+                st.markdown(
+                    f'<div class="book-stat" style="margin-top:4px;">'
+                    f'<span class="book-stat-label">Note:</span> '
+                    f'{note[:60]}{"..." if len(note) > 60 else ""}</div>',
+                    unsafe_allow_html=True,
+                )
+            if st.button("Note" if not note else "Edit Note", key=f"note_btn_{key_suffix}",
+                         use_container_width=True):
+                st.session_state[note_key] = not st.session_state.get(note_key, False)
+                st.rerun()
+            if st.session_state.get(note_key):
+                new_note = st.text_area(
+                    "Note",
+                    value=note or "",
+                    key=f"note_ta_{key_suffix}",
+                    label_visibility="collapsed",
+                    height=80,
+                )
+                nc1, nc2 = st.columns(2)
+                with nc1:
+                    if st.button("Save", key=f"note_save_{key_suffix}", use_container_width=True):
+                        if new_note.strip():
+                            db.set_book_note(metadata["id"], new_note.strip())
+                            st.toast("Note saved!", icon="✅")
+                        else:
+                            db.delete_book_note(metadata["id"])
+                            st.toast("Note removed", icon="✅")
+                        st.session_state[note_key] = False
+                        st.rerun()
+                with nc2:
+                    if st.button("Cancel", key=f"note_cancel_{key_suffix}", use_container_width=True):
+                        st.session_state[note_key] = False
+                        st.rerun()
 
         # Action buttons (feature-gated)
         if config.has_book_recommender():
@@ -559,12 +599,13 @@ def _render_bulk_ingest(items: List[Dict[str, Any]], progress_map: Dict[str, Any
             st.warning("No books selected.")
 
 
-def render_in_progress_view(api: AudiobookshelfAPI):
+def render_in_progress_view(api: AudiobookshelfAPI, db=None):
     """
     Render the in-progress books view with bookshelf-style grid.
 
     Args:
         api: Audiobookshelf API client
+        db: Optional ReleaseTrackerDB for book notes
     """
     st.markdown("### 📖 In Progress")
 
@@ -577,7 +618,13 @@ def render_in_progress_view(api: AudiobookshelfAPI):
     _sk.empty()
 
     if not items:
-        st.info("No audiobooks in progress. Start listening to see them here!")
+        render_empty_state(
+            "Nothing in progress",
+            "Open Audiobookshelf and start listening to see your books here!",
+            icon="🎧",
+            action_label="Open Audiobookshelf",
+            action_url=config.ABS_URL,
+        )
         return
     
     # Configuration
@@ -636,20 +683,21 @@ def render_in_progress_view(api: AudiobookshelfAPI):
             )
             
             with cols[col_idx]:
-                _render_book_card(api, metadata, progress_info, f"ip_{item_idx}")
-    
+                _render_book_card(api, metadata, progress_info, f"ip_{item_idx}", db=db)
+
     # Display count
     st.markdown(f"---")
     st.caption(f"Showing {len(items)} audiobook{'s' if len(items) != 1 else ''} in progress")
 
 
-def render_library_view(api: AudiobookshelfAPI):
+def render_library_view(api: AudiobookshelfAPI, db=None):
     """
     Render the full library view with search, pagination, and bookshelf grid.
     Includes a toggle to show all books or only finished books.
 
     Args:
         api: Audiobookshelf API client
+        db: Optional ReleaseTrackerDB for book notes
     """
     st.markdown("### 📚 Library")
 
@@ -662,7 +710,13 @@ def render_library_view(api: AudiobookshelfAPI):
     _sk.empty()
 
     if not items:
-        st.info("No audiobooks found in your library.")
+        render_empty_state(
+            "Library is empty",
+            "No audiobooks found. Add some books to your Audiobookshelf library to get started!",
+            icon="📚",
+            action_label="Open Audiobookshelf",
+            action_url=config.ABS_URL,
+        )
         return
 
     items_per_row = config.ITEMS_PER_ROW
@@ -725,9 +779,10 @@ def render_library_view(api: AudiobookshelfAPI):
             key="lib_sort",
         )
 
-    # Client-side search filtering
+    # Client-side search filtering (includes book notes)
     if search_query:
         query_lower = search_query.lower()
+        notes_map = db.get_all_book_notes() if db else {}
         filtered = []
         for item in items:
             meta = item.get('media', {}).get('metadata', {})
@@ -736,7 +791,8 @@ def render_library_view(api: AudiobookshelfAPI):
             series_names = ' '.join(
                 (s.get('name') or '') for s in (meta.get('series') or [])
             ).lower()
-            if query_lower in title or query_lower in author or query_lower in series_names:
+            note_text = (notes_map.get(item.get('id', '')) or '').lower()
+            if query_lower in title or query_lower in author or query_lower in series_names or query_lower in note_text:
                 filtered.append(item)
         items = filtered
 
@@ -818,7 +874,7 @@ def render_library_view(api: AudiobookshelfAPI):
                 # Use global index for unique keys
                 global_idx = start_idx + item_idx
                 with cols[col_idx]:
-                    _render_book_card(api, metadata, progress_info, f"lib_{global_idx}")
+                    _render_book_card(api, metadata, progress_info, f"lib_{global_idx}", db=db)
 
     # Pagination controls (bottom)
     st.markdown("---")

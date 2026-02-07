@@ -1,6 +1,6 @@
 """
-Statistics view component - displays listening analytics with book breakdowns
-and a Year in Recap feature.
+Statistics view component - displays listening analytics with book breakdowns,
+Year in Recap, listening streaks, and genre/tag breakdown.
 """
 
 import streamlit as st
@@ -13,9 +13,10 @@ from utils.helpers import (
     group_finished_by_year,
     format_date_short,
     render_skeleton_stats,
+    render_empty_state,
 )
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from collections import Counter
 
 
@@ -31,6 +32,21 @@ def _fetch_progress_map(base_url: str, token: str):
     return api.get_media_progress_map()
 
 
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_listening_sessions(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    return api.get_user_listening_sessions()
+
+
+@st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
+def _fetch_all_items(base_url: str, token: str):
+    api = AudiobookshelfAPI(base_url, token)
+    items = []
+    for lib in api.get_libraries():
+        items.extend(api.get_library_items(lib["id"]))
+    return items
+
+
 def render_statistics_view(api: AudiobookshelfAPI):
     """Render the statistics view with charts, book breakdowns, and Year in Recap."""
     st.markdown("### Statistics")
@@ -43,7 +59,11 @@ def render_statistics_view(api: AudiobookshelfAPI):
     _sk.empty()
 
     if not listening_stats and not progress_map:
-        st.info("No listening data available yet. Start listening to build your statistics!")
+        render_empty_state(
+            "No listening data yet",
+            "Start listening to audiobooks to build your statistics!",
+            icon="📊",
+        )
         return
 
     # Build finished books list from progress + metadata
@@ -88,6 +108,14 @@ def render_statistics_view(api: AudiobookshelfAPI):
 
     with tab_recap:
         _render_year_in_recap(finished_books, by_year, by_month, total_time_hours, api)
+
+    # --- Listening Streaks ---
+    st.markdown("---")
+    _render_listening_streaks(api)
+
+    # --- Genre / Tag Breakdown ---
+    st.markdown("---")
+    _render_genre_breakdown(api)
 
     # --- Additional insights ---
     if listening_stats:
@@ -365,6 +393,109 @@ def _render_year_in_recap(
     # --- Full book list for the year ---
     st.markdown(f"##### All Books — {selected_year}")
     _render_book_list(books, api, list_key=f"recap_{selected_year}")
+
+
+# ---------------------------------------------------------------------------
+# Listening Streaks (FUNC-13)
+# ---------------------------------------------------------------------------
+
+def _compute_streaks(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Compute current and longest listening streaks from session data."""
+    if not sessions:
+        return {"current": 0, "longest": 0, "total_days": 0}
+
+    # Collect unique dates with listening activity
+    active_dates: set[date] = set()
+    for s in sessions:
+        ts = s.get("updatedAt") or s.get("startedAt")
+        if ts:
+            try:
+                active_dates.add(datetime.fromtimestamp(ts / 1000).date())
+            except (ValueError, TypeError, OSError):
+                pass
+
+    if not active_dates:
+        return {"current": 0, "longest": 0, "total_days": 0}
+
+    sorted_dates = sorted(active_dates)
+    total_days = len(sorted_dates)
+
+    # Compute streaks
+    longest = 1
+    current_streak = 1
+    for i in range(1, len(sorted_dates)):
+        if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
+            current_streak += 1
+            longest = max(longest, current_streak)
+        else:
+            current_streak = 1
+
+    # Check if current streak is still active (includes today or yesterday)
+    today = date.today()
+    if sorted_dates[-1] >= today - timedelta(days=1):
+        # Walk backwards to find current streak
+        active_current = 1
+        for i in range(len(sorted_dates) - 1, 0, -1):
+            if sorted_dates[i] - sorted_dates[i - 1] == timedelta(days=1):
+                active_current += 1
+            else:
+                break
+    else:
+        active_current = 0
+
+    return {"current": active_current, "longest": longest, "total_days": total_days}
+
+
+def _render_listening_streaks(api: AudiobookshelfAPI):
+    """Render listening streak stats."""
+    st.markdown("#### Listening Streaks")
+
+    sessions = _fetch_listening_sessions(api.base_url, api.token)
+    streaks = _compute_streaks(sessions)
+
+    cols = st.columns(3)
+    with cols[0]:
+        _stat_card(str(streaks["current"]), "Current Streak (days)")
+    with cols[1]:
+        _stat_card(str(streaks["longest"]), "Longest Streak (days)")
+    with cols[2]:
+        _stat_card(str(streaks["total_days"]), "Total Active Days")
+
+
+# ---------------------------------------------------------------------------
+# Genre / Tag Breakdown (FUNC-14)
+# ---------------------------------------------------------------------------
+
+def _render_genre_breakdown(api: AudiobookshelfAPI):
+    """Render genre/tag distribution chart on the Statistics tab."""
+    st.markdown("#### Genre Breakdown")
+
+    items = _fetch_all_items(api.base_url, api.token)
+    if not items:
+        st.info("No library items to analyze.")
+        return
+
+    genre_counts: Counter[str] = Counter()
+    for item in items:
+        media = item.get("media", {})
+        metadata = media.get("metadata", {})
+        genres = metadata.get("genres", [])
+        for g in genres:
+            if g:
+                genre_counts[g] += 1
+
+    if not genre_counts:
+        st.info("No genre data found. Your books may not have genre metadata in Audiobookshelf.")
+        return
+
+    top = genre_counts.most_common(15)
+    df = pd.DataFrame(top, columns=["Genre", "Books"])
+    st.bar_chart(df.set_index("Genre")["Books"], use_container_width=True)
+
+    # Also show as a list for accessibility
+    with st.expander("All genres"):
+        for genre, count in genre_counts.most_common():
+            st.markdown(f"- **{genre}** — {count} book{'s' if count != 1 else ''}")
 
 
 # ---------------------------------------------------------------------------

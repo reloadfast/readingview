@@ -28,6 +28,7 @@ class Config:
     # UI Configuration
     ITEMS_PER_ROW: int = int(os.getenv("ITEMS_PER_ROW", "5"))
     THEME: str = os.getenv("THEME", "dark")  # dark or light
+    DATE_FORMAT: str = os.getenv("DATE_FORMAT", "")  # MMM DD, YYYY | MM/DD/YYYY | DD/MM/YYYY | YYYY-MM-DD
 
     # Release Tracker Configuration
     ENABLE_RELEASE_TRACKER: bool = (
@@ -94,6 +95,7 @@ class Config:
         cls.CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))
         cls.ITEMS_PER_ROW = int(os.getenv("ITEMS_PER_ROW", "5"))
         cls.THEME = os.getenv("THEME", "dark")
+        cls.DATE_FORMAT = os.getenv("DATE_FORMAT", "")
         cls.ENABLE_RELEASE_TRACKER = (
             os.getenv("ENABLE_RELEASE_TRACKER", "true").lower() == "true"
         )

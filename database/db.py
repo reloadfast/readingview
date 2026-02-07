@@ -63,6 +63,30 @@ class ReleaseTrackerDB:
                 FOREIGN KEY (author_id) REFERENCES tracked_authors(id),
                 FOREIGN KEY (series_id) REFERENCES tracked_series(id)
             );
+
+            CREATE TABLE IF NOT EXISTS book_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                library_item_id TEXT NOT NULL UNIQUE,
+                note TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS collections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS collection_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                collection_id INTEGER NOT NULL,
+                library_item_id TEXT NOT NULL,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (collection_id) REFERENCES collections(id),
+                UNIQUE(collection_id, library_item_id)
+            );
         """)
         # Migration: add link_url if missing (existing DBs)
         try:
@@ -243,3 +267,120 @@ class ReleaseTrackerDB:
         for row in cur.fetchall():
             settings[row["key"]] = row["value"]
         return settings
+
+    # --- Book Notes ---
+
+    def get_book_note(self, library_item_id: str) -> Optional[str]:
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT note FROM book_notes WHERE library_item_id = ?",
+            (library_item_id,),
+        )
+        row = cur.fetchone()
+        return row["note"] if row else None
+
+    def set_book_note(self, library_item_id: str, note: str):
+        cur = self.conn.cursor()
+        cur.execute(
+            "INSERT INTO book_notes (library_item_id, note, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) "
+            "ON CONFLICT(library_item_id) DO UPDATE SET note = excluded.note, updated_at = CURRENT_TIMESTAMP",
+            (library_item_id, note),
+        )
+        self.conn.commit()
+
+    def delete_book_note(self, library_item_id: str):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM book_notes WHERE library_item_id = ?", (library_item_id,))
+        self.conn.commit()
+
+    def get_all_book_notes(self) -> dict[str, str]:
+        cur = self.conn.cursor()
+        cur.execute("SELECT library_item_id, note FROM book_notes")
+        return {row["library_item_id"]: row["note"] for row in cur.fetchall()}
+
+    def search_book_notes(self, query: str) -> list[dict[str, Any]]:
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT library_item_id, note FROM book_notes WHERE note LIKE ?",
+            (f"%{query}%",),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    # --- Collections ---
+
+    def get_collections(self) -> list[dict[str, Any]]:
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT c.id, c.name, c.description, c.created_at, "
+            "COUNT(ci.id) AS item_count "
+            "FROM collections c LEFT JOIN collection_items ci ON c.id = ci.collection_id "
+            "GROUP BY c.id ORDER BY c.name"
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    def create_collection(self, name: str, description: str = "") -> int:
+        cur = self.conn.cursor()
+        cur.execute(
+            "INSERT INTO collections (name, description) VALUES (?, ?)",
+            (name, description),
+        )
+        self.conn.commit()
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def delete_collection(self, collection_id: int):
+        cur = self.conn.cursor()
+        cur.execute("DELETE FROM collection_items WHERE collection_id = ?", (collection_id,))
+        cur.execute("DELETE FROM collections WHERE id = ?", (collection_id,))
+        self.conn.commit()
+
+    def rename_collection(self, collection_id: int, name: str, description: str = ""):
+        cur = self.conn.cursor()
+        cur.execute(
+            "UPDATE collections SET name = ?, description = ? WHERE id = ?",
+            (name, description, collection_id),
+        )
+        self.conn.commit()
+
+    def get_collection_items(self, collection_id: int) -> list[str]:
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT library_item_id FROM collection_items WHERE collection_id = ? ORDER BY added_at",
+            (collection_id,),
+        )
+        return [row["library_item_id"] for row in cur.fetchall()]
+
+    def add_to_collection(self, collection_id: int, library_item_id: str):
+        cur = self.conn.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO collection_items (collection_id, library_item_id) VALUES (?, ?)",
+            (collection_id, library_item_id),
+        )
+        self.conn.commit()
+
+    def remove_from_collection(self, collection_id: int, library_item_id: str):
+        cur = self.conn.cursor()
+        cur.execute(
+            "DELETE FROM collection_items WHERE collection_id = ? AND library_item_id = ?",
+            (collection_id, library_item_id),
+        )
+        self.conn.commit()
+
+    def get_item_collections(self, library_item_id: str) -> list[dict[str, Any]]:
+        cur = self.conn.cursor()
+        cur.execute(
+            "SELECT c.id, c.name FROM collections c "
+            "JOIN collection_items ci ON c.id = ci.collection_id "
+            "WHERE ci.library_item_id = ? ORDER BY c.name",
+            (library_item_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+    # --- Database Integrity ---
+
+    def check_integrity(self) -> tuple[bool, str]:
+        """Run PRAGMA integrity_check. Returns (ok, message)."""
+        cur = self.conn.cursor()
+        cur.execute("PRAGMA integrity_check")
+        result = cur.fetchone()
+        msg = result[0] if result else "unknown"
+        return msg == "ok", msg
