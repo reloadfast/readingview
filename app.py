@@ -9,7 +9,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from config import config
 from api.audiobookshelf import AudiobookshelfAPI
-from components.library import render_library_view, render_in_progress_view
+from components.library import render_library_view, render_in_progress_view, trigger_library_dialogs
 from components.statistics import render_statistics_view
 from components.release_tracker import render_release_tracker_view
 from components.authors import render_authors_view
@@ -244,6 +244,9 @@ def main():
     # Notification status badge in sidebar
     if db:
         render_notification_status_badge()
+
+    # Trigger recommender dialogs once (before tabs to avoid duplicate IDs)
+    trigger_library_dialogs()
 
     # Build tab list dynamically
     tab_names = ["📚 Library", "📖 In Progress", "📊 Statistics", "👤 Authors", "📖 Series"]

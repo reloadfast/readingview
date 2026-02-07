@@ -239,6 +239,16 @@ def _similar_book_dialog():
         st.rerun()
 
 
+def trigger_library_dialogs():
+    """Call once per page render (before tabs) to avoid duplicate dialog IDs."""
+    if not config.has_book_recommender():
+        return
+    if st.session_state.get("_rec_add_book"):
+        _edition_picker_dialog()
+    if st.session_state.get("_similar_book"):
+        _similar_book_dialog()
+
+
 @st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
 def _fetch_items_in_progress(base_url: str, token: str):
     api = AudiobookshelfAPI(base_url, token)
@@ -505,14 +515,6 @@ def render_in_progress_view(api: AudiobookshelfAPI):
     Args:
         api: Audiobookshelf API client
     """
-    # Trigger edition picker dialog if a book was selected
-    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
-        _edition_picker_dialog()
-
-    # Similar-book recommendation dialog
-    if config.has_book_recommender() and st.session_state.get("_similar_book"):
-        _similar_book_dialog()
-
     st.markdown("### 📖 In Progress")
 
     # Fetch in-progress items and progress data (cached)
@@ -594,14 +596,6 @@ def render_library_view(api: AudiobookshelfAPI):
     Args:
         api: Audiobookshelf API client
     """
-    # Trigger edition picker dialog if a book was selected
-    if config.has_book_recommender() and st.session_state.get("_rec_add_book"):
-        _edition_picker_dialog()
-
-    # Similar-book recommendation dialog
-    if config.has_book_recommender() and st.session_state.get("_similar_book"):
-        _similar_book_dialog()
-
     st.markdown("### 📚 Library")
 
     # Fetch all library items and progress data (cached)
