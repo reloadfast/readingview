@@ -76,8 +76,12 @@ Streamlit auto-reloads on file changes.
 | `ABS_TOKEN` | Yes | — | API authentication token |
 | `APP_TITLE` | No | ReadingView | Dashboard title |
 | `CACHE_TTL` | No | 300 | Cache duration in seconds |
+| `ITEMS_PER_ROW` | No | 5 | Grid columns for book/author cards |
+| `THEME` | No | dark | Color theme (`dark` or `light`) |
 | `ENABLE_RELEASE_TRACKER` | No | true | Enable release tracking features |
-| `DB_PATH` | No | database/release_tracker.db | SQLite database path |
+| `DB_PATH` | No | /app/data/release_tracker.db | SQLite database path |
+
+See the [README](README.md) for notification and book recommender configuration.
 
 ## Getting Your API Token
 
