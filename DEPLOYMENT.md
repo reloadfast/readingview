@@ -67,17 +67,6 @@ streamlit run app.py
 
 Streamlit auto-reloads on file changes.
 
-## Unraid
-
-1. Go to **Docker** tab → **Add Container**
-2. Use template URL:
-   ```
-   https://raw.githubusercontent.com/reloadfast/readingview/main/unraid-template.xml
-   ```
-3. Configure `ABS_URL` and `ABS_TOKEN`
-4. Click **Apply**
-
-Or set up manually: Repository `reloadfast/readingview:latest`, port `8506:8506`, add the two environment variables.
 
 ## Configuration
 
