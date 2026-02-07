@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
 from api.openlibrary import OpenLibraryAPI
 from config.config import config
+from utils.helpers import render_skeleton_list
 from database.db import ReleaseTrackerDB
 
 
@@ -32,8 +33,11 @@ def render_authors_view(
     st.markdown("### Authors")
 
     # Gather authors from all libraries (cached)
-    with st.spinner("Loading authors from your library..."):
-        authors_map = _cached_collect_authors(api.base_url, api.token)
+    _sk = st.empty()
+    with _sk.container():
+        render_skeleton_list(6)
+    authors_map = _cached_collect_authors(api.base_url, api.token)
+    _sk.empty()
 
     if not authors_map:
         st.info("No authors found in your library.")
@@ -95,7 +99,7 @@ def _collect_authors(api: AudiobookshelfAPI) -> Dict[str, Dict[str, Any]]:
 
 def _render_author_grid(names: List[str], authors_map: Dict[str, Any], total_count: int = 0):
     """Show a clickable grid of all authors with pagination."""
-    cols_per_row = 4
+    cols_per_row = config.ITEMS_PER_ROW
     items_per_page = 20
     total_pages = max(1, -(-len(names) // items_per_page))  # ceil division
 
@@ -225,7 +229,7 @@ def _render_author_detail(
                 if st.button("Track Releases", type="primary"):
                     ol_key = ol_author.get("key") if ol_author else None
                     db.add_tracked_author(name, ol_key)
-                    st.success(f"Now tracking {name}!")
+                    st.toast(f"Now tracking {name}!", icon="✅")
                     st.rerun()
 
     # Books in library
@@ -233,7 +237,7 @@ def _render_author_detail(
     st.markdown(f"#### Books in Your Library ({len(author_data['books'])})")
 
     books = author_data["books"]
-    cols_per_row = 5
+    cols_per_row = config.ITEMS_PER_ROW
     for i in range(0, len(books), cols_per_row):
         cols = st.columns(cols_per_row)
         for j, col in enumerate(cols):

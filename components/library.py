@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
 from api.openlibrary import OpenLibraryAPI
 from config.config import config
-from utils.helpers import format_date_short
+from utils.helpers import format_date_short, render_skeleton_grid
 import logging
 import math
 
@@ -99,34 +99,85 @@ def _edition_picker_dialog():
 
     # Phase 2: Edition picker or direct ingest
     if editions:
-        labels = [_format_edition_label(ed) for ed in editions]
-        selected_idx = st.selectbox(
+        # ISBN availability notice
+        has_isbn = [ed for ed in editions if ed.get("isbn")]
+        no_isbn = len(editions) - len(has_isbn)
+        if no_isbn > 0:
+            st.caption(f"{no_isbn} of {len(editions)} editions have no ISBN")
+
+        # Group by format for large lists
+        display_editions = editions
+        if len(editions) > 20:
+            formats = sorted({ed.get("format") or "Unknown" for ed in editions})
+            if len(formats) > 1:
+                fmt_filter = st.selectbox(
+                    "Filter by format",
+                    ["All formats"] + formats,
+                    key="_rec_fmt_filter",
+                )
+                if fmt_filter != "All formats":
+                    display_editions = [
+                        ed for ed in editions
+                        if (ed.get("format") or "Unknown") == fmt_filter
+                    ]
+
+            # Search filter for very large lists
+            if len(display_editions) > 30:
+                ed_search = st.text_input(
+                    "Search editions",
+                    placeholder="Filter by publisher, year, ISBN...",
+                    key="_rec_ed_search",
+                )
+                if ed_search:
+                    q = ed_search.lower()
+                    display_editions = [
+                        ed for ed in display_editions
+                        if q in _format_edition_label(ed).lower()
+                    ]
+
+        # Map indices back to the full editions list
+        ed_index_map = {id(ed): i for i, ed in enumerate(editions)}
+        labels = [_format_edition_label(ed) for ed in display_editions]
+        display_indices = list(range(len(display_editions)))
+
+        # Find default within the displayed subset
+        disp_default = 0
+        if default_idx < len(editions):
+            target = editions[default_idx]
+            for di, ed in enumerate(display_editions):
+                if ed is target:
+                    disp_default = di
+                    break
+
+        selected_disp_idx = st.selectbox(
             "Select edition",
-            range(len(editions)),
-            index=default_idx,
+            display_indices,
+            index=disp_default,
             format_func=lambda i: labels[i],
         )
 
-        selected = editions[selected_idx]
+        selected = display_editions[selected_disp_idx]
 
         # Show details for selected edition
         col1, col2 = st.columns([1, 2])
         with col1:
-            if selected["cover_id"]:
+            if selected.get("cover_id"):
                 ol = OpenLibraryAPI()
                 cover_url = ol.get_cover_url(cover_id=selected["cover_id"], size="M")
                 if cover_url:
                     st.image(cover_url, width=120)
         with col2:
-            if selected["format"]:
+            if selected.get("format"):
                 st.markdown(f"**Format:** {selected['format']}")
-            if selected["publish_date"]:
+            if selected.get("publish_date"):
                 st.markdown(f"**Published:** {selected['publish_date']}")
-            if selected["publishers"]:
+            if selected.get("publishers"):
                 st.markdown(f"**Publisher:** {', '.join(selected['publishers'][:2])}")
-            if selected["isbn"]:
+            if selected.get("isbn"):
                 st.markdown(f"**ISBN:** {selected['isbn']}")
-            if selected["pages"]:
+            else:
+                st.caption("No ISBN available for this edition")
+            if selected.get("pages"):
                 st.markdown(f"**Pages:** {selected['pages']}")
 
         btn_col1, btn_col2 = st.columns(2)
@@ -134,7 +185,7 @@ def _edition_picker_dialog():
             if st.button("Confirm", type="primary", use_container_width=True):
                 with st.spinner("Ingesting..."):
                     try:
-                        if selected["isbn"]:
+                        if selected.get("isbn"):
                             book_recommender.ingest(isbn=selected["isbn"])
                         elif work_key:
                             book_recommender.ingest(work_key=work_key)
@@ -142,7 +193,7 @@ def _edition_picker_dialog():
                             book_recommender.ingest(
                                 title=book["title"], author=book["author"]
                             )
-                        st.success("Added to recommender!")
+                        st.toast("Added to recommender!", icon="✅")
                     except Exception as e:
                         logger.error("Recommender ingest failed: %s", e)
                         st.error(f"Failed: {e}")
@@ -153,7 +204,7 @@ def _edition_picker_dialog():
                 st.rerun()
     else:
         # No editions available — direct ingest
-        st.info("No editions found. Will ingest by title/author.")
+        st.info("No editions found on Open Library. Will ingest by title/author.")
         btn_col1, btn_col2 = st.columns(2)
         with btn_col1:
             if st.button("Confirm", type="primary", use_container_width=True):
@@ -167,7 +218,7 @@ def _edition_picker_dialog():
                             book_recommender.ingest(
                                 title=book["title"], author=book["author"]
                             )
-                        st.success("Added to recommender!")
+                        st.toast("Added to recommender!", icon="✅")
                     except Exception as e:
                         logger.error("Recommender ingest failed: %s", e)
                         st.error(f"Failed: {e}")
@@ -503,7 +554,7 @@ def _render_bulk_ingest(items: List[Dict[str, Any]], progress_map: Dict[str, Any
                     (i + 1) / len(selected),
                     text=f"Ingesting {i + 1}/{len(selected)}...",
                 )
-            st.success(f"Added {success_count}/{len(selected)} books to the recommender.")
+            st.toast(f"Added {success_count}/{len(selected)} books to the recommender.", icon="✅")
         elif submitted:
             st.warning("No books selected.")
 
@@ -518,16 +569,19 @@ def render_in_progress_view(api: AudiobookshelfAPI):
     st.markdown("### 📖 In Progress")
 
     # Fetch in-progress items and progress data (cached)
-    with st.spinner("Loading your audiobooks..."):
-        items = _fetch_items_in_progress(api.base_url, api.token)
-        progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk = st.empty()
+    with _sk.container():
+        render_skeleton_grid(config.ITEMS_PER_ROW, 2)
+    items = _fetch_items_in_progress(api.base_url, api.token)
+    progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk.empty()
 
     if not items:
         st.info("No audiobooks in progress. Start listening to see them here!")
         return
     
     # Configuration
-    items_per_row = 5
+    items_per_row = config.ITEMS_PER_ROW
 
     _inject_bookshelf_css()
     
@@ -537,7 +591,8 @@ def render_in_progress_view(api: AudiobookshelfAPI):
         sort_by = st.selectbox(
             "Sort by",
             ["Recently Updated", "Progress (Ascending)", "Progress (Descending)", "Title (A-Z)"],
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key="in_progress_sort",
         )
     
     def _get_progress(item: Dict[str, Any]) -> Dict[str, Any]:
@@ -599,15 +654,18 @@ def render_library_view(api: AudiobookshelfAPI):
     st.markdown("### 📚 Library")
 
     # Fetch all library items and progress data (cached)
-    with st.spinner("Loading your library..."):
-        items = _fetch_all_library_items(api.base_url, api.token)
-        progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk = st.empty()
+    with _sk.container():
+        render_skeleton_grid(config.ITEMS_PER_ROW, 2)
+    items = _fetch_all_library_items(api.base_url, api.token)
+    progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk.empty()
 
     if not items:
         st.info("No audiobooks found in your library.")
         return
 
-    items_per_row = 5
+    items_per_row = config.ITEMS_PER_ROW
 
     _inject_bookshelf_css()
 

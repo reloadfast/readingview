@@ -194,8 +194,79 @@ def display_error(message: str, details: Optional[str] = None):
 def display_info(message: str):
     """
     Display a formatted info message.
-    
+
     Args:
         message: Info message
     """
     st.info(message)
+
+
+_SKELETON_CSS_INJECTED = False
+
+
+def render_skeleton_grid(cols: int = 5, rows: int = 2):
+    """Render a CSS-animated skeleton grid that mimics a book card layout."""
+    global _SKELETON_CSS_INJECTED
+    if not _SKELETON_CSS_INJECTED:
+        st.markdown(
+            "<style>"
+            "@keyframes sk-pulse{0%,100%{opacity:.15}50%{opacity:.3}}"
+            ".sk-card{background:rgba(255,255,255,.06);border-radius:10px;"
+            "padding:12px;animation:sk-pulse 1.5s ease-in-out infinite}"
+            ".sk-cover{background:rgba(255,255,255,.1);border-radius:6px;"
+            "width:100%;aspect-ratio:2/3;margin-bottom:8px}"
+            ".sk-line{background:rgba(255,255,255,.1);border-radius:4px;"
+            "height:12px;margin-bottom:6px}"
+            ".sk-line.short{width:60%}"
+            "</style>",
+            unsafe_allow_html=True,
+        )
+        _SKELETON_CSS_INJECTED = True
+
+    for _ in range(rows):
+        row_cols = st.columns(cols)
+        for c in row_cols:
+            with c:
+                st.markdown(
+                    '<div class="sk-card">'
+                    '<div class="sk-cover"></div>'
+                    '<div class="sk-line"></div>'
+                    '<div class="sk-line short"></div>'
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+
+
+def render_skeleton_stats(count: int = 3):
+    """Render skeleton stat cards for the statistics view."""
+    global _SKELETON_CSS_INJECTED
+    if not _SKELETON_CSS_INJECTED:
+        render_skeleton_grid(0, 0)  # inject CSS only
+    cols = st.columns(count)
+    for c in cols:
+        with c:
+            st.markdown(
+                '<div class="sk-card" style="min-height:80px">'
+                '<div class="sk-line" style="height:28px;width:40%;margin-bottom:10px"></div>'
+                '<div class="sk-line short"></div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+
+def render_skeleton_list(count: int = 4):
+    """Render skeleton rows for list-style views (authors, series)."""
+    global _SKELETON_CSS_INJECTED
+    if not _SKELETON_CSS_INJECTED:
+        render_skeleton_grid(0, 0)
+    for _ in range(count):
+        st.markdown(
+            '<div class="sk-card" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">'
+            '<div style="background:rgba(255,255,255,.1);border-radius:50%;'
+            'width:48px;height:48px;flex-shrink:0"></div>'
+            '<div style="flex:1">'
+            '<div class="sk-line" style="width:50%"></div>'
+            '<div class="sk-line short"></div>'
+            '</div></div>',
+            unsafe_allow_html=True,
+        )

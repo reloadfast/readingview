@@ -9,6 +9,7 @@ from typing import Dict, List, Any
 
 from api.audiobookshelf import AudiobookshelfAPI, AudiobookData
 from config.config import config
+from utils.helpers import render_skeleton_list
 
 import logging
 
@@ -88,8 +89,11 @@ def render_series_tracker(api: AudiobookshelfAPI):
     """Render the series progress tracker view."""
     st.markdown("### Series Progress")
 
-    with st.spinner("Loading series data..."):
-        series_map = _fetch_series_data(api.base_url, api.token)
+    _sk = st.empty()
+    with _sk.container():
+        render_skeleton_list(5)
+    series_map = _fetch_series_data(api.base_url, api.token)
+    _sk.empty()
 
     if not series_map:
         st.info("No series found in your library.")

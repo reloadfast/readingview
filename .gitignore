@@ -42,6 +42,7 @@ diagnostics.py
 .opencode.json
 
 # Reports and logs
+vulnerabilities/
 reports/
 *.log
 *.json

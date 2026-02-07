@@ -12,6 +12,7 @@ from utils.helpers import (
     group_finished_by_month,
     group_finished_by_year,
     format_date_short,
+    render_skeleton_stats,
 )
 import pandas as pd
 from datetime import datetime
@@ -34,9 +35,12 @@ def render_statistics_view(api: AudiobookshelfAPI):
     """Render the statistics view with charts, book breakdowns, and Year in Recap."""
     st.markdown("### Statistics")
 
-    with st.spinner("Loading statistics..."):
-        listening_stats = _fetch_listening_stats(api.base_url, api.token)
-        progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk = st.empty()
+    with _sk.container():
+        render_skeleton_stats(3)
+    listening_stats = _fetch_listening_stats(api.base_url, api.token)
+    progress_map = _fetch_progress_map(api.base_url, api.token)
+    _sk.empty()
 
     if not listening_stats and not progress_map:
         st.info("No listening data available yet. Start listening to build your statistics!")

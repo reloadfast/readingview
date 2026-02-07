@@ -4,10 +4,14 @@ Main application entry point.
 """
 
 from pathlib import Path
+import logging
+import traceback
 
 import streamlit as st
 import streamlit.components.v1 as components
 from config import config
+
+logger = logging.getLogger(__name__)
 from api.audiobookshelf import AudiobookshelfAPI
 from components.library import render_library_view, render_in_progress_view, trigger_library_dialogs
 from components.statistics import render_statistics_view
@@ -259,40 +263,50 @@ def main():
     tabs = st.tabs(tab_names)
     tab_index = 0
 
-    with tabs[tab_index]:
-        render_library_view(api)
+    def _safe_render(tab, name: str, fn, *args, **kwargs):
+        """Wrap a tab render function with an error boundary."""
+        with tab:
+            try:
+                fn(*args, **kwargs)
+            except Exception as e:
+                logger.error("Error rendering %s tab:\n%s", name, traceback.format_exc())
+                st.error(f"Something went wrong loading the {name} tab.")
+                with st.expander("Error details"):
+                    st.code(traceback.format_exc())
+
+    _safe_render(tabs[tab_index], "Library", render_library_view, api)
+    tab_index += 1
+
+    _safe_render(tabs[tab_index], "In Progress", render_in_progress_view, api)
+    tab_index += 1
+
+    _safe_render(tabs[tab_index], "Statistics", render_statistics_view, api)
     tab_index += 1
 
     with tabs[tab_index]:
-        render_in_progress_view(api)
+        try:
+            if config.ENABLE_RELEASE_TRACKER and db:
+                render_authors_view(api, db)
+            else:
+                render_authors_view(api)
+        except Exception as e:
+            logger.error("Error rendering Authors tab:\n%s", traceback.format_exc())
+            st.error("Something went wrong loading the Authors tab.")
+            with st.expander("Error details"):
+                st.code(traceback.format_exc())
     tab_index += 1
 
-    with tabs[tab_index]:
-        render_statistics_view(api)
-    tab_index += 1
-
-    with tabs[tab_index]:
-        if config.ENABLE_RELEASE_TRACKER and db:
-            render_authors_view(api, db)
-        else:
-            render_authors_view(api)
-    tab_index += 1
-
-    with tabs[tab_index]:
-        render_series_tracker(api)
+    _safe_render(tabs[tab_index], "Series", render_series_tracker, api)
     tab_index += 1
 
     if config.ENABLE_RELEASE_TRACKER and db:
-        with tabs[tab_index]:
-            render_release_tracker_view(api, db)
+        _safe_render(tabs[tab_index], "Release Tracker", render_release_tracker_view, api, db)
         tab_index += 1
-        with tabs[tab_index]:
-            render_notification_settings(db)
+        _safe_render(tabs[tab_index], "Notifications", render_notification_settings, db)
         tab_index += 1
 
     if config.has_book_recommender():
-        with tabs[tab_index]:
-            render_recommendations_view()
+        _safe_render(tabs[tab_index], "Recommendations", render_recommendations_view)
         tab_index += 1
 
     # Switch to Authors tab when navigating from Library (Authors is at index 3)
@@ -303,6 +317,52 @@ def main():
                 if (tabs.length > 3) tabs[3].click();
             </script>
         """, height=0)
+
+    # Keyboard shortcuts: 1-9 switch tabs, / focuses search, Esc closes dialogs
+    components.html("""
+        <script>
+        (function() {
+            const doc = window.parent.document;
+            if (doc._rvShortcuts) return;
+            doc._rvShortcuts = true;
+            doc.addEventListener('keydown', function(e) {
+                const tag = (e.target.tagName || '').toLowerCase();
+                const inInput = (tag === 'input' || tag === 'textarea' || e.target.isContentEditable);
+                // Number keys 1-9: switch tabs (only when not typing)
+                if (!inInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    const num = parseInt(e.key);
+                    if (num >= 1 && num <= 9) {
+                        const tabs = doc.querySelectorAll('button[data-baseweb="tab"]');
+                        if (tabs.length >= num) {
+                            e.preventDefault();
+                            tabs[num - 1].click();
+                        }
+                        return;
+                    }
+                    // / key: focus search input
+                    if (e.key === '/') {
+                        const search = doc.querySelector('input[aria-label="Search"]')
+                                     || doc.querySelector('input[placeholder*="Search"]');
+                        if (search) {
+                            e.preventDefault();
+                            search.focus();
+                        }
+                        return;
+                    }
+                }
+                // Esc: close dialogs / blur inputs
+                if (e.key === 'Escape') {
+                    if (inInput) {
+                        e.target.blur();
+                        return;
+                    }
+                    const closeBtn = doc.querySelector('[data-testid="stModal"] button[aria-label="Close"]');
+                    if (closeBtn) closeBtn.click();
+                }
+            });
+        })();
+        </script>
+    """, height=0)
 
 
 if __name__ == "__main__":

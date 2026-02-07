@@ -104,13 +104,15 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
         author_filter = st.selectbox(
             "Filter by Author",
             options=[{"id": None, "author_name": "All Authors"}] + authors,
-            format_func=lambda x: x['author_name']
+            format_func=lambda x: x['author_name'],
+            key="rt_author_filter",
         )
-    
+
     with col2:
         sort_by = st.selectbox(
             "Sort by",
-            ["Release Date", "Author Name", "Book Title"]
+            ["Release Date", "Author Name", "Book Title"],
+            key="rt_sort",
         )
     
     # Apply filters
@@ -189,7 +191,7 @@ def render_upcoming_releases(db: ReleaseTrackerDB):
                 with ecol2:
                     if st.button("Delete", key=f"delete_{release['id']}", use_container_width=True):
                         db.delete_release(release['id'])
-                        st.success("Release deleted!")
+                        st.toast("Release deleted!", icon="🗑️")
                         st.rerun()
 
     # Pagination controls
@@ -539,7 +541,7 @@ def render_add_from_open_library_result(
                     source="openlibrary"
                 )
             
-            st.success(f"✅ Added '{book_title}' to tracker!")
+            st.toast(f"Added '{book_title}' to tracker!", icon="✅")
             # Clear the form state
             if f'adding_book_{idx}' in st.session_state:
                 del st.session_state[f'adding_book_{idx}']
@@ -623,8 +625,8 @@ def render_add_from_audiobookshelf(api: AudiobookshelfAPI, db: ReleaseTrackerDB)
                     series_id = series_by_author[author].get(series_name)
                     db.add_tracked_series(series_name, author_id, series_id)
         
-        st.success(f"Added {len(selected_authors)} author(s) to tracker!")
-        
+        st.toast(f"Added {len(selected_authors)} author(s) to tracker!", icon="✅")
+
         # Prompt to add release info
         st.info("Now add upcoming release information in the 'Upcoming Releases' tab!")
         st.rerun()
@@ -728,7 +730,7 @@ def render_manual_add(db: ReleaseTrackerDB):
                     notes=notes if notes else None
                 )
                 
-                st.success(f"Added '{book_title}' to tracker!")
+                st.toast(f"Added '{book_title}' to tracker!", icon="✅")
                 # Offer to add another release for the same author
                 st.session_state['manual_add_last_author'] = author_name
                 st.rerun()
@@ -790,7 +792,7 @@ def render_manage_tracking(db: ReleaseTrackerDB):
                     with r_col3:
                         if st.button("Delete", key=f"manage_del_rel_{rel['id']}", use_container_width=True):
                             db.delete_release(rel['id'])
-                            st.success(f"Deleted '{rel['book_title']}'")
+                            st.toast(f"Deleted '{rel['book_title']}'", icon="🗑️")
                             st.rerun()
                     # Inline edit form
                     if st.session_state.get(f'manage_edit_release_{rel["id"]}'):
@@ -815,7 +817,7 @@ def render_manage_tracking(db: ReleaseTrackerDB):
             # Remove author button
             if st.button(f"Remove {author['author_name']}", key=f"remove_author_{author['id']}"):
                 db.remove_tracked_author(author['id'])
-                st.success(f"Removed {author['author_name']} from tracking")
+                st.toast(f"Removed {author['author_name']} from tracking", icon="✅")
                 st.rerun()
 
 
@@ -856,7 +858,7 @@ def show_edit_release_form(db: ReleaseTrackerDB, release: Dict[str, Any]):
                 amazon_url=sanitize_url(amazon_url),
                 notes=notes if notes else None
             )
-            st.success("Release updated!")
+            st.toast("Release updated!", icon="✅")
             st.session_state[f'edit_release_{release["id"]}'] = False
             st.session_state.pop(f'manage_edit_release_{release["id"]}', None)
             st.rerun()
@@ -945,7 +947,7 @@ def _render_quick_add_release(db: ReleaseTrackerDB, author: Dict[str, Any]):
                 notes=notes if notes else None,
             )
             st.session_state.pop('manage_add_release_author', None)
-            st.success(f"Added '{book_title}'!")
+            st.toast(f"Added '{book_title}'!", icon="✅")
             st.rerun()
         elif submitted:
             st.error("Book title is required.")

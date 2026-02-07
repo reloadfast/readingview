@@ -107,7 +107,7 @@ def render_notification_settings(db: ReleaseTrackerDB):
         db.set_notification_setting("frequency", frequency)
         db.set_notification_setting("days_before_release", str(days_before))
         db.set_notification_setting("notify_new_books", "true" if notify_new_books else "false")
-        st.success("Settings saved!")
+        st.toast("Settings saved!", icon="✅")
 
     st.markdown("---")
 
@@ -124,7 +124,7 @@ def render_notification_settings(db: ReleaseTrackerDB):
                     config.APPRISE_NOTIFICATION_KEY,
                 )
             if ok:
-                st.success(msg)
+                st.toast(msg, icon="✅")
             else:
                 st.error(msg)
 
@@ -142,7 +142,7 @@ def render_notification_settings(db: ReleaseTrackerDB):
                         body=body,
                     )
                 if ok:
-                    st.success(f"Sent digest with {len(releases)} release(s).")
+                    st.toast(f"Sent digest with {len(releases)} release(s).", icon="✅")
                 else:
                     st.error(msg)
             else:
@@ -192,7 +192,7 @@ def render_notification_settings(db: ReleaseTrackerDB):
         if st.button("Start Scheduler", type="primary"):
             ok = start_scheduler(frequency=sched_freq)
             if ok:
-                st.success(f"Scheduler started ({sched_freq}).")
+                st.toast(f"Scheduler started ({sched_freq}).", icon="✅")
             else:
                 st.error("Failed to start scheduler. Check logs for details.")
 

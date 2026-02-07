@@ -44,7 +44,7 @@ def render_recommendations_view():
                     try:
                         book_id = book_recommender.ingest(isbn=isbn_input)
                         if book_id:
-                            st.success(f"Ingested: {book_id}")
+                            st.toast(f"Ingested: {book_id}", icon="✅")
                         else:
                             st.warning("No results found for that ISBN.")
                     except BookRecommenderConfigError as e:
@@ -60,7 +60,7 @@ def render_recommendations_view():
                             author=author_input or None,
                         )
                         if book_id:
-                            st.success(f"Ingested: {book_id}")
+                            st.toast(f"Ingested: {book_id}", icon="✅")
                         else:
                             st.warning("No results found.")
                     except BookRecommenderConfigError as e:
