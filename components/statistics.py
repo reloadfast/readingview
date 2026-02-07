@@ -133,7 +133,7 @@ def _render_yearly_breakdown(
     for year in reversed(list(by_year.keys())):
         books = by_year[year]
         with st.expander(f"{year} — {len(books)} book{'s' if len(books) != 1 else ''}", expanded=False):
-            _render_book_list(books, api)
+            _render_book_list(books, api, list_key=f"year_{year}")
 
 
 # ---------------------------------------------------------------------------
@@ -165,17 +165,17 @@ def _render_monthly_breakdown(
         books = by_month[month]
         label = datetime.strptime(month, "%Y-%m").strftime("%B %Y")
         with st.expander(f"{label} — {len(books)} book{'s' if len(books) != 1 else ''}", expanded=False):
-            _render_book_list(books, api)
+            _render_book_list(books, api, list_key=f"month_{month}")
 
 
 # ---------------------------------------------------------------------------
 # Book list rendering (shared)
 # ---------------------------------------------------------------------------
 
-def _render_book_list(books: List[Dict[str, Any]], api: AudiobookshelfAPI, page_size: int = 10):
+def _render_book_list(books: List[Dict[str, Any]], api: AudiobookshelfAPI, page_size: int = 10, list_key: str = ""):
     """Render a list of finished books with cover, title, author, and dates."""
     if len(books) > page_size:
-        page_key = f"stats_bl_{id(books)}"
+        page_key = f"stats_bl_{list_key}"
         total_pages = max(1, -(-len(books) // page_size))
         page = st.session_state.get(page_key, 1)
         page = min(page, total_pages)
@@ -360,7 +360,7 @@ def _render_year_in_recap(
 
     # --- Full book list for the year ---
     st.markdown(f"##### All Books — {selected_year}")
-    _render_book_list(books, api)
+    _render_book_list(books, api, list_key=f"recap_{selected_year}")
 
 
 # ---------------------------------------------------------------------------
