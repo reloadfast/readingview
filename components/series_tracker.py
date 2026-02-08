@@ -18,35 +18,15 @@ logger = logging.getLogger(__name__)
 
 @st.cache_data(ttl=config.CACHE_TTL, show_spinner=False)
 def _fetch_series_data(base_url: str, token: str):
-    """Fetch all library items and group them by series."""
+    """Fetch all series using the dedicated series API endpoint."""
     api = AudiobookshelfAPI(base_url, token)
     progress_map = api.get_media_progress_map()
 
-    items = []
-    for lib in api.get_libraries():
-        items.extend(api.get_library_items(lib["id"]))
-
-    # Group by series name
     series_map: Dict[str, Dict[str, Any]] = {}
 
-    for item in items:
-        metadata = AudiobookData.extract_metadata(item)
-        raw_series = metadata.get("series", [])
-        if not raw_series:
-            continue
-
-        progress_data = (
-            progress_map.get(item.get("id", ""))
-            or item.get("userMediaProgress")
-            or item.get("mediaProgress")
-            or {}
-        )
-        progress_info = AudiobookData.calculate_progress(
-            progress_data, metadata["duration"]
-        )
-
-        for s in raw_series:
-            series_name = s.get("name", "").strip()
+    for lib in api.get_libraries():
+        for series_data in api.get_library_series(lib["id"]):
+            series_name = series_data.get("name", "").strip()
             if not series_name:
                 continue
 
@@ -54,19 +34,34 @@ def _fetch_series_data(base_url: str, token: str):
                 series_map[series_name] = {
                     "name": series_name,
                     "books": [],
-                    "author": metadata["author"],
+                    "author": "",
                 }
 
-            series_map[series_name]["books"].append({
-                "id": metadata["id"],
-                "title": metadata["title"],
-                "author": metadata["author"],
-                "sequence": s.get("sequence", ""),
-                "is_finished": progress_info["is_finished"],
-                "progress": progress_info["progress"],
-                "duration": metadata["duration"],
-                "cover_path": metadata.get("cover_path"),
-            })
+            for book in series_data.get("books", []):
+                media = book.get("media", {})
+                metadata = media.get("metadata", {})
+                book_id = book.get("id", "")
+                duration = media.get("duration", 0)
+
+                progress_data = progress_map.get(book_id, {})
+                progress_info = AudiobookData.calculate_progress(
+                    progress_data, duration
+                )
+
+                author = metadata.get("authorName", "Unknown Author")
+                if not series_map[series_name]["author"]:
+                    series_map[series_name]["author"] = author
+
+                series_map[series_name]["books"].append({
+                    "id": book_id,
+                    "title": metadata.get("title", "Unknown Title"),
+                    "author": author,
+                    "sequence": book.get("sequence", ""),
+                    "is_finished": progress_info["is_finished"],
+                    "progress": progress_info["progress"],
+                    "duration": duration,
+                    "cover_path": media.get("coverPath"),
+                })
 
     # Sort books within each series by sequence number
     for series in series_map.values():

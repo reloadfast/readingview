@@ -107,6 +107,37 @@ class AudiobookshelfAPI:
         result = self._make_request(f'/libraries/{library_id}/items')
         return result.get('results', []) if result else []
     
+    def get_library_series(self, library_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all series in a library with their books (handles pagination).
+
+        Args:
+            library_id: Library ID
+
+        Returns:
+            List of series objects, each containing books
+        """
+        all_series: List[Dict[str, Any]] = []
+        page = 0
+        limit = 100
+
+        while True:
+            result = self._make_request(
+                f'/libraries/{library_id}/series?limit={limit}&page={page}'
+            )
+            if not result:
+                break
+
+            series_list = result.get('results', [])
+            all_series.extend(series_list)
+
+            total = result.get('total', 0)
+            if len(all_series) >= total or not series_list:
+                break
+            page += 1
+
+        return all_series
+
     def get_user_listening_sessions(self) -> List[Dict[str, Any]]:
         """
         Get all user's listening sessions (handles pagination).
