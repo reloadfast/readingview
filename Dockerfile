@@ -12,7 +12,7 @@ RUN pnpm build
 # ── Stage 2: backend deps ─────────────────────────────────────────────────────
 FROM python:3.11-slim AS backend-builder
 WORKDIR /app
-RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir --upgrade pip setuptools
 COPY backend/pyproject.toml ./
 RUN pip install --no-cache-dir --user .
 
