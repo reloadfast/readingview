@@ -1,52 +1,39 @@
-# ReadingView - Audiobook Statistics Dashboard
-# Multi-stage build for optimized image size
+# ReadingView — multi-stage build: frontend → backend → runtime
 
-FROM python:3.11-slim AS builder
+# ── Stage 1: frontend ────────────────────────────────────────────────────────
+FROM node:20-slim AS frontend-builder
+WORKDIR /app/frontend
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ ./
+RUN pnpm build
 
-# Set working directory
+# ── Stage 2: backend deps ─────────────────────────────────────────────────────
+FROM python:3.11-slim AS backend-builder
 WORKDIR /app
+RUN pip install --no-cache-dir --upgrade pip
+COPY backend/pyproject.toml ./
+RUN pip install --no-cache-dir --user .
 
-# Upgrade build tooling to patched versions before installing deps
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Final stage
+# ── Stage 3: runtime ──────────────────────────────────────────────────────────
 FROM python:3.11-slim
-
-# Set working directory
 WORKDIR /app
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-
-# Copy application files
-COPY . .
-
-# Make sure scripts in .local are usable
+ARG GIT_SHA=dev
+ENV GIT_SHA=$GIT_SHA
 ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONPATH=/app
 
-# Remove build tooling from base image (not needed at runtime, avoids CVEs)
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && rm -rf /usr/local/lib/python3.11/site-packages/pip* \
-              /usr/local/lib/python3.11/site-packages/setuptools* \
-              /usr/local/lib/python3.11/site-packages/wheel* \
-              /usr/local/lib/python3.11/site-packages/_distutils_hack* \
-              /usr/local/lib/python3.11/site-packages/pkg_resources* \
-              /usr/local/bin/pip* \
-              /usr/local/bin/wheel
+COPY --from=backend-builder /root/.local /root/.local
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+COPY backend/ ./backend/
 
-# Create data directory for SQLite database (separate from Python database/ package)
-RUN mkdir -p /app/data
+RUN mkdir -p /data
 
-# Expose Streamlit port
-EXPOSE 8506
+EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8506/_stcore/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
 
-# Run the application
-CMD ["streamlit", "run", "app.py", "--server.port=8506", "--server.address=0.0.0.0", "--server.headless=true"]
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
