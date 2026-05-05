@@ -87,16 +87,6 @@ jobs:
             --ignorefile .trivyignore \
             ${{ env.IMAGE_NAME }}:scan || true
 
-      - name: Upload Trivy reports as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-vulnerability-report
-          path: |
-            trivy-results.json
-            trivy-results.sarif
-          retention-days: 30
-
       - name: Push Docker image
         if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
