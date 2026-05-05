@@ -1,0 +1,173 @@
+import asyncio
+from typing import Literal
+
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..crypto import decrypt
+from ..db import get_db
+from ..models.settings import Settings
+from ..schemas.library import BookProgress, LibraryBook, SeriesEntry
+from ..services.audiobookshelf import AudiobookshelfClient
+
+router = APIRouter()
+
+_NOT_CONFIGURED = {"detail": "ABS connection not configured"}
+
+
+async def _get_client(db: AsyncSession) -> AudiobookshelfClient:
+    row = await db.get(Settings, 1)
+    if not row or not row.abs_url or not row.abs_token:
+        raise HTTPException(status_code=503, detail="ABS connection not configured")
+    return AudiobookshelfClient(row.abs_url, decrypt(row.abs_token))
+
+
+def _parse_progress(raw: dict, duration: float) -> BookProgress:
+    current_time = raw.get("currentTime", 0) or 0
+    return BookProgress(
+        is_finished=raw.get("isFinished", False),
+        progress_pct=(raw.get("progress", 0) or 0) * 100,
+        current_time=current_time,
+        time_remaining=max(0.0, duration - current_time),
+        started_at=raw.get("startedAt"),
+        finished_at=raw.get("finishedAt"),
+        last_update=raw.get("lastUpdate"),
+    )
+
+
+def _parse_series(raw_series: list) -> list[SeriesEntry]:
+    entries = []
+    for s in raw_series or []:
+        if isinstance(s, dict):
+            entries.append(SeriesEntry(name=s.get("name", ""), sequence=s.get("sequence")))
+        elif isinstance(s, str):
+            entries.append(SeriesEntry(name=s))
+    return entries
+
+
+def _item_to_book(item: dict, progress_map: dict, cover_url_fn) -> LibraryBook:
+    media = item.get("media", {})
+    meta = media.get("metadata", {})
+    item_id = item.get("id", "")
+    duration = media.get("duration", 0) or 0
+
+    progress_raw = (
+        progress_map.get(item_id)
+        or item.get("userMediaProgress")
+        or item.get("mediaProgress")
+        or {}
+    )
+    progress = _parse_progress(progress_raw, duration) if progress_raw else None
+
+    return LibraryBook(
+        id=item_id,
+        title=meta.get("title", "Unknown Title"),
+        authors=meta.get("authorName", "Unknown Author"),
+        narrator=meta.get("narratorName"),
+        series=_parse_series(meta.get("series", [])),
+        cover_url=cover_url_fn(item_id),
+        duration=duration,
+        genres=meta.get("genres", []),
+        description=meta.get("description"),
+        published_year=meta.get("publishedYear"),
+        isbn=meta.get("isbn"),
+        asin=meta.get("asin"),
+        progress=progress,
+    )
+
+
+def _sort_books(
+    books: list[LibraryBook],
+    sort: str,
+) -> list[LibraryBook]:
+    if sort == "title":
+        return sorted(books, key=lambda b: b.title.lower())
+    if sort == "progress_asc":
+        return sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0)
+    if sort == "progress_desc":
+        return sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0, reverse=True)
+    if sort == "updated":
+        return sorted(books, key=lambda b: b.progress.last_update if b.progress and b.progress.last_update else 0, reverse=True)
+    if sort == "finished":
+        return sorted(books, key=lambda b: b.progress.finished_at if b.progress and b.progress.finished_at else 0, reverse=True)
+    return books
+
+
+@router.get("/library", response_model=list[LibraryBook])
+async def get_library(
+    search: str | None = Query(default=None),
+    sort: Literal["title", "progress_asc", "progress_desc", "updated", "finished"] = Query(default="updated"),
+    page: int = Query(default=0, ge=0),
+    limit: int = Query(default=20, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+) -> list[LibraryBook]:
+    async with db.begin():
+        client = await _get_client(db)
+
+    try:
+        items, progress_map = await _parallel_fetch(client)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    books = [_item_to_book(item, progress_map, client.cover_url) for item in items]
+
+    if search:
+        q = search.lower()
+        books = [
+            b for b in books
+            if q in b.title.lower()
+            or q in b.authors.lower()
+            or any(q in s.name.lower() for s in b.series)
+        ]
+
+    books = _sort_books(books, sort)
+    return books[page * limit : (page + 1) * limit]
+
+
+async def _parallel_fetch(client: AudiobookshelfClient):
+    items_task = asyncio.create_task(client.get_all_library_items())
+    progress_task = asyncio.create_task(client.get_media_progress_map())
+    items = await items_task
+    progress_map = await progress_task
+    return items, progress_map
+
+
+@router.get("/library/in-progress", response_model=list[LibraryBook])
+async def get_in_progress(
+    db: AsyncSession = Depends(get_db),
+) -> list[LibraryBook]:
+    async with db.begin():
+        client = await _get_client(db)
+
+    try:
+        items_task = asyncio.create_task(client.get_user_items_in_progress())
+        progress_task = asyncio.create_task(client.get_media_progress_map())
+        items = await items_task
+        progress_map = await progress_task
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return [_item_to_book(item, progress_map, client.cover_url) for item in items]
+
+
+@router.get("/library/{item_id}", response_model=LibraryBook)
+async def get_library_item(
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> LibraryBook:
+    async with db.begin():
+        client = await _get_client(db)
+
+    try:
+        item_task = asyncio.create_task(client.get_item(item_id))
+        progress_task = asyncio.create_task(client.get_media_progress_map())
+        item = await item_task
+        progress_map = await progress_task
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    if item is None:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    return _item_to_book(item, progress_map, client.cover_url)

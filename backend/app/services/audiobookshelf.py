@@ -1,0 +1,61 @@
+import httpx
+
+_TIMEOUT = 10.0
+
+
+class AudiobookshelfClient:
+    def __init__(self, base_url: str, token: str) -> None:
+        self.base_url = base_url.rstrip("/")
+        self._headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+    def _client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            base_url=f"{self.base_url}/api",
+            headers=self._headers,
+            timeout=_TIMEOUT,
+        )
+
+    async def get_media_progress_map(self) -> dict:
+        async with self._client() as c:
+            r = await c.get("/me")
+            r.raise_for_status()
+        progress_list = r.json().get("mediaProgress", [])
+        return {p["libraryItemId"]: p for p in progress_list if p.get("libraryItemId")}
+
+    async def get_libraries(self) -> list[dict]:
+        async with self._client() as c:
+            r = await c.get("/libraries")
+            r.raise_for_status()
+        return r.json().get("libraries", [])
+
+    async def get_library_items(self, library_id: str) -> list[dict]:
+        async with self._client() as c:
+            r = await c.get(f"/libraries/{library_id}/items")
+            r.raise_for_status()
+        return r.json().get("results", [])
+
+    async def get_all_library_items(self) -> list[dict]:
+        items: list[dict] = []
+        for lib in await self.get_libraries():
+            items.extend(await self.get_library_items(lib["id"]))
+        return items
+
+    async def get_user_items_in_progress(self) -> list[dict]:
+        async with self._client() as c:
+            r = await c.get("/me/items-in-progress")
+            r.raise_for_status()
+        return r.json().get("libraryItems", [])
+
+    async def get_item(self, item_id: str) -> dict | None:
+        async with self._client() as c:
+            r = await c.get(f"/items/{item_id}")
+            if r.status_code == 404:
+                return None
+            r.raise_for_status()
+        return r.json()
+
+    def cover_url(self, item_id: str) -> str:
+        return f"{self.base_url}/api/items/{item_id}/cover"
