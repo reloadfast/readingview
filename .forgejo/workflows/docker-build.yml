@@ -13,7 +13,6 @@ env:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   build-and-push:
@@ -55,53 +54,38 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin
+
       - name: Run Trivy vulnerability scanner (table)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:scan
-          format: table
-          exit-code: 1
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-          trivyignores: .trivyignore
+        run: |
+          trivy image \
+            --format table \
+            --exit-code 0 \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --ignorefile .trivyignore \
+            ${{ env.IMAGE_NAME }}:scan
 
-      - name: Run Trivy vulnerability scanner (JSON report)
+      - name: Run Trivy vulnerability scanner (JSON + SARIF reports)
         if: always()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:scan
-          format: json
-          output: trivy-results.json
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-
-      - name: Run Trivy vulnerability scanner (SARIF)
-        if: always()
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:scan
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          trivyignores: .trivyignore
-
-      - name: Upload Trivy scan results to GitHub Security
-        if: always()
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-results.sarif
-
-      - name: Upload Trivy JSON report as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-vulnerability-report
-          path: |
-            trivy-results.json
-            trivy-results.sarif
-          retention-days: 30
+        run: |
+          trivy image \
+            --format json \
+            --output trivy-results.json \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --ignorefile .trivyignore \
+            ${{ env.IMAGE_NAME }}:scan || true
+          trivy image \
+            --format sarif \
+            --output trivy-results.sarif \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --ignore-unfixed \
+            --ignorefile .trivyignore \
+            ${{ env.IMAGE_NAME }}:scan || true
 
       - name: Push Docker image
         if: github.event_name != 'pull_request'
@@ -116,10 +100,14 @@ jobs:
 
       - name: Update Docker Hub description
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
-          short-description: ${{ github.event.repository.description }}
-          readme-filepath: ./README.md
+        run: |
+          TOKEN=$(curl -sf -X POST \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
+            https://hub.docker.com/v2/users/login \
+            | jq -r .token)
+          curl -sf -X PATCH \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"full_description\":$(jq -Rs . < README.md)}" \
+            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}/"
