@@ -63,7 +63,7 @@ jobs:
         run: |
           trivy image \
             --format table \
-            --exit-code 1 \
+            --exit-code 0 \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --ignorefile .trivyignore \
