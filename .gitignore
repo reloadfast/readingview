@@ -11,6 +11,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
@@ -46,6 +47,9 @@ vulnerabilities/
 reports/
 *.log
 *.json
+!frontend/package.json
+!frontend/tsconfig*.json
+!frontend/eslint.config.js
 
 # Security
 .env
