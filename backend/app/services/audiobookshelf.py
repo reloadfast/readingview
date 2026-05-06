@@ -57,5 +57,30 @@ class AudiobookshelfClient:
             r.raise_for_status()
         return r.json()
 
+    async def get_user_listening_stats(self) -> dict:
+        async with self._client() as c:
+            r = await c.get("/me/listening-stats")
+            r.raise_for_status()
+        return r.json()
+
+    async def get_user_listening_sessions(self) -> list[dict]:
+        all_sessions: list[dict] = []
+        page = 0
+        items_per_page = 100
+        async with self._client() as c:
+            while True:
+                r = await c.get(
+                    f"/me/listening-sessions?itemsPerPage={items_per_page}&page={page}"
+                )
+                r.raise_for_status()
+                data = r.json()
+                sessions = data.get("sessions", [])
+                all_sessions.extend(sessions)
+                total = data.get("total", 0)
+                if len(all_sessions) >= total or not sessions:
+                    break
+                page += 1
+        return all_sessions
+
     def cover_url(self, item_id: str) -> str:
         return f"{self.base_url}/api/items/{item_id}/cover"
