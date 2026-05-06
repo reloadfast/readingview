@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import authors, connections, health, library, settings, statistics
+from .api import authors, connections, health, library, series, settings, statistics
 
 app = FastAPI(title="ReadingView")
 
@@ -23,6 +23,7 @@ app.include_router(connections.router, prefix="/api")
 app.include_router(library.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")
 app.include_router(authors.router, prefix="/api")
+app.include_router(series.router, prefix="/api")
 
 _dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 

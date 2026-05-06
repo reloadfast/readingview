@@ -57,6 +57,22 @@ class AudiobookshelfClient:
             r.raise_for_status()
         return r.json()
 
+    async def get_library_series(self, library_id: str) -> list[dict]:
+        all_series: list[dict] = []
+        page = 0
+        limit = 100
+        async with self._client() as c:
+            while True:
+                r = await c.get(f"/libraries/{library_id}/series?limit={limit}&page={page}")
+                r.raise_for_status()
+                data = r.json()
+                batch = data.get("results", [])
+                all_series.extend(batch)
+                if len(all_series) >= data.get("total", 0) or not batch:
+                    break
+                page += 1
+        return all_series
+
     async def get_user_listening_stats(self) -> dict:
         async with self._client() as c:
             r = await c.get("/me/listening-stats")
