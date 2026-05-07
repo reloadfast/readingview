@@ -39,6 +39,7 @@ Designed for single-user, self-hosted deployments. No cloud services required.
 - **Scheduled digests** — daily or weekly release notification emails via background scheduler
 - **Manual digest** — preview and send upcoming release summaries on demand
 - **Connection status** — live indicator showing configured notification services
+- Configured through the **Settings UI** — no env vars needed after initial setup
 
 ### Book Recommender (optional)
 - **Local AI** — runs entirely on your machine via [Ollama](https://ollama.com/), no cloud APIs
@@ -49,125 +50,49 @@ Designed for single-user, self-hosted deployments. No cloud services required.
 - **Optional explanations** — LLM-generated reasoning for each recommendation
 - **Vector backends** — FAISS for speed or pure-Python cosine similarity (zero extra dependencies)
 
-### UI Polish
-- Dark theme with custom typography
-- Loading skeletons instead of spinners
-- Keyboard shortcuts: `1`-`9` switch tabs, `/` focuses search, `Esc` closes dialogs
-- Toast notifications for non-blocking action feedback
-- Error boundaries per tab — one broken tab won't take down the dashboard
-
 ## Quick Start
 
-### Docker (recommended)
-
 ```bash
-docker run -d \
-  --name readingview \
-  -p 8506:8506 \
-  -v readingview-data:/app/data \
-  -e ABS_URL=https://your-audiobookshelf-url \
-  -e ABS_TOKEN=your_api_token \
-  --restart unless-stopped \
-  readingview:latest
+cp .env.example .env   # set SECRET_KEY and DATABASE_URL
+docker-compose up -d
 ```
 
-### Local
-
-```bash
-git clone https://github.com/reloadfast/readingview.git
-cd readingview
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp env.example .env   # edit with your credentials
-streamlit run app.py
-```
-
-Access at: **http://localhost:8506**
-
-## Configuration
-
-All configuration is via environment variables (or a `.env` file). See [`env.example`](env.example) for a complete template.
-
-### Required
-
-| Variable | Description |
-|----------|-------------|
-| `ABS_URL` | Audiobookshelf server URL |
-| `ABS_TOKEN` | API token ([how to get one](DEPLOYMENT.md#getting-your-api-token)) |
-
-### Optional
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APP_TITLE` | `ReadingView` | Dashboard title |
-| `CACHE_TTL` | `300` | Data cache duration in seconds |
-| `ITEMS_PER_ROW` | `5` | Grid columns for book/author cards |
-| `THEME` | `dark` | Color theme (`dark` or `light`) |
-| `ENABLE_RELEASE_TRACKER` | `true` | Show release tracker and authors tabs |
-| `DB_PATH` | `/app/data/release_tracker.db` | SQLite database path |
-
-### Notifications (via Apprise)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ENABLE_NOTIFICATIONS` | `false` | Enable notification features |
-| `APPRISE_API_URL` | — | Apprise API server URL |
-| `APPRISE_NOTIFICATION_KEY` | — | Routing key configured in Apprise |
-
-See [NOTIFICATIONS.md](NOTIFICATIONS.md) for setup instructions.
-
-### Book Recommender (via Ollama)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BOOK_RECOMMENDER_ENABLED` | `false` | Enable the recommender module |
-| `BOOK_RECOMMENDER_OLLAMA_URL` | `http://localhost:11434` | Ollama API endpoint |
-| `BOOK_RECOMMENDER_EMBED_MODEL` | `nomic-embed-text` | Embedding model |
-| `BOOK_RECOMMENDER_LLM_MODEL` | `llama3` | LLM for explanations |
-| `BOOK_RECOMMENDER_VECTOR_BACKEND` | `python` | `faiss` or `python` |
-| `BOOK_RECOMMENDER_DB_PATH` | `/app/data/book_recommender.db` | Recommender database path |
-| `BOOK_RECOMMENDER_ENABLE_EXPLANATIONS` | `false` | Generate LLM explanations |
-| `BOOK_RECOMMENDER_TOP_K` | `10` | Number of recommendations to return |
-| `BOOK_RECOMMENDER_MIN_SIMILARITY` | `0.2` | Minimum similarity threshold |
-
-Requires [Ollama](https://ollama.com/) running locally with the configured models pulled.
+Access at **http://localhost:8000** — configure ABS credentials and all other settings through the Settings UI.
 
 ## Architecture
 
 ```
 readingview/
-├── app.py                     # Streamlit entry point
-├── config/config.py           # Environment variable loading
-├── api/
-│   ├── audiobookshelf.py      # ABS API client
-│   └── openlibrary.py         # Open Library API client
-├── components/                # UI tab components
-│   ├── library.py             # Library + In Progress views
-│   ├── statistics.py          # Stats + Year in Recap
-│   ├── authors.py             # Author browser
-│   ├── series_tracker.py      # Series progress
-│   ├── release_tracker.py     # Release tracking
-│   ├── recommendations.py     # Recommender UI
-│   └── notifications.py       # Notification settings
-├── book_recommender/          # Pluggable AI recommendation module
-│   ├── __init__.py            # Public API
-│   ├── service.py             # Orchestration
-│   ├── _db.py, _ollama.py     # Storage + AI clients
-│   ├── _vector.py             # FAISS / cosine backends
-│   └── _ingestion.py          # Open Library metadata fetcher
-├── database/db.py             # Release tracker SQLite schema
-├── utils/
-│   ├── helpers.py             # Formatting, grouping, skeletons
-│   ├── notifications.py       # Apprise client
-│   └── scheduler.py           # APScheduler background jobs
-├── Dockerfile                 # Multi-stage Docker build
-└── docker-compose.yml         # Full-stack compose config
+├── backend/                   # FastAPI Python backend
+│   ├── app/
+│   │   ├── main.py            # App entrypoint, router registration, SPA serving
+│   │   ├── config.py          # Pydantic-settings config
+│   │   ├── db.py              # SQLAlchemy async engine
+│   │   ├── api/               # FastAPI routers
+│   │   ├── models/            # SQLAlchemy ORM models
+│   │   ├── schemas/           # Pydantic schemas
+│   │   └── services/          # Business logic (ABS client, OL client, etc.)
+│   ├── book_recommender/      # Pluggable AI recommendation module (Ollama)
+│   ├── alembic/               # Database migrations
+│   └── pyproject.toml         # Dependencies
+├── frontend/                  # React + Vite SPA
+├── Dockerfile                 # Multi-stage build (Python 3.12 + Node 22)
+├── docker-compose.yml         # Production compose
+└── .env.example               # Bootstrap env vars
 ```
 
-Data is stored in two SQLite databases (under `/app/data/` in Docker):
-- **release_tracker.db** — tracked authors, series, releases, notification preferences
-- **book_recommender.db** — ingested book metadata, embeddings, feedback
+## Configuration
+
+Four environment variables bootstrap the container. All other settings (Audiobookshelf credentials, notifications, appearance) are managed through the **Settings UI** at `/settings`.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | `sqlite+aiosqlite:////data/readingview.db` |
+| `SECRET_KEY` | Yes | Long random string for session signing |
+| `PORT` | No | Container port (default: 8000) |
+| `TZ` | No | Timezone (default: UTC) |
+
+See [`.env.example`](.env.example) for the full template.
 
 ## Documentation
 

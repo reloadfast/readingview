@@ -1,5 +1,8 @@
 # Python
 __pycache__/
+backend/__pycache__/
+backend/.mypy_cache/
+backend/.ruff_cache/
 *.py[cod]
 *$py.class
 *.so
@@ -29,6 +32,8 @@ env/
 
 # Node
 node_modules/
+frontend/node_modules/
+frontend/dist/
 *.tsbuildinfo
 
 # IDE

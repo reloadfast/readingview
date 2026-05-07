@@ -2,93 +2,54 @@
 
 ## Prerequisites
 
-- **Docker** or **Python 3.11+**
+- **Docker** and **Docker Compose**
 - Audiobookshelf instance running and accessible
 - Audiobookshelf API token (see [Getting Your API Token](#getting-your-api-token))
 
-## Docker (Recommended)
+## Docker Compose (Recommended)
 
 ```bash
-docker run -d \
-  --name readingview \
-  -p 8506:8506 \
-  -e ABS_URL=https://your-audiobookshelf-url \
-  -e ABS_TOKEN=your_api_token \
-  --restart unless-stopped \
-  readingview:latest
+cp .env.example .env
+# Edit .env: set SECRET_KEY to a long random string
+docker-compose up -d
 ```
 
-Access at: **http://localhost:8506**
+Access at: **http://localhost:8000**
+
+Complete ABS setup in the **Settings UI** — no additional env vars needed.
 
 ### Building from Source
 
 ```bash
-git clone https://github.com/reloadfast/readingview.git
+git clone forgejo:Wind/readingview
 cd readingview
 docker build -t readingview:latest .
-```
-
-## Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  readingview:
-    image: readingview:latest
-    container_name: readingview
-    ports:
-      - "8506:8506"
-    env_file:
-      - .env
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8506/_stcore/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-```
-
-```bash
-cp env.example .env   # edit with your credentials
-docker-compose up -d
 ```
 
 ## Local Development
 
 ```bash
-git clone https://github.com/reloadfast/readingview.git
-cd readingview
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp env.example .env   # edit with your credentials
-streamlit run app.py
+# Backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+DATABASE_URL=sqlite+aiosqlite:////tmp/readingview.db SECRET_KEY=dev uvicorn app.main:app --reload
+
+# Frontend (separate terminal)
+cd frontend
+pnpm install
+pnpm dev
 ```
 
-Streamlit auto-reloads on file changes.
-
-
-## Configuration
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `ABS_URL` | Yes | — | Audiobookshelf server URL |
-| `ABS_TOKEN` | Yes | — | API authentication token |
-| `APP_TITLE` | No | ReadingView | Dashboard title |
-| `CACHE_TTL` | No | 300 | Cache duration in seconds |
-| `ITEMS_PER_ROW` | No | 5 | Grid columns for book/author cards |
-| `THEME` | No | dark | Color theme (`dark` or `light`) |
-| `ENABLE_RELEASE_TRACKER` | No | true | Enable release tracking features |
-| `DB_PATH` | No | /app/data/release_tracker.db | SQLite database path |
-
-See the [README](README.md) for notification and book recommender configuration.
+Backend: **http://localhost:8000** | Frontend dev server: **http://localhost:5173**
 
 ## Getting Your API Token
 
 1. Log into your Audiobookshelf instance
 2. Go to **Settings** → **Users** → click your username
 3. Scroll to **API Tokens** → **Generate Token**
-4. Copy the token (shown only once)
+4. Copy the token — paste it into the ReadingView **Settings UI**
 
 ## Reverse Proxy
 
@@ -100,7 +61,7 @@ server {
     server_name readingview.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:8506;
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -108,7 +69,6 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
     }
 }
 ```
@@ -117,31 +77,23 @@ server {
 
 ```
 readingview.yourdomain.com {
-    reverse_proxy localhost:8506
+    reverse_proxy localhost:8000
 }
 ```
 
 ## Updating
 
 ```bash
-# Docker
-docker pull readingview:latest
-docker stop readingview && docker rm readingview
-# Re-run with same settings
-
 # Docker Compose
 docker-compose pull && docker-compose up -d
-
-# Local
-git pull && pip install -r requirements.txt
 ```
 
 ## Troubleshooting
 
-**Cannot connect to Audiobookshelf** — Verify `ABS_URL` is reachable (`curl $ABS_URL/api/ping`) and token is valid.
+**Cannot connect to Audiobookshelf** — Check the ABS URL and token in the Settings UI. Verify reachability: `curl $ABS_URL/api/ping`.
 
-**Port already in use** — Map to a different host port: `-p 8502:8506`
+**Port already in use** — Set `PORT=8001` in `.env` and update `docker-compose.yml` accordingly.
 
 **Covers not loading** — Check that covers display in the Audiobookshelf web UI. Inspect browser console for CORS errors.
 
-**Slow performance** — Increase `CACHE_TTL` or check Audiobookshelf server response times.
+**Slow performance** — Check Audiobookshelf server response times. Cache TTL is configurable in the Settings UI.
