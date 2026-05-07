@@ -2,16 +2,17 @@
 
 import json
 import logging
+from typing import Any
 
 from ._config import get_config
 from ._exceptions import BookRecommenderDisabledError
 
 logger = logging.getLogger(__name__)
 
-_db = None
-_ollama = None
-_backend = None
-_ingester = None
+_db: Any = None
+_ollama: Any = None
+_backend: Any = None
+_ingester: Any = None
 _initialized = False
 
 

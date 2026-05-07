@@ -9,7 +9,7 @@ _HEADERS = {
 
 
 async def fetch_author_works(author_name: str, limit: int = 20) -> list[dict]:
-    params = {
+    params: dict[str, str | int] = {
         "author": author_name,
         "limit": limit,
         "fields": "key,title,author_name,first_publish_year,isbn,cover_i",

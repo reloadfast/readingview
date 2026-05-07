@@ -85,7 +85,8 @@ async def get_library_authors(db: AsyncSession = Depends(get_db)) -> list[Librar
 async def list_followed_authors(db: AsyncSession = Depends(get_db)) -> list[TrackedAuthorOut]:
     async with db.begin():
         result = await db.execute(select(TrackedAuthor).order_by(TrackedAuthor.name))
-        return list(result.scalars().all())
+        rows = result.scalars().all()
+        return [TrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
 
 
 @router.post("/authors", response_model=TrackedAuthorOut, status_code=201)

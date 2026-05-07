@@ -57,7 +57,7 @@ class FAISSBackend:
         self._dim: int = 0
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
-        import faiss
+        import faiss  # type: ignore[import-not-found]
         import numpy as np
 
         self._ids = list(ids)
@@ -73,7 +73,7 @@ class FAISSBackend:
         self._index.add(mat)
 
     def search(self, query: list[float], top_k: int) -> list[tuple[str, float]]:
-        import faiss
+        import faiss  # type: ignore[import-not-found]
         import numpy as np
 
         if self._index is None or len(self._ids) == 0:
@@ -93,7 +93,7 @@ def create_backend(name: str) -> VectorBackend:
     """Create a vector backend by name. Falls back to Python if FAISS unavailable."""
     if name == "faiss":
         try:
-            import faiss  # noqa: F401
+            import faiss  # type: ignore[import-not-found]  # noqa: F401
 
             return FAISSBackend()
         except ImportError:

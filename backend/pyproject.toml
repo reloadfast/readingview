@@ -49,6 +49,7 @@ extend-ignore = ["B008"]
 strict = true
 python_version = "3.12"
 exclude = ["alembic/"]
+plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -43,7 +43,8 @@ def _release_to_out(r: Release) -> ReleaseOut:
 async def list_tracked_authors(db: AsyncSession = Depends(get_db)) -> list[ReleaseTrackedAuthorOut]:
     async with db.begin():
         result = await db.execute(select(ReleaseTrackedAuthor).order_by(ReleaseTrackedAuthor.name))
-        return list(result.scalars().all())
+        rows = result.scalars().all()
+        return [ReleaseTrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
 
 
 @router.post("/releases/tracked-authors", response_model=ReleaseTrackedAuthorOut, status_code=201)
