@@ -5,7 +5,7 @@ import json
 import sqlite3
 import struct
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 class RecommenderDB:
@@ -70,21 +70,22 @@ class RecommenderDB:
         book_id: str,
         title: str,
         authors: list[str],
-        description: Optional[str] = None,
-        subjects: Optional[list[str]] = None,
-        isbns: Optional[list[str]] = None,
-        cover_id: Optional[int] = None,
-        work_key: Optional[str] = None,
+        description: str | None = None,
+        subjects: list[str] | None = None,
+        isbns: list[str] | None = None,
+        cover_id: int | None = None,
+        work_key: str | None = None,
     ) -> None:
         content_hash = self.compute_content_hash(description or "", subjects or [])
         self.conn.execute(
-            """INSERT INTO books (id, title, authors, description, subjects, isbns, cover_id, work_key, content_hash)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-               ON CONFLICT(id) DO UPDATE SET
-                   title=excluded.title, authors=excluded.authors,
-                   description=excluded.description, subjects=excluded.subjects,
-                   isbns=excluded.isbns, cover_id=excluded.cover_id,
-                   work_key=excluded.work_key, content_hash=excluded.content_hash""",
+            "INSERT INTO books"
+            " (id, title, authors, description, subjects, isbns, cover_id, work_key, content_hash)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            " ON CONFLICT(id) DO UPDATE SET"
+            " title=excluded.title, authors=excluded.authors,"
+            " description=excluded.description, subjects=excluded.subjects,"
+            " isbns=excluded.isbns, cover_id=excluded.cover_id,"
+            " work_key=excluded.work_key, content_hash=excluded.content_hash",
             (
                 book_id,
                 title,
@@ -99,7 +100,7 @@ class RecommenderDB:
         )
         self.conn.commit()
 
-    def get_book(self, book_id: str) -> Optional[dict[str, Any]]:
+    def get_book(self, book_id: str) -> dict[str, Any] | None:
         cur = self.conn.execute("SELECT * FROM books WHERE id = ?", (book_id,))
         row = cur.fetchone()
         if row is None:
@@ -140,10 +141,8 @@ class RecommenderDB:
         )
         self.conn.commit()
 
-    def get_embedding(self, book_id: str) -> Optional[list[float]]:
-        cur = self.conn.execute(
-            "SELECT embedding FROM embeddings WHERE book_id = ?", (book_id,)
-        )
+    def get_embedding(self, book_id: str) -> list[float] | None:
+        cur = self.conn.execute("SELECT embedding FROM embeddings WHERE book_id = ?", (book_id,))
         row = cur.fetchone()
         if row is None:
             return None
@@ -176,7 +175,7 @@ class RecommenderDB:
 
     # --- Index State ---
 
-    def get_index_state(self) -> Optional[str]:
+    def get_index_state(self) -> str | None:
         cur = self.conn.execute("SELECT last_rebuild_hash FROM index_state WHERE id = 1")
         row = cur.fetchone()
         return row["last_rebuild_hash"] if row else None
@@ -206,8 +205,8 @@ class RecommenderDB:
         self,
         book_id: str,
         rating: int,
-        source_book_ids: Optional[list[str]] = None,
-        source_prompt: Optional[str] = None,
+        source_book_ids: list[str] | None = None,
+        source_prompt: str | None = None,
     ) -> None:
         """Store user feedback for a recommendation. rating: +1 (positive) or -1 (negative)."""
         self.conn.execute(
@@ -245,8 +244,6 @@ class RecommenderDB:
 
     def compute_embeddings_hash(self) -> str:
         """Hash of all embedding content_hashes — detects when index needs rebuild."""
-        cur = self.conn.execute(
-            "SELECT content_hash FROM embeddings ORDER BY book_id"
-        )
+        cur = self.conn.execute("SELECT content_hash FROM embeddings ORDER BY book_id")
         combined = "|".join(row["content_hash"] for row in cur.fetchall())
         return hashlib.sha256(combined.encode()).hexdigest()

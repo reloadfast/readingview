@@ -56,15 +56,17 @@ async def search_authors(q: str = Query(..., min_length=1)) -> list[OLAuthorResu
         photo_url: str | None = None
         if photos and photos[0] and photos[0] != -1:
             photo_url = f"https://covers.openlibrary.org/a/id/{photos[0]}-M.jpg"
-        results.append(OLAuthorResult(
-            ol_key=ol_key,
-            name=doc.get("name", ""),
-            birth_date=doc.get("birth_date"),
-            death_date=doc.get("death_date"),
-            photo_url=photo_url,
-            top_work=doc.get("top_work"),
-            work_count=doc.get("work_count", 0),
-        ))
+        results.append(
+            OLAuthorResult(
+                ol_key=ol_key,
+                name=doc.get("name", ""),
+                birth_date=doc.get("birth_date"),
+                death_date=doc.get("death_date"),
+                photo_url=photo_url,
+                top_work=doc.get("top_work"),
+                work_count=doc.get("work_count", 0),
+            )
+        )
     return results
 
 
@@ -83,7 +85,8 @@ async def get_library_authors(db: AsyncSession = Depends(get_db)) -> list[Librar
 async def list_followed_authors(db: AsyncSession = Depends(get_db)) -> list[TrackedAuthorOut]:
     async with db.begin():
         result = await db.execute(select(TrackedAuthor).order_by(TrackedAuthor.name))
-        return list(result.scalars().all())
+        rows = result.scalars().all()
+        return [TrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
 
 
 @router.post("/authors", response_model=TrackedAuthorOut, status_code=201)

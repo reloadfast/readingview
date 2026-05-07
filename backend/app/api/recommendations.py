@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,10 +9,10 @@ router = APIRouter()
 
 
 class IngestRequest(BaseModel):
-    isbn: Optional[str] = None
-    title: Optional[str] = None
-    author: Optional[str] = None
-    work_key: Optional[str] = None
+    isbn: str | None = None
+    title: str | None = None
+    author: str | None = None
+    work_key: str | None = None
 
 
 class IngestResponse(BaseModel):
@@ -23,14 +21,14 @@ class IngestResponse(BaseModel):
 
 class StatusResponse(BaseModel):
     enabled: bool
-    model: Optional[str]
-    vector_backend: Optional[str]
+    model: str | None
+    vector_backend: str | None
 
 
 @router.get("/recommendations")
 async def recommendations(
-    book_ids: Optional[str] = None,
-    prompt: Optional[str] = None,
+    book_ids: str | None = None,
+    prompt: str | None = None,
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     ids = [b.strip() for b in book_ids.split(",") if b.strip()] if book_ids else None

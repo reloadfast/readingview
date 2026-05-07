@@ -10,4 +10,4 @@ class Settings(BaseSettings):
     GIT_SHA: str = "dev"
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

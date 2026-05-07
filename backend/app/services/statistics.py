@@ -27,21 +27,21 @@ def _get_finished_books(
         stats_item = stats_items.get(lib_item_id, {})
         metadata = stats_item.get("mediaMetadata", {})
         authors = metadata.get("authors", [])
-        author_str = (
-            ", ".join(a.get("name", "") for a in authors) if authors else "Unknown Author"
+        author_str = ", ".join(a.get("name", "") for a in authors) if authors else "Unknown Author"
+        finished.append(
+            {
+                "id": lib_item_id,
+                "title": metadata.get("title", "Unknown Title"),
+                "author": author_str,
+                "narrator": ", ".join(metadata.get("narrators", [])),
+                "series": metadata.get("series", []),
+                "genres": metadata.get("genres", []),
+                "finished_at": progress.get("finishedAt"),
+                "started_at": progress.get("startedAt"),
+                "duration": progress.get("duration", 0) or 0,
+                "time_listening": stats_item.get("timeListening", 0) or 0,
+            }
         )
-        finished.append({
-            "id": lib_item_id,
-            "title": metadata.get("title", "Unknown Title"),
-            "author": author_str,
-            "narrator": ", ".join(metadata.get("narrators", [])),
-            "series": metadata.get("series", []),
-            "genres": metadata.get("genres", []),
-            "finished_at": progress.get("finishedAt"),
-            "started_at": progress.get("startedAt"),
-            "duration": progress.get("duration", 0) or 0,
-            "time_listening": stats_item.get("timeListening", 0) or 0,
-        })
     finished.sort(key=lambda x: x.get("finished_at") or 0)
     return finished
 
@@ -204,15 +204,20 @@ def compute_recap(
     shortest_book: BookSummary | None = None
     if books_with_dur:
         lb = max(books_with_dur, key=lambda b: b["duration"])
-        longest_book = BookSummary(id=lb["id"], title=lb["title"], author=lb["author"], duration=lb["duration"])
+        longest_book = BookSummary(
+            id=lb["id"], title=lb["title"], author=lb["author"], duration=lb["duration"]
+        )
         sb = min(books_with_dur, key=lambda b: b["duration"])
-        shortest_book = BookSummary(id=sb["id"], title=sb["title"], author=sb["author"], duration=sb["duration"])
+        shortest_book = BookSummary(
+            id=sb["id"], title=sb["title"], author=sb["author"], duration=sb["duration"]
+        )
 
     def _read_days(b: dict) -> float:
         return (b["finished_at"] - b["started_at"]) / (1000 * 86400)
 
     books_with_times = [
-        b for b in year_books
+        b
+        for b in year_books
         if b.get("started_at") and b.get("finished_at") and b["finished_at"] > b["started_at"]
     ]
     fastest_read: ReadDuration | None = None
@@ -221,7 +226,9 @@ def compute_recap(
         fb = min(books_with_times, key=_read_days)
         fastest_read = ReadDuration(id=fb["id"], title=fb["title"], days=round(_read_days(fb), 1))
         slb = max(books_with_times, key=_read_days)
-        slowest_read = ReadDuration(id=slb["id"], title=slb["title"], days=round(_read_days(slb), 1))
+        slowest_read = ReadDuration(
+            id=slb["id"], title=slb["title"], days=round(_read_days(slb), 1)
+        )
 
     monthly_pace = [
         MonthlyPoint(month=f"{year}-{m:02d}", books=len(by_month.get(f"{year}-{m:02d}", [])))

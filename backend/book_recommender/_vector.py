@@ -1,7 +1,7 @@
 """Vector similarity search backends."""
 
 import logging
-from typing import Protocol
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,9 @@ class VectorBackend(Protocol):
 class PythonCosineBackend:
     """Pure-Python cosine similarity using numpy."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._ids: list[str] = []
-        self._matrix = None  # numpy array, lazily typed
+        self._matrix: Any = None
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
         import numpy as np
@@ -51,13 +51,13 @@ class PythonCosineBackend:
 class FAISSBackend:
     """FAISS-based vector similarity using IndexFlatIP on L2-normalized vectors."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._ids: list[str] = []
-        self._index = None
+        self._index: Any = None
         self._dim: int = 0
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
-        import faiss
+        import faiss  # type: ignore[import-not-found]
         import numpy as np
 
         self._ids = list(ids)
@@ -73,7 +73,7 @@ class FAISSBackend:
         self._index.add(mat)
 
     def search(self, query: list[float], top_k: int) -> list[tuple[str, float]]:
-        import faiss
+        import faiss  # type: ignore[import-not-found]
         import numpy as np
 
         if self._index is None or len(self._ids) == 0:
@@ -83,7 +83,7 @@ class FAISSBackend:
         k = min(top_k, len(self._ids))
         scores, indices = self._index.search(q, k)
         results = []
-        for score, idx in zip(scores[0], indices[0]):
+        for score, idx in zip(scores[0], indices[0], strict=False):
             if idx >= 0:
                 results.append((self._ids[idx], float(score)))
         return results
@@ -93,7 +93,8 @@ def create_backend(name: str) -> VectorBackend:
     """Create a vector backend by name. Falls back to Python if FAISS unavailable."""
     if name == "faiss":
         try:
-            import faiss  # noqa: F401
+            import faiss  # type: ignore[import-not-found]  # noqa: F401
+
             return FAISSBackend()
         except ImportError:
             logger.warning("faiss not installed, falling back to Python cosine backend")

@@ -1,4 +1,5 @@
 """Unit tests for series grouping and progress calculation."""
+
 import pytest
 
 from app.services.series import (
@@ -50,6 +51,7 @@ _PROGRESS_PARTIAL = {"book-2": {"isFinished": False, "progress": 0.5}}
 
 # --- _parse_sequence ---
 
+
 def test_parse_sequence_integer():
     assert _parse_sequence("1") == 1.0
 
@@ -72,6 +74,7 @@ def test_parse_sequence_non_numeric():
 
 # --- _format_duration ---
 
+
 def test_format_duration_hours_and_minutes():
     assert _format_duration(3661) == "1h 1m"
 
@@ -85,6 +88,7 @@ def test_format_duration_zero():
 
 
 # --- compute_series_list ---
+
 
 def test_compute_series_list_returns_summary():
     summaries = compute_series_list(_LIBRARY_SERIES, {})
@@ -126,6 +130,7 @@ def test_compute_series_list_skips_unnamed():
 
 
 # --- compute_series_detail ---
+
 
 def test_compute_series_detail_found():
     detail = compute_series_detail("The Expanse", _LIBRARY_SERIES, {})

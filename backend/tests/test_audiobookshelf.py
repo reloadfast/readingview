@@ -1,6 +1,8 @@
 """Unit tests for AudiobookshelfClient — mocked httpx responses."""
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.services.audiobookshelf import AudiobookshelfClient
 

@@ -1,12 +1,9 @@
 """Tests for /api/backup and /api/restore endpoints."""
+
 import io
 import sqlite3
 import tarfile
-import tempfile
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 
 async def test_backup_404_when_db_file_missing(client):

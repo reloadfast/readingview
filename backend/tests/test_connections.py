@@ -1,4 +1,5 @@
 """Tests for /api/abs/test-connection and /api/llm/test-connection."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
@@ -15,7 +16,8 @@ def _mock_ok_response(json_data=None):
 
 
 def _mock_error_response(status_code=401):
-    from httpx import HTTPStatusError, Request, Response
+    from httpx import HTTPStatusError, Request
+
     resp_mock = MagicMock()
     resp_mock.status_code = status_code
     exc = HTTPStatusError(

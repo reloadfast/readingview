@@ -1,6 +1,8 @@
 """Unit tests for OpenLibraryClient (mocked httpx)."""
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from app.services.openlibrary import OpenLibraryClient
 

@@ -1,7 +1,6 @@
 """Ollama HTTP client for embeddings and text generation."""
 
 import logging
-from typing import Optional
 
 import httpx
 
@@ -27,7 +26,7 @@ class OllamaClient:
         except httpx.RequestError:
             return False
 
-    def embed(self, text: str) -> Optional[list[float]]:
+    def embed(self, text: str) -> list[float] | None:
         try:
             r = httpx.post(
                 f"{self.base_url}/api/embed",
@@ -46,7 +45,7 @@ class OllamaClient:
             logger.error("Ollama embed failed: %s", e)
             return None
 
-    def generate(self, prompt: str, timeout: float = _TIMEOUT_GENERATE) -> Optional[str]:
+    def generate(self, prompt: str, timeout: float = _TIMEOUT_GENERATE) -> str | None:
         try:
             r = httpx.post(
                 f"{self.base_url}/api/generate",

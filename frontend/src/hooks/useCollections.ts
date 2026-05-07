@@ -21,7 +21,7 @@ export function useCollections() {
 export function useCollectionDetail(id: number | null) {
   return useQuery({
     queryKey: ["collections", id],
-    queryFn: () => getCollection(id!),
+    queryFn: () => getCollection(id as number),
     enabled: id !== null,
   });
 }

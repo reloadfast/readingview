@@ -2,7 +2,6 @@
 
 import hashlib
 import logging
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +10,7 @@ from ..models.settings import Settings as DBSettings
 
 logger = logging.getLogger(__name__)
 
-_last_config_hash: Optional[str] = None
+_last_config_hash: str | None = None
 
 
 def _db_path_from_url(database_url: str) -> str:
@@ -22,11 +21,11 @@ def _db_path_from_url(database_url: str) -> str:
     """
     if "sqlite" in database_url and "///" in database_url:
         idx = database_url.index("///")
-        return database_url[idx + 3:]
+        return database_url[idx + 3 :]
     return database_url
 
 
-def _settings_hash(row: Optional[DBSettings]) -> str:
+def _settings_hash(row: DBSettings | None) -> str:
     if row is None:
         return "none"
     fields = (
@@ -39,7 +38,7 @@ def _settings_hash(row: Optional[DBSettings]) -> str:
         row.recommender_top_k,
         row.recommender_min_similarity,
     )
-    return hashlib.md5(str(fields).encode()).hexdigest()  # noqa: S324
+    return hashlib.md5(str(fields).encode()).hexdigest()  # noqa: S324  # nosec B324
 
 
 async def _configure_recommender(db: AsyncSession) -> None:
@@ -79,33 +78,36 @@ async def _configure_recommender(db: AsyncSession) -> None:
 
 async def get_recommendations(
     db: AsyncSession,
-    book_ids: Optional[list[str]] = None,
-    prompt: Optional[str] = None,
+    book_ids: list[str] | None = None,
+    prompt: str | None = None,
 ) -> list[dict]:
     await _configure_recommender(db)
     from book_recommender.service import recommend
+
     return recommend(liked_book_ids=book_ids, free_text_prompt=prompt)
 
 
 async def run_ingest(
     db: AsyncSession,
-    isbn: Optional[str] = None,
-    title: Optional[str] = None,
-    author: Optional[str] = None,
-    work_key: Optional[str] = None,
-) -> Optional[str]:
+    isbn: str | None = None,
+    title: str | None = None,
+    author: str | None = None,
+    work_key: str | None = None,
+) -> str | None:
     await _configure_recommender(db)
+    from book_recommender._exceptions import BookRecommenderDisabledError
     from book_recommender.service import ingest
-    from book_recommender._exceptions import BookRecommenderDisabled
+
     try:
         return ingest(isbn=isbn, title=title, author=author, work_key=work_key)
-    except BookRecommenderDisabled:
+    except BookRecommenderDisabledError:
         return None
 
 
 async def get_status(db: AsyncSession) -> dict:
     await _configure_recommender(db)
     from book_recommender._config import get_config
+
     cfg = get_config()
     if cfg is None or not cfg.enabled:
         return {"enabled": False, "model": None, "vector_backend": None}

@@ -12,7 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame } from "lucide-react";
-import { Card, CardContent, CardHeader, Skeleton, Select } from "@/components/ui";
+import { Card, CardContent, Skeleton, Select } from "@/components/ui";
 import { useStatistics, useYearlyStats, useRecap } from "@/hooks/useStatistics";
 import { formatDuration } from "@/lib/utils";
 import type { RecapStats, AuthorCount, GenreCount } from "@/lib/api";
@@ -383,10 +383,10 @@ export default function StatisticsPage() {
                     <p className="text-sm text-text-secondary text-center py-10">No genre data</p>
                   ) : (
                     <>
-                      <GenreChart data={yearly.data!.genre_breakdown} />
+                      <GenreChart data={yearly.data?.genre_breakdown ?? []} />
                       {/* Legend */}
                       <div className="mt-4 grid grid-cols-2 gap-1">
-                        {genreData(yearly.data!.genre_breakdown).map((g, i) => (
+                        {genreData(yearly.data?.genre_breakdown ?? []).map((g, i) => (
                           <div key={g.name} className="flex items-center gap-2 text-xs">
                             <span
                               className="w-2.5 h-2.5 rounded-sm flex-shrink-0"

@@ -1,7 +1,7 @@
 """Exceptions for the book recommender module."""
 
 
-class BookRecommenderDisabled(Exception):
+class BookRecommenderDisabledError(Exception):
     """Raised when the book recommender feature is not enabled."""
 
     def __init__(self):

@@ -6,15 +6,16 @@ Create Date: 2026-05-05
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -24,7 +25,9 @@ def upgrade() -> None:
         sa.Column("abs_url", sa.String(), nullable=True),
         sa.Column("abs_token", sa.String(), nullable=True),
         sa.Column("recommender_enabled", sa.Boolean(), nullable=False, server_default="0"),
-        sa.Column("recommender_vector_backend", sa.String(), nullable=False, server_default="python"),
+        sa.Column(
+            "recommender_vector_backend", sa.String(), nullable=False, server_default="python"
+        ),
         sa.Column(
             "recommender_embed_model",
             sa.String(),
@@ -32,9 +35,7 @@ def upgrade() -> None:
             server_default="nomic-embed-text",
         ),
         sa.Column("recommender_top_k", sa.Integer(), nullable=False, server_default="10"),
-        sa.Column(
-            "recommender_min_similarity", sa.Float(), nullable=False, server_default="0.2"
-        ),
+        sa.Column("recommender_min_similarity", sa.Float(), nullable=False, server_default="0.2"),
         sa.Column("llm_type", sa.String(), nullable=False, server_default="ollama"),
         sa.Column("llm_endpoint", sa.String(), nullable=True),
         sa.Column("llm_model", sa.String(), nullable=True),

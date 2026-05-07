@@ -20,6 +20,7 @@ router = APIRouter()
 
 # --- helpers ---
 
+
 def _release_to_out(r: Release) -> ReleaseOut:
     return ReleaseOut(
         id=r.id,
@@ -37,13 +38,13 @@ def _release_to_out(r: Release) -> ReleaseOut:
 
 # --- tracked authors ---
 
+
 @router.get("/releases/tracked-authors", response_model=list[ReleaseTrackedAuthorOut])
 async def list_tracked_authors(db: AsyncSession = Depends(get_db)) -> list[ReleaseTrackedAuthorOut]:
     async with db.begin():
-        result = await db.execute(
-            select(ReleaseTrackedAuthor).order_by(ReleaseTrackedAuthor.name)
-        )
-        return list(result.scalars().all())
+        result = await db.execute(select(ReleaseTrackedAuthor).order_by(ReleaseTrackedAuthor.name))
+        rows = result.scalars().all()
+        return [ReleaseTrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
 
 
 @router.post("/releases/tracked-authors", response_model=ReleaseTrackedAuthorOut, status_code=201)
@@ -55,8 +56,11 @@ async def track_author(
         where = ReleaseTrackedAuthor.name == body.name
         if body.ol_key:
             from sqlalchemy import or_
+
             where = or_(where, ReleaseTrackedAuthor.ol_key == body.ol_key)
-        existing = (await db.execute(select(ReleaseTrackedAuthor).where(where))).scalar_one_or_none()
+        existing = (
+            await db.execute(select(ReleaseTrackedAuthor).where(where))
+        ).scalar_one_or_none()
         if existing:
             raise HTTPException(status_code=409, detail="Author already tracked")
 
@@ -89,6 +93,7 @@ async def untrack_author(
 
 # --- releases ---
 
+
 @router.get("/releases", response_model=list[ReleaseOut])
 async def list_releases(
     author: str | None = Query(default=None),
@@ -109,6 +114,7 @@ async def list_releases(
 
 
 # --- refresh ---
+
 
 @router.post("/releases/refresh", response_model=RefreshResult)
 async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
@@ -131,14 +137,14 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
 
         async with db.begin():
             existing_keys = set(
-                (await db.execute(
-                    select(Release.ol_key).where(Release.author_id == author.id)
-                )).scalars().all()
+                (await db.execute(select(Release.ol_key).where(Release.author_id == author.id)))
+                .scalars()
+                .all()
             )
             existing_titles = set(
-                (await db.execute(
-                    select(Release.title).where(Release.author_id == author.id)
-                )).scalars().all()
+                (await db.execute(select(Release.title).where(Release.author_id == author.id)))
+                .scalars()
+                .all()
             )
 
             for rel in releases:
@@ -147,14 +153,16 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
                 if (ol_key and ol_key in existing_keys) or title in existing_titles:
                     skipped += 1
                     continue
-                db.add(Release(
-                    author_id=author.id,
-                    title=title,
-                    release_date=rel["release_date"],
-                    ol_key=ol_key or None,
-                    link_url=rel["link_url"],
-                    source=rel["source"],
-                ))
+                db.add(
+                    Release(
+                        author_id=author.id,
+                        title=title,
+                        release_date=rel["release_date"],
+                        ol_key=ol_key or None,
+                        link_url=rel["link_url"],
+                        source=rel["source"],
+                    )
+                )
                 added += 1
 
     return RefreshResult(added=added, skipped=skipped)

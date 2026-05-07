@@ -11,7 +11,7 @@ _HEADERS = {
 
 class OpenLibraryClient:
     async def search_authors(self, name: str, limit: int = 10) -> list[dict]:
-        params = {
+        params: dict[str, str | int] = {
             "q": name,
             "limit": limit,
             "fields": "key,name,birth_date,death_date,photos,top_work,work_count",

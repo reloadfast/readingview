@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -41,9 +41,7 @@ def _to_detail(coll: Collection) -> CollectionDetail:
 @router.get("/collections", response_model=list[CollectionOut])
 async def list_collections(db: AsyncSession = Depends(get_db)) -> list[CollectionOut]:
     async with db.begin():
-        rows = (
-            await db.execute(select(Collection).order_by(Collection.name))
-        ).scalars().all()
+        rows = (await db.execute(select(Collection).order_by(Collection.name))).scalars().all()
     return [_to_out(c) for c in rows]
 
 
@@ -62,7 +60,7 @@ async def create_collection(
         coll = Collection(
             name=body.name,
             description=body.description,
-            created_at=datetime.now(timezone.utc).date().isoformat(),
+            created_at=datetime.now(UTC).date().isoformat(),
         )
         db.add(coll)
 
@@ -77,9 +75,7 @@ async def get_collection(
 ) -> CollectionDetail:
     async with db.begin():
         coll = (
-            await db.execute(
-                select(Collection).where(Collection.id == collection_id)
-            )
+            await db.execute(select(Collection).where(Collection.id == collection_id))
         ).scalar_one_or_none()
         if coll is None:
             raise HTTPException(status_code=404, detail="Collection not found")
@@ -94,9 +90,7 @@ async def patch_collection(
 ) -> CollectionOut:
     async with db.begin():
         coll = (
-            await db.execute(
-                select(Collection).where(Collection.id == collection_id)
-            )
+            await db.execute(select(Collection).where(Collection.id == collection_id))
         ).scalar_one_or_none()
         if coll is None:
             raise HTTPException(status_code=404, detail="Collection not found")
@@ -127,9 +121,7 @@ async def delete_collection(
 ) -> None:
     async with db.begin():
         coll = (
-            await db.execute(
-                select(Collection).where(Collection.id == collection_id)
-            )
+            await db.execute(select(Collection).where(Collection.id == collection_id))
         ).scalar_one_or_none()
         if coll is None:
             raise HTTPException(status_code=404, detail="Collection not found")
@@ -144,9 +136,7 @@ async def add_item(
 ) -> CollectionDetail:
     async with db.begin():
         coll = (
-            await db.execute(
-                select(Collection).where(Collection.id == collection_id)
-            )
+            await db.execute(select(Collection).where(Collection.id == collection_id))
         ).scalar_one_or_none()
         if coll is None:
             raise HTTPException(status_code=404, detail="Collection not found")

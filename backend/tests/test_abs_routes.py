@@ -1,4 +1,5 @@
 """ABS-dependent route tests: 503 without config, happy path with mocked client."""
+
 from unittest.mock import AsyncMock, patch
 
 
@@ -18,6 +19,7 @@ async def _configure_abs(client):
 
 
 # --- 503 without ABS config ---
+
 
 async def test_library_503_without_config(client):
     r = await client.get("/api/library")
@@ -70,6 +72,7 @@ async def test_narrator_detail_503_without_config(client):
 
 
 # --- happy path with mocked ABS ---
+
 
 async def test_statistics_returns_overall_stats(client):
     await _configure_abs(client)

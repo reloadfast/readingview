@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional
 from ._exceptions import BookRecommenderConfigError
 
 if TYPE_CHECKING:
-    from ..app.models.settings import Settings as DBSettings
+    pass
 
 _config_instance: Optional["RecommenderConfig"] = None
 _logging_configured = False
@@ -37,7 +37,7 @@ class RecommenderConfig:
         self.top_k = top_k
         self.min_similarity = min_similarity
 
-    def validate(self) -> tuple[bool, Optional[str]]:
+    def validate(self) -> tuple[bool, str | None]:
         if not self.enabled:
             return True, None
         if not self.db_path:
@@ -67,14 +67,12 @@ def configure_logging(level_name: str = "WARNING") -> None:
     root_logger.setLevel(level)
     if not root_logger.handlers:
         handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
-        ))
+        handler.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(levelname)s: %(message)s"))
         root_logger.addHandler(handler)
     _logging_configured = True
 
 
-def get_config() -> Optional[RecommenderConfig]:
+def get_config() -> RecommenderConfig | None:
     """Return the current config, or None if not yet configured."""
     return _config_instance
 

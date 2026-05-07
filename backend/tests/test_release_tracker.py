@@ -1,4 +1,5 @@
 """Unit tests for release dedup and sort logic in services/release_tracker.py."""
+
 import pytest
 
 from app.services.release_tracker import extract_releases

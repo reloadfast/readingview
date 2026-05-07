@@ -1,4 +1,5 @@
 """Unit tests for pure functions in services/narrators.py."""
+
 import pytest
 
 from app.services.narrators import compute_narrator_detail, compute_narrator_list
@@ -59,7 +60,7 @@ def test_compute_narrator_list_multi_narrator_split():
     bob = next(n for n in result if n.name == "Bob Narrator")
     # Book Four has both Alice and Bob — each should have it counted
     assert alice.book_count == 3  # b1, b2, b4
-    assert bob.book_count == 2   # b3, b4
+    assert bob.book_count == 2  # b3, b4
 
 
 def test_compute_narrator_list_total_hours():
