@@ -471,6 +471,10 @@ export function getCollections(): Promise<CollectionOut[]> {
   return apiFetch("/collections");
 }
 
+export function getCollection(id: number): Promise<CollectionDetail> {
+  return apiFetch(`/collections/${id}`);
+}
+
 export function createCollection(body: CreateCollectionRequest): Promise<CollectionOut> {
   return apiFetch("/collections", { method: "POST", body: JSON.stringify(body) });
 }
