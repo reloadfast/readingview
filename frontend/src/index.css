@@ -11,6 +11,17 @@
   --color-accent-positive: oklch(72% 0.17 160);
   --color-accent-warning:  oklch(78% 0.18  80);
   --color-accent-danger:   oklch(65% 0.22  15);
+
+  /* Chart palette — 9 tokens for data visualisation */
+  --color-chart-1: oklch(62% 0.20 250);
+  --color-chart-2: oklch(72% 0.17 160);
+  --color-chart-3: oklch(78% 0.18  80);
+  --color-chart-4: oklch(65% 0.20 300);
+  --color-chart-5: oklch(70% 0.18 195);
+  --color-chart-6: oklch(68% 0.20  15);
+  --color-chart-7: oklch(75% 0.19  55);
+  --color-chart-8: oklch(65% 0.18 220);
+  --color-chart-9: oklch(40% 0.02 255);
 }
 
 [data-theme="light"] {
