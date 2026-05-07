@@ -1,7 +1,7 @@
 """Optional LLM-based explanation generation for recommendations."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ def explain_recommendation(
     source_books: list[dict[str, Any]],
     rec_book: dict[str, Any],
     timeout: int = 30,
-) -> Optional[str]:
+) -> str | None:
     """Generate a short explanation for why a book was recommended based on liked books."""
     try:
         source_titles = ", ".join(b["title"] for b in source_books)
@@ -31,7 +31,7 @@ def explain_prompt_recommendation(
     prompt_text: str,
     rec_book: dict[str, Any],
     timeout: int = 30,
-) -> Optional[str]:
+) -> str | None:
     """Generate a short explanation for why a book matches a free-text prompt."""
     try:
         prompt = (

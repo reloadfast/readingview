@@ -1,8 +1,9 @@
 """Tests for library API — field mapping and pure helpers."""
+
 import pytest
 
 from app.api.library import _item_to_book, _parse_progress, _parse_series, _sort_books
-from app.schemas.library import LibraryBook, BookProgress, SeriesEntry
+from app.schemas.library import BookProgress, LibraryBook
 
 pytestmark = pytest.mark.unit
 
@@ -41,6 +42,7 @@ def _cover(item_id: str) -> str:
 
 # --- _parse_progress ---
 
+
 def test_parse_progress_finished():
     raw = {"isFinished": True, "progress": 1.0, "currentTime": 3600.0, "finishedAt": 1700000000000}
     p = _parse_progress(raw, 3600.0)
@@ -66,6 +68,7 @@ def test_parse_progress_none_fields():
 
 # --- _parse_series ---
 
+
 def test_parse_series_dict_entries():
     raw = [{"name": "The Expanse", "sequence": "1"}, {"name": "Spin-off", "sequence": None}]
     entries = _parse_series(raw)
@@ -85,6 +88,7 @@ def test_parse_series_empty():
 
 
 # --- _item_to_book ---
+
 
 def test_item_to_book_fields():
     item = _make_item("id-1", "My Book", "An Author", duration=7200.0)
@@ -114,7 +118,10 @@ def test_item_to_book_missing_title_fallback():
 
 # --- _sort_books ---
 
-def _make_book(title: str, progress_pct: float = 0.0, last_update: int = 0, finished_at: int = 0) -> LibraryBook:
+
+def _make_book(
+    title: str, progress_pct: float = 0.0, last_update: int = 0, finished_at: int = 0
+) -> LibraryBook:
     progress = BookProgress(
         is_finished=finished_at > 0,
         progress_pct=progress_pct,
@@ -156,7 +163,11 @@ def test_sort_by_progress_desc():
 
 
 def test_sort_by_updated():
-    books = [_make_book("A", last_update=100), _make_book("B", last_update=300), _make_book("C", last_update=200)]
+    books = [
+        _make_book("A", last_update=100),
+        _make_book("B", last_update=300),
+        _make_book("C", last_update=200),
+    ]
     sorted_books = _sort_books(books, "updated")
     updates = [b.progress.last_update for b in sorted_books]
     assert updates == sorted(updates, reverse=True)

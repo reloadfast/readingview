@@ -1,7 +1,6 @@
 """Metadata ingestion from Open Library into the recommender database."""
 
 import logging
-from typing import Optional
 
 from ._db import RecommenderDB
 
@@ -15,24 +14,25 @@ class MetadataIngester:
         self.db = db
         if openlibrary_api is None:
             from ._openlibrary_sync import OpenLibraryAPI
+
             openlibrary_api = OpenLibraryAPI()
         self.ol = openlibrary_api
 
-    def ingest_by_isbn(self, isbn: str) -> Optional[str]:
+    def ingest_by_isbn(self, isbn: str) -> str | None:
         results = self.ol.search_books(query=f"isbn:{isbn}", limit=1)
         if not results:
             logger.warning("No results found for ISBN %s", isbn)
             return None
         return self._ingest_search_result(results[0])
 
-    def ingest_by_title(self, title: str, author: Optional[str] = None) -> Optional[str]:
+    def ingest_by_title(self, title: str, author: str | None = None) -> str | None:
         results = self.ol.search_books(title=title, author=author, limit=1)
         if not results:
             logger.warning("No results found for title=%s author=%s", title, author)
             return None
         return self._ingest_search_result(results[0])
 
-    def ingest_by_work_key(self, work_key: str) -> Optional[str]:
+    def ingest_by_work_key(self, work_key: str) -> str | None:
         details = self.ol.get_work_details(work_key)
         if not details:
             logger.warning("No work details found for key %s", work_key)
@@ -97,7 +97,7 @@ class MetadataIngester:
         return work_key
 
     @staticmethod
-    def _extract_description(details: dict) -> Optional[str]:
+    def _extract_description(details: dict) -> str | None:
         desc = details.get("description")
         if desc is None:
             return None

@@ -1,7 +1,7 @@
 """Synchronous Open Library client for use inside book_recommender (httpx-based)."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -17,9 +17,9 @@ class OpenLibraryAPI:
 
     def search_books(
         self,
-        query: Optional[str] = None,
-        title: Optional[str] = None,
-        author: Optional[str] = None,
+        query: str | None = None,
+        title: str | None = None,
+        author: str | None = None,
         limit: int = 10,
     ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {"limit": limit}
@@ -42,7 +42,7 @@ class OpenLibraryAPI:
             logger.error("Open Library search failed: %s", e)
             return []
 
-    def get_work_details(self, work_key: str) -> Optional[dict[str, Any]]:
+    def get_work_details(self, work_key: str) -> dict[str, Any] | None:
         if not work_key.startswith("/works/"):
             work_key = f"/works/{work_key}"
         try:
@@ -55,7 +55,7 @@ class OpenLibraryAPI:
             logger.error("Open Library get_work_details failed: %s", e)
             return None
 
-    def get_author_details(self, author_key: str) -> Optional[dict[str, Any]]:
+    def get_author_details(self, author_key: str) -> dict[str, Any] | None:
         if not author_key.startswith("/authors/"):
             author_key = f"/authors/{author_key}"
         try:

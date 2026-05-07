@@ -8,16 +8,17 @@ Create Date: 2026-05-06
 
 import sqlite3
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0003"
-down_revision: Union[str, None] = "0002"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "0002"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _OLD_DB_PATHS = [
     Path("/app/data/release_tracker.db"),
@@ -40,7 +41,9 @@ def upgrade() -> None:
     op.create_table(
         "releases",
         sa.Column("id", sa.Integer(), nullable=False, autoincrement=True),
-        sa.Column("author_id", sa.Integer(), sa.ForeignKey("release_tracked_authors.id"), nullable=False),
+        sa.Column(
+            "author_id", sa.Integer(), sa.ForeignKey("release_tracked_authors.id"), nullable=False
+        ),
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("release_date", sa.String(), nullable=True),
         sa.Column("release_date_confirmed", sa.Boolean(), nullable=False, server_default="0"),
@@ -67,10 +70,13 @@ def upgrade() -> None:
     author_id_map: dict[int, int] = {}
     now_ms = int(time.time() * 1000)
 
-    for row in old.execute("SELECT id, author_name, external_id FROM tracked_authors WHERE is_active = 1"):
+    for row in old.execute(
+        "SELECT id, author_name, external_id FROM tracked_authors WHERE is_active = 1"
+    ):
         result = conn.execute(
             sa.text(
-                "INSERT INTO release_tracked_authors (name, ol_key, added_at) VALUES (:name, :ol_key, :added_at)"
+                "INSERT INTO release_tracked_authors (name, ol_key, added_at)"
+                " VALUES (:name, :ol_key, :added_at)"
             ),
             {"name": row["author_name"], "ol_key": row["external_id"], "added_at": now_ms},
         )
@@ -88,7 +94,8 @@ def upgrade() -> None:
             sa.text(
                 "INSERT INTO releases (author_id, title, release_date, release_date_confirmed, "
                 "book_number, link_url, notes, source, is_active) "
-                "VALUES (:author_id, :title, :release_date, :confirmed, :book_number, :link_url, :notes, :source, 1)"
+                "VALUES (:author_id, :title, :release_date, :confirmed,"
+                " :book_number, :link_url, :notes, :source, 1)"
             ),
             {
                 "author_id": new_author_id,

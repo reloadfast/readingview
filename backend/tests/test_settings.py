@@ -27,11 +27,14 @@ async def test_patch_abs_token_masked(client):
 
 
 async def test_patch_recommender_fields(client):
-    r = await client.patch("/api/settings", json={
-        "recommender_enabled": True,
-        "recommender_top_k": 5,
-        "recommender_min_similarity": 0.3,
-    })
+    r = await client.patch(
+        "/api/settings",
+        json={
+            "recommender_enabled": True,
+            "recommender_top_k": 5,
+            "recommender_min_similarity": 0.3,
+        },
+    )
     assert r.status_code == 200
     data = r.json()
     assert data["recommender_enabled"] is True
@@ -46,12 +49,15 @@ async def test_patch_llm_api_key_masked(client):
 
 
 async def test_patch_notifications(client):
-    r = await client.patch("/api/settings", json={
-        "notifications_enabled": True,
-        "notify_days_before": 3,
-        "notify_time": "08:00",
-        "timezone": "Europe/Madrid",
-    })
+    r = await client.patch(
+        "/api/settings",
+        json={
+            "notifications_enabled": True,
+            "notify_days_before": 3,
+            "notify_time": "08:00",
+            "timezone": "Europe/Madrid",
+        },
+    )
     assert r.status_code == 200
     data = r.json()
     assert data["notifications_enabled"] is True

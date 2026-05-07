@@ -46,16 +46,18 @@ def _build_series_map(
                 if not series_map[name]["author"]:
                     series_map[name]["author"] = author
 
-                series_map[name]["books"].append(SeriesBook(
-                    id=book_id,
-                    title=metadata.get("title", "Unknown Title"),
-                    author=author,
-                    sequence=str(book.get("sequence") or ""),
-                    is_finished=is_finished,
-                    progress=round(progress_pct, 1),
-                    duration=duration,
-                    duration_formatted=_format_duration(duration),
-                ))
+                series_map[name]["books"].append(
+                    SeriesBook(
+                        id=book_id,
+                        title=metadata.get("title", "Unknown Title"),
+                        author=author,
+                        sequence=str(book.get("sequence") or ""),
+                        is_finished=is_finished,
+                        progress=round(progress_pct, 1),
+                        duration=duration,
+                        duration_formatted=_format_duration(duration),
+                    )
+                )
 
     for entry in series_map.values():
         entry["books"].sort(key=lambda b: _parse_sequence(b.sequence))

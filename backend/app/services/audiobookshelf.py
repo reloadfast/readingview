@@ -85,9 +85,7 @@ class AudiobookshelfClient:
         items_per_page = 100
         async with self._client() as c:
             while True:
-                r = await c.get(
-                    f"/me/listening-sessions?itemsPerPage={items_per_page}&page={page}"
-                )
+                r = await c.get(f"/me/listening-sessions?itemsPerPage={items_per_page}&page={page}")
                 r.raise_for_status()
                 data = r.json()
                 sessions = data.get("sessions", [])

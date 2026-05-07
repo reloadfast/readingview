@@ -20,7 +20,7 @@ _ALLOWED_FILENAMES = {"readingview.db"}
 def _db_path() -> Path:
     url = settings.DATABASE_URL
     # strip driver prefix: sqlite+aiosqlite:////path → /path
-    raw = url.split("sqlite", 1)[-1].lstrip("+aiosqlite").lstrip(":")
+    raw = url.split("sqlite", 1)[-1].removeprefix("+aiosqlite").lstrip(":")
     return Path(raw.lstrip("/")).resolve() if not raw.startswith("/") else Path(raw)
 
 
@@ -81,9 +81,10 @@ async def restore_backup(file: UploadFile) -> dict:
                         cur = conn.execute("PRAGMA integrity_check")
                         result = cur.fetchone()
                         if not result or result[0] != "ok":
+                            msg = result[0] if result else "unknown"
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"SQLite integrity check failed: {result[0] if result else 'unknown'}",
+                                detail=f"SQLite integrity check failed: {msg}",
                             )
                     finally:
                         conn.close()
@@ -109,6 +110,7 @@ async def restore_backup(file: UploadFile) -> dict:
 
     # Dispose engine so next request gets fresh connections to the new DB
     from ..db import engine
+
     await engine.dispose()
 
     return {"status": "restored"}

@@ -5,7 +5,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import authors, backup, collections, connections, health, library, narrators, recommendations, releases, series, settings, statistics
+from .api import (
+    authors,
+    backup,
+    collections,
+    connections,
+    health,
+    library,
+    narrators,
+    recommendations,
+    releases,
+    series,
+    settings,
+    statistics,
+)
 
 app = FastAPI(title="ReadingView")
 

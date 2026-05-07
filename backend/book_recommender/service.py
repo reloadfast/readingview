@@ -2,10 +2,9 @@
 
 import json
 import logging
-from typing import Optional
 
 from ._config import get_config
-from ._exceptions import BookRecommenderDisabled
+from ._exceptions import BookRecommenderDisabledError
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +29,14 @@ def _ensure_initialized():
 
     cfg = get_config()
     if cfg is None or not cfg.enabled:
-        raise BookRecommenderDisabled()
+        raise BookRecommenderDisabledError()
 
     cfg.validate_or_raise()
 
     from ._db import RecommenderDB
+    from ._ingestion import MetadataIngester
     from ._ollama import OllamaClient
     from ._vector import create_backend
-    from ._ingestion import MetadataIngester
 
     _db = RecommenderDB(cfg.db_path)
     _ollama = OllamaClient(cfg.ollama_url, cfg.embed_model, cfg.llm_model)
@@ -46,7 +45,10 @@ def _ensure_initialized():
     _initialized = True
     logger.info(
         "Recommender initialized: db=%s vector=%s embed_model=%s ollama=%s",
-        cfg.db_path, cfg.vector_backend, cfg.embed_model, cfg.ollama_url,
+        cfg.db_path,
+        cfg.vector_backend,
+        cfg.embed_model,
+        cfg.ollama_url,
     )
 
 
@@ -103,8 +105,8 @@ def _rebuild_index_if_needed() -> None:
 
 
 def recommend(
-    liked_book_ids: Optional[list[str]] = None,
-    free_text_prompt: Optional[str] = None,
+    liked_book_ids: list[str] | None = None,
+    free_text_prompt: str | None = None,
 ) -> list[dict]:
     cfg = get_config()
     if cfg is None or not cfg.enabled:
@@ -112,7 +114,7 @@ def recommend(
 
     try:
         _ensure_initialized()
-    except BookRecommenderDisabled:
+    except BookRecommenderDisabledError:
         return []
 
     if not liked_book_ids and not free_text_prompt:
@@ -139,7 +141,7 @@ def recommend(
         results.append((book_id, adjusted_score))
 
     results.sort(key=lambda x: x[1], reverse=True)
-    results = results[:cfg.top_k]
+    results = results[: cfg.top_k]
 
     output = []
     source_books = []
@@ -170,9 +172,9 @@ def recommend(
 
 
 def _compute_query_vector(
-    liked_book_ids: Optional[list[str]],
-    free_text_prompt: Optional[str],
-) -> Optional[list[float]]:
+    liked_book_ids: list[str] | None,
+    free_text_prompt: str | None,
+) -> list[float] | None:
     import numpy as np
 
     book_vec = None
@@ -201,11 +203,12 @@ def _compute_query_vector(
 
 def _generate_explanation(
     source_books: list[dict],
-    free_text_prompt: Optional[str],
+    free_text_prompt: str | None,
     rec_book: dict,
-) -> Optional[str]:
+) -> str | None:
     try:
-        from ._explanations import explain_recommendation, explain_prompt_recommendation
+        from ._explanations import explain_prompt_recommendation, explain_recommendation
+
         if source_books:
             return explain_recommendation(_ollama, source_books, rec_book)
         if free_text_prompt:
@@ -216,11 +219,11 @@ def _generate_explanation(
 
 
 def ingest(
-    isbn: Optional[str] = None,
-    title: Optional[str] = None,
-    author: Optional[str] = None,
-    work_key: Optional[str] = None,
-) -> Optional[str]:
+    isbn: str | None = None,
+    title: str | None = None,
+    author: str | None = None,
+    work_key: str | None = None,
+) -> str | None:
     _ensure_initialized()
     book_id = None
     if work_key:
@@ -237,8 +240,8 @@ def ingest(
 def submit_feedback(
     book_id: str,
     rating: int,
-    source_book_ids: Optional[list[str]] = None,
-    source_prompt: Optional[str] = None,
+    source_book_ids: list[str] | None = None,
+    source_prompt: str | None = None,
 ) -> None:
     _ensure_initialized()
     _db.add_feedback(book_id, rating, source_book_ids, source_prompt)

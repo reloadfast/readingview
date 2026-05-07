@@ -26,14 +26,16 @@ def _build_narrator_map(items: list[dict], progress_map: dict) -> dict[str, dict
         for name in [n.strip() for n in narrator_str.split(",") if n.strip()]:
             if name not in narrators:
                 narrators[name] = {"name": name, "books": [], "total_duration": 0.0, "finished": 0}
-            narrators[name]["books"].append(NarratorBook(
-                id=item_id,
-                title=title,
-                author=author,
-                duration=duration,
-                duration_formatted=_format_duration(duration),
-                is_finished=is_finished,
-            ))
+            narrators[name]["books"].append(
+                NarratorBook(
+                    id=item_id,
+                    title=title,
+                    author=author,
+                    duration=duration,
+                    duration_formatted=_format_duration(duration),
+                    is_finished=is_finished,
+                )
+            )
             narrators[name]["total_duration"] += duration
             if is_finished:
                 narrators[name]["finished"] += 1

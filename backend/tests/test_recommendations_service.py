@@ -1,6 +1,8 @@
 """Unit tests for recommendations service helpers."""
+
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.services.recommendations import _db_path_from_url, _settings_hash
 
@@ -8,6 +10,7 @@ pytestmark = pytest.mark.unit
 
 
 # --- _db_path_from_url ---
+
 
 def test_db_path_from_url_absolute():
     assert _db_path_from_url("sqlite+aiosqlite:////data/readingview.db") == "/data/readingview.db"
@@ -24,6 +27,7 @@ def test_db_path_from_url_non_sqlite_passthrough():
 
 
 # --- _settings_hash ---
+
 
 def test_settings_hash_none_returns_none_string():
     assert _settings_hash(None) == "none"
@@ -73,22 +77,23 @@ def test_settings_hash_changes_with_field():
 
 # --- _configure_recommender via get_recommendations ---
 
+
 async def test_configure_recommender_disabled_path(engine):
     """Verify _configure_recommender runs the disabled path when row is None."""
-    import importlib
     import app.services.recommendations as rec_mod
 
     # Reset cache so _configure_recommender runs fresh
     rec_mod._last_config_hash = None
 
     from sqlalchemy.ext.asyncio import async_sessionmaker
+
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     with (
         patch("app.services.recommendations.reset_service", create=True),
-        patch("book_recommender._config.configure") as mock_configure,
-        patch("book_recommender._config.RecommenderConfig") as MockConfig,
-        patch("book_recommender.service.reset") as mock_reset,
+        patch("book_recommender._config.configure"),
+        patch("book_recommender._config.RecommenderConfig"),
+        patch("book_recommender.service.reset"),
     ):
         async with factory() as session:
             # No settings row — should configure with enabled=False
@@ -104,6 +109,7 @@ async def test_configure_recommender_skips_when_hash_unchanged(engine):
     rec_mod._last_config_hash = "none"  # pre-set to match None settings
 
     from sqlalchemy.ext.asyncio import async_sessionmaker
+
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     called = []
@@ -121,6 +127,7 @@ async def test_get_status_disabled(engine):
     rec_mod._last_config_hash = None  # reset
 
     from sqlalchemy.ext.asyncio import async_sessionmaker
+
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     with (

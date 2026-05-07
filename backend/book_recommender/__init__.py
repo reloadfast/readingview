@@ -10,14 +10,14 @@ Public API:
     remove_book(book_id) -> bool
 """
 
-from ._exceptions import BookRecommenderDisabled, BookRecommenderConfigError
+from ._exceptions import BookRecommenderConfigError, BookRecommenderDisabledError
 
 __all__ = [
     "recommend",
     "ingest",
     "remove_book",
     "submit_feedback",
-    "BookRecommenderDisabled",
+    "BookRecommenderDisabledError",
     "BookRecommenderConfigError",
 ]
 
@@ -27,6 +27,7 @@ def recommend(
     free_text_prompt: str | None = None,
 ) -> list[dict]:
     from .service import recommend as _recommend
+
     return _recommend(liked_book_ids=liked_book_ids, free_text_prompt=free_text_prompt)
 
 
@@ -37,11 +38,13 @@ def ingest(
     work_key: str | None = None,
 ) -> str | None:
     from .service import ingest as _ingest
+
     return _ingest(isbn=isbn, title=title, author=author, work_key=work_key)
 
 
 def remove_book(book_id: str) -> bool:
     from .service import remove_book as _remove_book
+
     return _remove_book(book_id=book_id)
 
 
@@ -52,6 +55,7 @@ def submit_feedback(
     source_prompt: str | None = None,
 ) -> None:
     from .service import submit_feedback as _submit_feedback
+
     _submit_feedback(
         book_id=book_id,
         rating=rating,

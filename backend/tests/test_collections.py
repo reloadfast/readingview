@@ -8,7 +8,9 @@ async def test_list_collections_empty(client):
 
 
 async def test_create_collection(client):
-    r = await client.post("/api/collections", json={"name": "Sci-Fi", "description": "My sci-fi picks"})
+    r = await client.post(
+        "/api/collections", json={"name": "Sci-Fi", "description": "My sci-fi picks"}
+    )
     assert r.status_code == 201
     data = r.json()
     assert data["name"] == "Sci-Fi"

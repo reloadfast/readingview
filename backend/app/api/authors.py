@@ -56,15 +56,17 @@ async def search_authors(q: str = Query(..., min_length=1)) -> list[OLAuthorResu
         photo_url: str | None = None
         if photos and photos[0] and photos[0] != -1:
             photo_url = f"https://covers.openlibrary.org/a/id/{photos[0]}-M.jpg"
-        results.append(OLAuthorResult(
-            ol_key=ol_key,
-            name=doc.get("name", ""),
-            birth_date=doc.get("birth_date"),
-            death_date=doc.get("death_date"),
-            photo_url=photo_url,
-            top_work=doc.get("top_work"),
-            work_count=doc.get("work_count", 0),
-        ))
+        results.append(
+            OLAuthorResult(
+                ol_key=ol_key,
+                name=doc.get("name", ""),
+                birth_date=doc.get("birth_date"),
+                death_date=doc.get("death_date"),
+                photo_url=photo_url,
+                top_work=doc.get("top_work"),
+                work_count=doc.get("work_count", 0),
+            )
+        )
     return results
 
 

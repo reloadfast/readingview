@@ -86,18 +86,30 @@ def _sort_books(
     if sort == "progress_asc":
         return sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0)
     if sort == "progress_desc":
-        return sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0, reverse=True)
+        return sorted(
+            books, key=lambda b: b.progress.progress_pct if b.progress else 0.0, reverse=True
+        )
     if sort == "updated":
-        return sorted(books, key=lambda b: b.progress.last_update if b.progress and b.progress.last_update else 0, reverse=True)
+        return sorted(
+            books,
+            key=lambda b: b.progress.last_update if b.progress and b.progress.last_update else 0,
+            reverse=True,
+        )
     if sort == "finished":
-        return sorted(books, key=lambda b: b.progress.finished_at if b.progress and b.progress.finished_at else 0, reverse=True)
+        return sorted(
+            books,
+            key=lambda b: b.progress.finished_at if b.progress and b.progress.finished_at else 0,
+            reverse=True,
+        )
     return books
 
 
 @router.get("/library", response_model=list[LibraryBook])
 async def get_library(
     search: str | None = Query(default=None),
-    sort: Literal["title", "progress_asc", "progress_desc", "updated", "finished"] = Query(default="updated"),
+    sort: Literal["title", "progress_asc", "progress_desc", "updated", "finished"] = Query(
+        default="updated"
+    ),
     page: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -115,7 +127,8 @@ async def get_library(
     if search:
         q = search.lower()
         books = [
-            b for b in books
+            b
+            for b in books
             if q in b.title.lower()
             or q in b.authors.lower()
             or any(q in s.name.lower() for s in b.series)

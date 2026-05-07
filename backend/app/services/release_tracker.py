@@ -9,7 +9,11 @@ _HEADERS = {
 
 
 async def fetch_author_works(author_name: str, limit: int = 20) -> list[dict]:
-    params = {"author": author_name, "limit": limit, "fields": "key,title,author_name,first_publish_year,isbn,cover_i"}
+    params = {
+        "author": author_name,
+        "limit": limit,
+        "fields": "key,title,author_name,first_publish_year,isbn,cover_i",
+    }
     async with httpx.AsyncClient(headers=_HEADERS, timeout=_TIMEOUT) as c:
         r = await c.get(f"{_BASE_URL}/search.json", params=params)
         r.raise_for_status()
@@ -42,15 +46,17 @@ def extract_releases(docs: list[dict], author_name: str) -> list[dict]:
 
         work_key = doc.get("key") or ""
 
-        releases.append({
-            "title": title,
-            "author_name": author_name,
-            "release_date": release_date,
-            "ol_key": work_key,
-            "link_url": _ol_work_url(work_key) if work_key else None,
-            "source": "openlibrary",
-            "isbn": isbn,
-        })
+        releases.append(
+            {
+                "title": title,
+                "author_name": author_name,
+                "release_date": release_date,
+                "ol_key": work_key,
+                "link_url": _ol_work_url(work_key) if work_key else None,
+                "source": "openlibrary",
+                "isbn": isbn,
+            }
+        )
 
     releases.sort(key=lambda r: r["release_date"] or "", reverse=True)
     return releases

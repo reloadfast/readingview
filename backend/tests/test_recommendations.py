@@ -1,4 +1,5 @@
 """Verify recommendations returns [] and makes no Ollama calls when disabled."""
+
 from unittest.mock import patch
 
 
@@ -40,7 +41,8 @@ async def test_no_ollama_calls_when_disabled(client):
         await client.get("/api/recommendations")
         # httpx should not have been called for Ollama
         ollama_calls = [
-            call for call in mock_get.call_args_list
+            call
+            for call in mock_get.call_args_list
             if "11434" in str(call) or "ollama" in str(call).lower()
         ]
         assert ollama_calls == []

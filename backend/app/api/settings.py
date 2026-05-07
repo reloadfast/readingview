@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..crypto import decrypt, encrypt
+from ..crypto import encrypt
 from ..db import get_db
 from ..models.settings import Settings
 from ..schemas.settings import SettingsPatch, SettingsRead

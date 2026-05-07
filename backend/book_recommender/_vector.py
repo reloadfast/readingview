@@ -83,7 +83,7 @@ class FAISSBackend:
         k = min(top_k, len(self._ids))
         scores, indices = self._index.search(q, k)
         results = []
-        for score, idx in zip(scores[0], indices[0]):
+        for score, idx in zip(scores[0], indices[0], strict=False):
             if idx >= 0:
                 results.append((self._ids[idx], float(score)))
         return results
@@ -94,6 +94,7 @@ def create_backend(name: str) -> VectorBackend:
     if name == "faiss":
         try:
             import faiss  # noqa: F401
+
             return FAISSBackend()
         except ImportError:
             logger.warning("faiss not installed, falling back to Python cosine backend")

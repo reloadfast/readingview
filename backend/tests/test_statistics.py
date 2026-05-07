@@ -1,5 +1,6 @@
 """Unit tests for pure calculation functions in services/statistics.py."""
-from datetime import date, datetime, timezone
+
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -17,7 +18,7 @@ pytestmark = pytest.mark.unit
 
 
 def _ts(year: int, month: int, day: int) -> int:
-    return int(datetime(year, month, day, tzinfo=timezone.utc).timestamp() * 1000)
+    return int(datetime(year, month, day, tzinfo=UTC).timestamp() * 1000)
 
 
 _PROGRESS_MAP = {
@@ -93,6 +94,7 @@ _LISTENING_STATS = {"totalTime": 154000, "items": _STATS_ITEMS}
 
 # --- _get_finished_books ---
 
+
 def test_get_finished_books_excludes_in_progress():
     finished = _get_finished_books(_PROGRESS_MAP, _STATS_ITEMS)
     ids = {b["id"] for b in finished}
@@ -115,6 +117,7 @@ def test_get_finished_books_unknown_author_fallback():
 
 
 # --- _group_by_year / _group_by_month ---
+
 
 def test_group_by_year():
     books = _get_finished_books(_PROGRESS_MAP, _STATS_ITEMS)
@@ -140,6 +143,7 @@ def test_group_by_year_skips_missing_timestamp():
 
 # --- _compute_streaks ---
 
+
 def test_compute_streaks_empty():
     result = _compute_streaks([])
     assert result.current == 0
@@ -150,9 +154,23 @@ def test_compute_streaks_empty():
 def test_compute_streaks_consecutive():
     today = date.today()
     sessions = [
-        {"updatedAt": int(datetime(today.year, today.month, today.day, tzinfo=timezone.utc).timestamp() * 1000)},
-        {"updatedAt": int(datetime(today.year, today.month, today.day, tzinfo=timezone.utc).timestamp() * 1000) - 86_400_000},
-        {"updatedAt": int(datetime(today.year, today.month, today.day, tzinfo=timezone.utc).timestamp() * 1000) - 2 * 86_400_000},
+        {
+            "updatedAt": int(
+                datetime(today.year, today.month, today.day, tzinfo=UTC).timestamp() * 1000
+            )
+        },
+        {
+            "updatedAt": int(
+                datetime(today.year, today.month, today.day, tzinfo=UTC).timestamp() * 1000
+            )
+            - 86_400_000
+        },
+        {
+            "updatedAt": int(
+                datetime(today.year, today.month, today.day, tzinfo=UTC).timestamp() * 1000
+            )
+            - 2 * 86_400_000
+        },
     ]
     result = _compute_streaks(sessions)
     assert result.longest >= 3
@@ -176,6 +194,7 @@ def test_compute_streaks_ignores_invalid_ts():
 
 # --- compute_overall_stats ---
 
+
 def test_compute_overall_stats_counts():
     stats = compute_overall_stats(_PROGRESS_MAP, _LISTENING_STATS, [])
     assert stats.books_completed == 3
@@ -190,6 +209,7 @@ def test_compute_overall_stats_empty():
 
 
 # --- compute_yearly_stats ---
+
 
 def test_compute_yearly_stats_2024():
     stats = compute_yearly_stats("2024", _PROGRESS_MAP, _LISTENING_STATS)
@@ -213,6 +233,7 @@ def test_compute_yearly_stats_empty_year():
 
 
 # --- compute_recap ---
+
 
 def test_compute_recap_basic():
     recap = compute_recap("2024", _PROGRESS_MAP, _LISTENING_STATS)
