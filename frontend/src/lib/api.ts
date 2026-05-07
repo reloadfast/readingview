@@ -546,6 +546,19 @@ export function getRecommenderStatus(): Promise<RecommenderStatus> {
 }
 
 // ---------------------------------------------------------------------------
+// Health
+// ---------------------------------------------------------------------------
+
+export interface HealthResponse {
+  status: string;
+  version: string;
+}
+
+export function getHealth(): Promise<HealthResponse> {
+  return apiFetch("/health");
+}
+
+// ---------------------------------------------------------------------------
 // Backup
 // ---------------------------------------------------------------------------
 
