@@ -16,7 +16,7 @@ class VectorBackend(Protocol):
 class PythonCosineBackend:
     """Pure-Python cosine similarity using numpy."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._ids: list[str] = []
         self._matrix = None  # numpy array, lazily typed
 
@@ -51,7 +51,7 @@ class PythonCosineBackend:
 class FAISSBackend:
     """FAISS-based vector similarity using IndexFlatIP on L2-normalized vectors."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._ids: list[str] = []
         self._index = None
         self._dim: int = 0
