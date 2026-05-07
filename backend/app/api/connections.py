@@ -16,7 +16,7 @@ async def test_llm_connection(req: LLMTestRequest) -> TestConnectionResponse:
 
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            r = await client.get(f"{req.llm_endpoint.rstrip('/')}/v1/models", headers=headers)
+            r = await client.get(f"{req.endpoint.rstrip('/')}/v1/models", headers=headers)
             r.raise_for_status()
             data = r.json()
             model_ids = [m["id"] for m in data.get("data", [])]

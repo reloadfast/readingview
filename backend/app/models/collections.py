@@ -13,7 +13,7 @@ class Collection(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False)  # ISO date string
 
     items: Mapped[list["CollectionItem"]] = relationship(
-        back_populates="collection", cascade="all, delete-orphan"
+        back_populates="collection", cascade="all, delete-orphan", lazy="selectin"
     )
 
 
