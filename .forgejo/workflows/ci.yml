@@ -94,6 +94,7 @@ jobs:
 
       - name: Smoke test
         run: |
+          docker rm -f smoke 2>/dev/null || true
           docker run -d --name smoke -p 8000:8000 \
             -e SECRET_KEY=smoke-test-key \
             ${{ env.IMAGE }}:latest
@@ -108,6 +109,7 @@ jobs:
             fi
             sleep 1
           done
+          docker rm -f smoke
 
       - name: Push image
         run: |
