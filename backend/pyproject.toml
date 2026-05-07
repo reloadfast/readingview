@@ -26,6 +26,7 @@ dev = [
     "ruff>=0.9",
     "bandit>=1.8",
     "httpx>=0.27",
+    "python-multipart>=0.0.9",
 ]
 
 [tool.ruff]
@@ -36,7 +37,7 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "N", "UP", "S", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-"backend/tests/**" = ["S101"]
+"tests/**" = ["S101"]
 
 [tool.mypy]
 strict = true
@@ -47,6 +48,11 @@ exclude = ["alembic/"]
 asyncio_mode = "auto"
 addopts = "--cov=app --cov-report=term-missing --cov-fail-under=80"
 testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "unit: pure logic tests with no I/O",
+    "integration: requires external services (ABS, Open Library) — skipped in CI",
+]
 
 [tool.bandit]
 exclude_dirs = ["venv", "alembic"]
