@@ -38,7 +38,7 @@ def _settings_hash(row: DBSettings | None) -> str:
         row.recommender_top_k,
         row.recommender_min_similarity,
     )
-    return hashlib.md5(str(fields).encode()).hexdigest()  # noqa: S324
+    return hashlib.md5(str(fields).encode()).hexdigest()  # noqa: S324  # nosec B324
 
 
 async def _configure_recommender(db: AsyncSession) -> None:

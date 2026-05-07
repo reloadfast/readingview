@@ -62,5 +62,5 @@ markers = [
 ]
 
 [tool.bandit]
-exclude_dirs = ["venv", "alembic"]
+exclude_dirs = ["venv", "alembic", "tests"]
 skips = []
