@@ -10,7 +10,7 @@ const queryClient = new QueryClient({
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <div className="p-8 text-[var(--color-text-primary)]">ReadingView — coming soon</div>,
+    element: <div className="p-8 text-text-primary">ReadingView — coming soon</div>,
   },
 ]);
 
