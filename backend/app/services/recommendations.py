@@ -1,0 +1,116 @@
+"""Thin wrapper that bridges DB settings to the book_recommender module."""
+
+import hashlib
+import logging
+from typing import Optional
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..config import settings as app_settings
+from ..models.settings import Settings as DBSettings
+
+logger = logging.getLogger(__name__)
+
+_last_config_hash: Optional[str] = None
+
+
+def _db_path_from_url(database_url: str) -> str:
+    """Extract filesystem path from a SQLite DATABASE_URL.
+
+    sqlite+aiosqlite:////data/foo.db  →  /data/foo.db
+    sqlite+aiosqlite:///./foo.db      →  ./foo.db
+    """
+    if "sqlite" in database_url and "///" in database_url:
+        idx = database_url.index("///")
+        return database_url[idx + 3:]
+    return database_url
+
+
+def _settings_hash(row: Optional[DBSettings]) -> str:
+    if row is None:
+        return "none"
+    fields = (
+        row.recommender_enabled,
+        row.recommender_vector_backend,
+        row.recommender_embed_model,
+        row.llm_model,
+        row.recommender_explanations_enabled,
+        row.llm_endpoint,
+        row.recommender_top_k,
+        row.recommender_min_similarity,
+    )
+    return hashlib.md5(str(fields).encode()).hexdigest()  # noqa: S324
+
+
+async def _configure_recommender(db: AsyncSession) -> None:
+    """Load settings from DB and (re)configure the recommender if anything changed."""
+    global _last_config_hash
+
+    row = await db.get(DBSettings, 1)
+    current_hash = _settings_hash(row)
+
+    if current_hash == _last_config_hash:
+        return
+
+    from book_recommender._config import RecommenderConfig, configure
+    from book_recommender.service import reset as reset_service
+
+    reset_service()
+
+    if row is None or not row.recommender_enabled:
+        configure(RecommenderConfig(enabled=False, db_path=""))
+    else:
+        db_path = _db_path_from_url(app_settings.DATABASE_URL)
+        cfg = RecommenderConfig(
+            enabled=True,
+            db_path=db_path,
+            vector_backend=row.recommender_vector_backend,
+            embed_model=row.recommender_embed_model,
+            llm_model=row.llm_model or "",
+            enable_explanations=row.recommender_explanations_enabled,
+            ollama_url=row.llm_endpoint or "",
+            top_k=row.recommender_top_k,
+            min_similarity=row.recommender_min_similarity,
+        )
+        configure(cfg)
+
+    _last_config_hash = current_hash
+
+
+async def get_recommendations(
+    db: AsyncSession,
+    book_ids: Optional[list[str]] = None,
+    prompt: Optional[str] = None,
+) -> list[dict]:
+    await _configure_recommender(db)
+    from book_recommender.service import recommend
+    return recommend(liked_book_ids=book_ids, free_text_prompt=prompt)
+
+
+async def run_ingest(
+    db: AsyncSession,
+    isbn: Optional[str] = None,
+    title: Optional[str] = None,
+    author: Optional[str] = None,
+    work_key: Optional[str] = None,
+) -> Optional[str]:
+    await _configure_recommender(db)
+    from book_recommender.service import ingest
+    from book_recommender._exceptions import BookRecommenderDisabled
+    try:
+        return ingest(isbn=isbn, title=title, author=author, work_key=work_key)
+    except BookRecommenderDisabled:
+        return None
+
+
+async def get_status(db: AsyncSession) -> dict:
+    await _configure_recommender(db)
+    from book_recommender._config import get_config
+    cfg = get_config()
+    if cfg is None or not cfg.enabled:
+        return {"enabled": False, "model": None, "vector_backend": None}
+    return {
+        "enabled": True,
+        "model": cfg.embed_model,
+        "vector_backend": cfg.vector_backend,
+    }

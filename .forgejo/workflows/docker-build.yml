@@ -9,7 +9,8 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: readingview
+  REGISTRY: forgejo.moseisley.es
+  IMAGE: forgejo.moseisley.es/wind/readingview
 
 permissions:
   contents: read
@@ -25,32 +26,37 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to Forgejo registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.FORGEJO_USERNAME }}
+          password: ${{ secrets.FORGEJO_TOKEN }}
 
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Determine image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.IMAGE }}"
+          SHA="${{ github.sha }}"
+          SHORT_SHA="${SHA:0:7}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tags=${IMAGE}:pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
+          elif echo "${{ github.ref }}" | grep -q '^refs/tags/v'; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            MAJOR="${VERSION%%.*}"
+            MINOR="${VERSION%.*}"
+            echo "tags=${IMAGE}:${VERSION},${IMAGE}:${MINOR},${IMAGE}:${MAJOR},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "tags=${IMAGE}:${SHORT_SHA},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           load: true
-          tags: ${{ env.IMAGE_NAME }}:scan
+          tags: readingview:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -59,33 +65,14 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
             | sh -s -- -b /usr/local/bin
 
-      - name: Run Trivy vulnerability scanner (table)
+      - name: Run Trivy vulnerability scanner
         run: |
           trivy image \
             --format table \
             --exit-code 0 \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
-            --ignorefile .trivyignore \
-            ${{ env.IMAGE_NAME }}:scan
-
-      - name: Run Trivy vulnerability scanner (JSON + SARIF reports)
-        if: always()
-        run: |
-          trivy image \
-            --format json \
-            --output trivy-results.json \
-            --severity CRITICAL,HIGH,MEDIUM \
-            --ignore-unfixed \
-            --ignorefile .trivyignore \
-            ${{ env.IMAGE_NAME }}:scan || true
-          trivy image \
-            --format sarif \
-            --output trivy-results.sarif \
-            --severity CRITICAL,HIGH,MEDIUM \
-            --ignore-unfixed \
-            --ignorefile .trivyignore \
-            ${{ env.IMAGE_NAME }}:scan || true
+            readingview:scan
 
       - name: Push Docker image
         if: github.event_name != 'pull_request'
@@ -93,21 +80,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Update Docker Hub description
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: |
-          TOKEN=$(curl -sf -X POST \
-            -H "Content-Type: application/json" \
-            -d "{\"username\":\"${{ secrets.DOCKERHUB_USERNAME }}\",\"password\":\"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
-            https://hub.docker.com/v2/users/login \
-            | jq -r .token)
-          curl -sf -X PATCH \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"full_description\":$(jq -Rs . < README.md)}" \
-            "https://hub.docker.com/v2/repositories/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}/"

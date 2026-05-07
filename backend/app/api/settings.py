@@ -32,6 +32,7 @@ def _mask(row: Settings) -> SettingsRead:
         recommender_embed_model=row.recommender_embed_model,
         recommender_top_k=row.recommender_top_k,
         recommender_min_similarity=row.recommender_min_similarity,
+        recommender_explanations_enabled=row.recommender_explanations_enabled,
         llm_type=row.llm_type,
         llm_endpoint=row.llm_endpoint,
         llm_model=row.llm_model,
