@@ -63,16 +63,12 @@ Replace `readingview` with whatever key you want to use.
 
 ## 3. Configure ReadingView
 
-Add these to your `.env` file:
+Open the ReadingView **Settings UI** → **Notifications** and enter:
 
-```env
-ENABLE_NOTIFICATIONS=true
-APPRISE_API_URL=http://your-apprise-server:8000
-APPRISE_NOTIFICATION_KEY=readingview
-```
+- **Apprise API URL** — URL of your Apprise API instance (e.g. `http://apprise:8000`)
+- **Notification Key** — the key you used when adding URLs to Apprise (e.g. `readingview`). This is a routing tag you define — any string works. All notification URLs added under this key will receive notifications.
 
-- **`APPRISE_API_URL`** — URL of your Apprise API instance
-- **`APPRISE_NOTIFICATION_KEY`** — the key you used when adding URLs to Apprise (e.g., `readingview`). This is a routing tag you define — any string works. All notification URLs added under this key will receive notifications.
+No `.env` changes are needed — notification settings are persisted in the database.
 
 ## 4. Add Other Services
 
@@ -132,4 +128,4 @@ curl -X POST http://localhost:8000/notify/readingview \
 
 **From ReadingView:**
 
-Go to the Notifications tab and click **Send Test Notification**.
+Open **Settings UI** → **Notifications** and click **Send Test Notification**.
