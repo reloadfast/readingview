@@ -95,16 +95,22 @@ jobs:
       - name: Smoke test
         run: |
           docker rm -f smoke 2>/dev/null || true
-          docker run -d --name smoke -p 127.0.0.1:8000:8000 \
+          docker run -d --name smoke \
             -e SECRET_KEY=smoke-test-key \
             ${{ env.IMAGE }}:latest
-          if curl -sf --retry 60 --retry-delay 1 --retry-connrefused \
-              --max-time 5 http://127.0.0.1:8000/api/health > /dev/null; then
-            echo "Health OK"
-          else
+          OK=0
+          for i in $(seq 1 60); do
+            if docker exec smoke curl -sf http://127.0.0.1:8000/api/health > /dev/null 2>&1; then
+              OK=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$OK" = "0" ]; then
             docker logs smoke
             exit 1
           fi
+          echo "Health OK"
           docker rm -f smoke
 
       - name: Push image
