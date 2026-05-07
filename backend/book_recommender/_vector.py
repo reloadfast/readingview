@@ -1,7 +1,7 @@
 """Vector similarity search backends."""
 
 import logging
-from typing import Protocol
+from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class PythonCosineBackend:
 
     def __init__(self) -> None:
         self._ids: list[str] = []
-        self._matrix = None  # numpy array, lazily typed
+        self._matrix: Any = None
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
         import numpy as np
@@ -53,7 +53,7 @@ class FAISSBackend:
 
     def __init__(self) -> None:
         self._ids: list[str] = []
-        self._index = None
+        self._index: Any = None
         self._dim: int = 0
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
