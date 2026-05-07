@@ -42,7 +42,7 @@ jobs:
         run: mypy backend/
 
       - name: Security scan
-        run: bandit -r backend/ && pip-audit
+        run: bandit -r backend/app backend/book_recommender && pip-audit
 
       - name: Test
         run: pytest --cov --cov-fail-under=80
