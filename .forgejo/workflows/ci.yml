@@ -84,32 +84,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v3
-        with:
-          config-inline: |
-            [registry."docker.io"]
-              mirrors = ["mirror.gcr.io"]
+      - name: Log in to registry
+        run: echo "${{ secrets.FORGEJO_TOKEN }}" | docker login ${{ env.REGISTRY }} -u Wind --password-stdin
 
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ secrets.FORGEJO_USERNAME }}
-          password: ${{ secrets.FORGEJO_TOKEN }}
-
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ env.IMAGE }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=sha-,format=short
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          load: true
-          tags: ${{ steps.meta.outputs.tags }}
+      - name: Build image
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          docker build -t ${{ env.IMAGE }}:latest -t ${{ env.IMAGE }}:sha-${SHA} .
 
       - name: Smoke test
         run: |
@@ -127,6 +108,12 @@ jobs:
             fi
             sleep 1
           done
+
+      - name: Push image
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          docker push ${{ env.IMAGE }}:latest
+          docker push ${{ env.IMAGE }}:sha-${SHA}
 
       - name: Prune images
         if: success()
