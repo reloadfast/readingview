@@ -74,3 +74,4 @@ class TestConnectionResponse(BaseModel):
     ok: bool
     models: list[str] | None = None
     error: str | None = None
+    metadata: dict | None = None

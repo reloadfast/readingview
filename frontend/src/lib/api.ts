@@ -278,6 +278,7 @@ export interface TestConnectionResponse {
   ok: boolean;
   models: string[] | null;
   error: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface IngestRequest {
