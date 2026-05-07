@@ -7,3 +7,5 @@ export { Skeleton } from "./Skeleton";
 export { Table } from "./Table";
 export type { Column } from "./Table";
 export { ThemeToggle } from "./ThemeToggle";
+export { Select } from "./Select";
+export type { SelectOption } from "./Select";
