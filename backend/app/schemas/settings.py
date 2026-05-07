@@ -14,6 +14,7 @@ class SettingsRead(BaseModel):
     recommender_embed_model: str
     recommender_top_k: int
     recommender_min_similarity: float
+    recommender_explanations_enabled: bool
 
     # LLM
     llm_type: str
@@ -42,6 +43,7 @@ class SettingsPatch(BaseModel):
     recommender_embed_model: str | None = None
     recommender_top_k: int | None = None
     recommender_min_similarity: float | None = None
+    recommender_explanations_enabled: bool | None = None
 
     # LLM
     llm_type: str | None = None

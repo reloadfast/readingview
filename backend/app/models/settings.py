@@ -19,6 +19,7 @@ class Settings(Base):
     recommender_embed_model: Mapped[str] = mapped_column(String, default="nomic-embed-text")
     recommender_top_k: Mapped[int] = mapped_column(Integer, default=10)
     recommender_min_similarity: Mapped[float] = mapped_column(Float, default=0.2)
+    recommender_explanations_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # LLM
     llm_type: Mapped[str] = mapped_column(String, default="ollama")
