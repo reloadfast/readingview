@@ -3,6 +3,7 @@ import {
   addToCollection,
   createCollection,
   deleteCollection,
+  getCollection,
   getCollections,
   removeFromCollection,
   updateCollection,
@@ -14,6 +15,14 @@ export function useCollections() {
   return useQuery({
     queryKey: ["collections"],
     queryFn: getCollections,
+  });
+}
+
+export function useCollectionDetail(id: number | null) {
+  return useQuery({
+    queryKey: ["collections", id],
+    queryFn: () => getCollection(id!),
+    enabled: id !== null,
   });
 }
 
