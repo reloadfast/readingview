@@ -9,3 +9,4 @@ export type { Column } from "./Table";
 export { ThemeToggle } from "./ThemeToggle";
 export { Select } from "./Select";
 export type { SelectOption } from "./Select";
+export { Switch } from "./Switch";
