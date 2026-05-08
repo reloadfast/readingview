@@ -113,6 +113,8 @@ async def test_restore_rejects_oversized_upload(client, monkeypatch):
 async def test_db_path_uses_make_url():
     from pathlib import Path
 
-    with patch.object(backup_mod.settings, "DATABASE_URL", "sqlite+aiosqlite:////data/readingview.db"):
+    with patch.object(
+        backup_mod.settings, "DATABASE_URL", "sqlite+aiosqlite:////data/readingview.db"
+    ):
         p = backup_mod._db_path()
     assert p == Path("/data/readingview.db")
