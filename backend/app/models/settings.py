@@ -5,6 +5,7 @@ from ..db import Base
 
 
 class Settings(Base):
+    # Encrypted fields use their natural column name (no _enc suffix); see api/settings.py
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -25,7 +26,7 @@ class Settings(Base):
     llm_type: Mapped[str] = mapped_column(String, default="ollama")
     llm_endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
     llm_model: Mapped[str | None] = mapped_column(String, nullable=True)
-    llm_api_key_enc: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted
+    llm_api_key: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted
 
     # Recommender config fingerprint — shared across workers; stale on settings change
     recommender_config_hash: Mapped[str | None] = mapped_column(String, nullable=True)
