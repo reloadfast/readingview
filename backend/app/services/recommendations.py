@@ -11,8 +11,6 @@ from ..models.settings import Settings as DBSettings
 
 logger = logging.getLogger(__name__)
 
-_last_config_hash: str | None = None
-
 
 def _db_path_from_url(database_url: str) -> str:
     """Extract filesystem path from a SQLite DATABASE_URL.
@@ -43,13 +41,16 @@ def _settings_hash(row: DBSettings | None) -> str:
 
 
 async def _configure_recommender(db: AsyncSession) -> None:
-    """Load settings from DB and (re)configure the recommender if anything changed."""
-    global _last_config_hash
+    """Load settings from DB and (re)configure the recommender if anything changed.
 
+    Uses recommender_config_hash persisted on the settings row so all uvicorn
+    workers share the same source of truth instead of per-process in-memory state.
+    """
     row = await db.get(DBSettings, 1)
     current_hash = _settings_hash(row)
+    stored_hash = row.recommender_config_hash if row is not None else None
 
-    if current_hash == _last_config_hash:
+    if current_hash == stored_hash:
         return
 
     from book_recommender._config import RecommenderConfig, configure
@@ -74,7 +75,9 @@ async def _configure_recommender(db: AsyncSession) -> None:
         )
         configure(cfg)
 
-    _last_config_hash = current_hash
+    if row is not None:
+        row.recommender_config_hash = current_hash
+        await db.commit()
 
 
 async def get_recommendations(
