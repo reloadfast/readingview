@@ -15,9 +15,9 @@ from ..schemas.releases import (
     ReleaseTrackedAuthorOut,
     TrackAuthorRequest,
 )
+from ..services import release_tracker as rt_svc
 
 logger = logging.getLogger(__name__)
-from ..services import release_tracker as rt_svc
 
 router = APIRouter()
 
@@ -137,7 +137,9 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
         try:
             docs = await rt_svc.fetch_author_works(author.name)
         except httpx.HTTPError as exc:
-            logger.warning("Failed to fetch works for author %r: %s", author.name, type(exc).__name__)
+            logger.warning(
+                "Failed to fetch works for author %r: %s", author.name, type(exc).__name__
+            )
             failed += 1
             errors.append(RefreshError(author=author.name, message=type(exc).__name__))
             continue
