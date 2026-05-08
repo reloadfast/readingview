@@ -19,7 +19,8 @@ async def _get_or_create(db: AsyncSession) -> Settings:
         sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
     )
     row = await db.get(Settings, 1)
-    assert row is not None
+    if row is None:
+        raise RuntimeError("Settings row missing after INSERT OR IGNORE")
     return row
 
 
