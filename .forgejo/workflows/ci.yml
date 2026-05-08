@@ -113,7 +113,7 @@ jobs:
       - name: Configure Docker push concurrency
         run: |
           sudo mkdir -p /etc/docker && echo '{"max-concurrent-uploads": 2}' | sudo tee /etc/docker/daemon.json
-          sudo kill -HUP $(pidof dockerd)
+          sudo kill -HUP $(sudo cat /var/run/docker.pid)
           sleep 2
           echo "${{ secrets.FORGEJO_TOKEN }}" | docker login ${{ env.REGISTRY }} -u Wind --password-stdin
 
