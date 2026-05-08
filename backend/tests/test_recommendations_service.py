@@ -4,7 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
+import app.services.recommendations as rec_mod
 from app.models.settings import Settings
 from app.services.recommendations import _db_path_from_url, _settings_hash
 
@@ -82,9 +84,6 @@ def test_settings_hash_changes_with_field():
 
 async def test_configure_recommender_disabled_path(engine):
     """Verify _configure_recommender runs the disabled path when row is None."""
-    import app.services.recommendations as rec_mod
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     with (
@@ -101,9 +100,6 @@ async def test_configure_recommender_disabled_path(engine):
 
 async def test_configure_recommender_skips_when_hash_unchanged(engine):
     """When DB hash matches current settings, _configure_recommender returns early."""
-    import app.services.recommendations as rec_mod
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     # Insert settings row and pre-populate recommender_config_hash with the current hash
@@ -130,9 +126,6 @@ async def test_configure_recommender_redetects_after_settings_change(engine):
     recommender_config_hash from the DB, so a hash mismatch is visible to every
     process, not just the one that handled the PATCH.
     """
-    import app.services.recommendations as rec_mod
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     # Initial state: settings row with hash matching current field values
@@ -153,7 +146,10 @@ async def test_configure_recommender_redetects_after_settings_change(engine):
 
     with (
         patch("book_recommender.service.reset"),
-        patch("book_recommender._config.configure", side_effect=lambda *a, **kw: configure_calls.append(1)),
+        patch(
+            "book_recommender._config.configure",
+            side_effect=lambda *a, **kw: configure_calls.append(1),
+        ),
         patch("book_recommender._config.RecommenderConfig"),
         patch("app.services.recommendations.app_settings") as mock_settings,
     ):
@@ -165,9 +161,6 @@ async def test_configure_recommender_redetects_after_settings_change(engine):
 
 
 async def test_get_status_disabled(engine):
-    import app.services.recommendations as rec_mod
-    from sqlalchemy.ext.asyncio import async_sessionmaker
-
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     with (
