@@ -1,8 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .api import (
@@ -24,14 +23,6 @@ from .api import (
 
 app = FastAPI(title="ReadingView")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.include_router(health.router, prefix="/api")
 app.include_router(covers.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
@@ -46,6 +37,16 @@ app.include_router(collections.router, prefix="/api")
 app.include_router(backup.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(goals.router, prefix="/api")
+
+
+@app.api_route(
+    "/api/{path:path}",
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    include_in_schema=False,
+)
+async def api_catch_all(path: str) -> JSONResponse:  # noqa: ARG001
+    return JSONResponse({"detail": "Not Found"}, status_code=404)
+
 
 _dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
