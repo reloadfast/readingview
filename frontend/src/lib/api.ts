@@ -588,6 +588,29 @@ export function setGoal(year: number, target_books: number): Promise<ReadingGoal
 }
 
 // ---------------------------------------------------------------------------
+// Notes
+// ---------------------------------------------------------------------------
+
+export interface NoteOut {
+  body: string | null;
+}
+
+export function getNote(absItemId: string): Promise<NoteOut> {
+  return apiFetch(`/notes/${encodeURIComponent(absItemId)}`);
+}
+
+export function upsertNote(absItemId: string, body: string): Promise<NoteOut> {
+  return apiFetch(`/notes/${encodeURIComponent(absItemId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ body }),
+  });
+}
+
+export function deleteNote(absItemId: string): Promise<void> {
+  return apiFetch(`/notes/${encodeURIComponent(absItemId)}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
 // Health
 // ---------------------------------------------------------------------------
 
