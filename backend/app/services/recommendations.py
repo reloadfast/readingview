@@ -3,6 +3,7 @@
 import hashlib
 import logging
 
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings as app_settings
@@ -19,9 +20,9 @@ def _db_path_from_url(database_url: str) -> str:
     sqlite+aiosqlite:////data/foo.db  →  /data/foo.db
     sqlite+aiosqlite:///./foo.db      →  ./foo.db
     """
-    if "sqlite" in database_url and "///" in database_url:
-        idx = database_url.index("///")
-        return database_url[idx + 3 :]
+    if "sqlite" in database_url:
+        db = make_url(database_url).database
+        return db if db is not None else database_url
     return database_url
 
 
