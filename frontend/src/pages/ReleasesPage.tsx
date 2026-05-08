@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { BookMarked, RefreshCw, Search, Trash2 } from "lucide-react";
+import { BookMarked, Check, HelpCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { Badge, Input, Select, Skeleton, Table } from "@/components/ui";
+import { Badge, Input, Select, Skeleton } from "@/components/ui";
 import {
   useAddTrackedAuthor,
+  usePatchRelease,
   useRefreshReleases,
   useReleases,
   useRemoveTrackedAuthor,
   useTrackedAuthors,
 } from "@/hooks/useReleases";
 import { useSearchAuthors } from "@/hooks/useAuthors";
-import type { Column } from "@/components/ui/Table";
+import { cn } from "@/lib/utils";
 import type { ReleaseOut, ReleaseTrackedAuthorOut } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
@@ -31,62 +32,148 @@ function ReleaseDateBadge({ dateStr }: { dateStr: string | null }) {
 }
 
 // ---------------------------------------------------------------------------
-// Releases tab
+// Releases tab — per-row inline edit
 // ---------------------------------------------------------------------------
 
 const AUTHOR_ALL = "__all__";
 
-const RELEASE_COLUMNS: Column<ReleaseOut>[] = [
-  {
-    key: "title",
-    header: "Title",
-    cell: (row) => (
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-text-primary">
-          {row.title}
-          {row.book_number && (
-            <span className="text-text-secondary ml-1">#{row.book_number}</span>
-          )}
-        </p>
-        {row.link_url && (
-          <a
-            href={row.link_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-accent hover:underline"
+function ReleaseRow({ release }: { release: ReleaseOut }) {
+  const [editing, setEditing] = useState(false);
+  const [dateVal, setDateVal] = useState(release.release_date ?? "");
+  const [notesVal, setNotesVal] = useState(release.notes ?? "");
+  const [confirmedVal, setConfirmedVal] = useState(release.release_date_confirmed);
+  const patch = usePatchRelease();
+
+  function handleSave() {
+    patch.mutate(
+      {
+        id: release.id,
+        release_date_confirmed: confirmedVal,
+        release_date: dateVal || null,
+        notes: notesVal || null,
+      },
+      { onSuccess: () => setEditing(false) },
+    );
+  }
+
+  function handleCancel() {
+    setEditing(false);
+    setDateVal(release.release_date ?? "");
+    setNotesVal(release.notes ?? "");
+    setConfirmedVal(release.release_date_confirmed);
+  }
+
+  return (
+    <>
+      <tr className="border-b border-border hover:bg-surface-hover transition-colors">
+        <td className="py-3 px-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-text-primary">
+              {release.title}
+              {release.book_number && (
+                <span className="text-text-secondary ml-1">#{release.book_number}</span>
+              )}
+            </p>
+            {release.link_url && (
+              <a
+                href={release.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-accent hover:underline"
+              >
+                View
+              </a>
+            )}
+          </div>
+        </td>
+        <td className="py-3 px-4 text-sm text-text-primary">{release.author_name}</td>
+        <td className="py-3 px-4">
+          <div className="flex items-center gap-1.5">
+            <ReleaseDateBadge dateStr={release.release_date} />
+            {release.release_date_confirmed ? (
+              <Check className="w-3 h-3 text-green-500 shrink-0" aria-label="Date confirmed" />
+            ) : (
+              <HelpCircle className="w-3 h-3 text-text-secondary opacity-40 shrink-0" aria-label="Date unconfirmed" />
+            )}
+          </div>
+        </td>
+        <td className="py-3 px-4">
+          {release.source && <Badge variant="neutral">{release.source}</Badge>}
+        </td>
+        <td className="py-3 px-4">
+          <button
+            onClick={() => setEditing((e) => !e)}
+            className="text-text-secondary hover:text-text-primary"
+            title="Edit release"
           >
-            View
-          </a>
-        )}
-      </div>
-    ),
-  },
-  {
-    key: "author_name",
-    header: "Author",
-    cell: (row) => <span className="text-sm text-text-primary">{row.author_name}</span>,
-  },
-  {
-    key: "release_date",
-    header: "Release Date",
-    cell: (row) => <ReleaseDateBadge dateStr={row.release_date} />,
-  },
-  {
-    key: "source",
-    header: "Source",
-    cell: (row) =>
-      row.source ? <Badge variant="neutral">{row.source}</Badge> : null,
-  },
-];
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        </td>
+      </tr>
+      {editing && (
+        <tr className="border-b border-border bg-surface">
+          <td colSpan={5} className="px-4 py-3">
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="space-y-1">
+                <label className="text-xs text-text-secondary">Release date</label>
+                <Input
+                  value={dateVal}
+                  onChange={(e) => setDateVal(e.target.value)}
+                  placeholder="YYYY or YYYY-MM-DD"
+                  className="w-40"
+                />
+              </div>
+              <div className="space-y-1 flex-1 min-w-[12rem]">
+                <label className="text-xs text-text-secondary">Notes</label>
+                <Input
+                  value={notesVal}
+                  onChange={(e) => setNotesVal(e.target.value)}
+                  placeholder="Optional notes"
+                />
+              </div>
+              <button
+                onClick={() => setConfirmedVal((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1 text-xs px-2 py-1.5 rounded-md border transition-colors",
+                  confirmedVal
+                    ? "border-green-500 text-green-500 bg-green-500/10"
+                    : "border-border text-text-secondary hover:border-text-secondary",
+                )}
+              >
+                <Check className="w-3 h-3" />
+                {confirmedVal ? "Confirmed" : "Unconfirmed"}
+              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  disabled={patch.isPending}
+                  onClick={handleSave}
+                  className="text-xs text-accent hover:text-accent/80 disabled:opacity-40"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="text-xs text-text-secondary hover:text-text-primary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
 
 function ReleasesTab() {
   const [authorFilter, setAuthorFilter] = useState(AUTHOR_ALL);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [lastFailedCount, setLastFailedCount] = useState(0);
 
-  const releases     = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined);
-  const tracked      = useTrackedAuthors();
-  const refresh      = useRefreshReleases();
+  const releases = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined);
+  const tracked  = useTrackedAuthors();
+  const refresh  = useRefreshReleases();
 
   const authorOptions = [
     { value: AUTHOR_ALL, label: "All authors" },
@@ -144,7 +231,20 @@ function ReleasesTab() {
         </div>
       ) : (
         <div className="rounded-xl border border-border overflow-hidden">
-          <Table columns={RELEASE_COLUMNS} data={releases.data ?? []} rowKey={(r) => r.id} />
+          <table className="w-full text-sm overflow-auto">
+            <thead>
+              <tr className="border-b border-border">
+                {["Title", "Author", "Release Date", "Source", ""].map((h) => (
+                  <th key={h} className="py-3 px-4 text-left text-text-secondary font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {releases.data?.map((r) => <ReleaseRow key={r.id} release={r} />)}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

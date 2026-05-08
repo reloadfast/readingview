@@ -5,10 +5,12 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..db import get_db
 from ..models.releases import Release, ReleaseTrackedAuthor
 from ..schemas.releases import (
+    PatchReleaseRequest,
     RefreshError,
     RefreshResult,
     ReleaseOut,
@@ -117,6 +119,27 @@ async def list_releases(
     return [_release_to_out(r) for r in rows]
 
 
+@router.patch("/releases/{release_id}", response_model=ReleaseOut)
+async def patch_release(
+    release_id: int,
+    body: PatchReleaseRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ReleaseOut:
+    async with db.begin():
+        row = (
+            await db.execute(
+                select(Release)
+                .options(selectinload(Release.author))
+                .where(Release.id == release_id)
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Release not found")
+        for field, value in body.model_dump(exclude_unset=True).items():
+            setattr(row, field, value)
+    return _release_to_out(row)
+
+
 # --- refresh ---
 
 
@@ -169,6 +192,7 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
                         author_id=author.id,
                         title=title,
                         release_date=rel["release_date"],
+                        release_date_confirmed=rel.get("release_date_confirmed", False),
                         ol_key=ol_key or None,
                         link_url=rel["link_url"],
                         source=rel["source"],

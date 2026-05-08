@@ -459,6 +459,16 @@ export function refreshReleases(): Promise<RefreshResult> {
   return apiFetch("/releases/refresh", { method: "POST" });
 }
 
+export interface PatchReleaseRequest {
+  release_date_confirmed?: boolean;
+  release_date?: string | null;
+  notes?: string | null;
+}
+
+export function patchRelease(id: number, body: PatchReleaseRequest): Promise<ReleaseOut> {
+  return apiFetch(`/releases/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
 // ---------------------------------------------------------------------------
 // Narrators
 // ---------------------------------------------------------------------------

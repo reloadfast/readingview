@@ -88,3 +88,15 @@ def test_extract_releases_no_year():
     docs = [{"title": "Untitled", "key": "/works/OL1W"}]
     releases = extract_releases(docs, "Author")
     assert releases[0]["release_date"] is None
+
+
+def test_extract_releases_confirmed_when_year_present():
+    releases = extract_releases(_SAMPLE_DOCS, "James S.A. Corey")
+    lw = next(r for r in releases if r["title"] == "Leviathan Wakes")
+    assert lw["release_date_confirmed"] is True
+
+
+def test_extract_releases_not_confirmed_when_no_year():
+    docs = [{"title": "Untitled", "key": "/works/OL1W"}]
+    releases = extract_releases(docs, "Author")
+    assert releases[0]["release_date_confirmed"] is False
