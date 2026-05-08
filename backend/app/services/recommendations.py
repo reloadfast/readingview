@@ -11,6 +11,7 @@ from ..models.settings import Settings as DBSettings
 
 logger = logging.getLogger(__name__)
 
+
 def _db_path_from_url(database_url: str) -> str:
     """Extract filesystem path from a SQLite DATABASE_URL.
 
