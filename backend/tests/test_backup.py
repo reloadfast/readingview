@@ -84,7 +84,7 @@ async def test_backup_passes_with_correct_token(client, monkeypatch, tmp_path):
 async def test_restore_requires_token_when_configured(client, monkeypatch):
     monkeypatch.setattr(backup_mod.settings, "BACKUP_TOKEN", "secret")
     buf = io.BytesIO()
-    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+    with tarfile.open(fileobj=buf, mode="w:gz"):
         pass
     buf.seek(0)
     r = await client.post(
