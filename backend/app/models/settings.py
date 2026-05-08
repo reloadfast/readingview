@@ -25,7 +25,7 @@ class Settings(Base):
     llm_type: Mapped[str] = mapped_column(String, default="ollama")
     llm_endpoint: Mapped[str | None] = mapped_column(String, nullable=True)
     llm_model: Mapped[str | None] = mapped_column(String, nullable=True)
-    llm_api_key_enc: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted
+    llm_api_key: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted; all encrypted fields use their natural column name
 
     # Recommender config fingerprint — shared across workers; stale on settings change
     recommender_config_hash: Mapped[str | None] = mapped_column(String, nullable=True)

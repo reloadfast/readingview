@@ -10,8 +10,6 @@ from ..schemas.settings import SettingsPatch, SettingsRead
 router = APIRouter()
 
 _ENCRYPTED = {"abs_token", "llm_api_key", "apprise_url"}
-# Map API field names to model column names for encrypted fields
-_API_TO_COL = {"llm_api_key": "llm_api_key_enc"}
 
 
 async def _get_or_create(db: AsyncSession) -> Settings:
@@ -37,7 +35,7 @@ def _mask(row: Settings) -> SettingsRead:
         llm_type=row.llm_type,
         llm_endpoint=row.llm_endpoint,
         llm_model=row.llm_model,
-        llm_api_key="" if row.llm_api_key_enc else None,
+        llm_api_key="" if row.llm_api_key else None,
         notifications_enabled=row.notifications_enabled,
         apprise_url="" if row.apprise_url else None,
         notify_days_before=row.notify_days_before,
@@ -64,9 +62,8 @@ async def patch_settings(
         row = await _get_or_create(db)
 
         for api_field, value in updates.items():
-            col = _API_TO_COL.get(api_field, api_field)
             if api_field in _ENCRYPTED and value is not None:
                 value = encrypt(value)
-            setattr(row, col, value)
+            setattr(row, api_field, value)
 
     return _mask(row)
