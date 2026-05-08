@@ -87,7 +87,7 @@ jobs:
       - name: Build image
         run: |
           SHA=$(git rev-parse --short HEAD)
-          docker build -t ${{ env.IMAGE }}:latest -t ${{ env.IMAGE }}:sha-${SHA} .
+          docker build --build-arg GIT_SHA=${SHA} -t ${{ env.IMAGE }}:latest -t ${{ env.IMAGE }}:sha-${SHA} .
 
       - name: Smoke test
         run: |
