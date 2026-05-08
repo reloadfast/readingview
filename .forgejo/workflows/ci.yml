@@ -108,6 +108,13 @@ jobs:
             exit 1
           fi
           echo "Health OK"
+          if ! docker exec smoke curl -sf http://127.0.0.1:8000/api/settings > /dev/null 2>&1; then
+            echo "ERROR: /api/settings failed — migrations likely did not run"
+            docker logs smoke
+            docker rm -f smoke
+            exit 1
+          fi
+          echo "Migrations OK"
           docker rm -f smoke
 
       - name: Log in to registry
