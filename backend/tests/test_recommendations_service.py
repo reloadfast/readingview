@@ -3,7 +3,9 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
+from app.models.settings import Settings
 from app.services.recommendations import _db_path_from_url, _settings_hash
 
 pytestmark = pytest.mark.unit
@@ -81,36 +83,36 @@ def test_settings_hash_changes_with_field():
 async def test_configure_recommender_disabled_path(engine):
     """Verify _configure_recommender runs the disabled path when row is None."""
     import app.services.recommendations as rec_mod
-
-    # Reset cache so _configure_recommender runs fresh
-    rec_mod._last_config_hash = None
-
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
     with (
-        patch("app.services.recommendations.reset_service", create=True),
-        patch("book_recommender._config.configure"),
+        patch("book_recommender._config.configure") as mock_configure,
         patch("book_recommender._config.RecommenderConfig"),
         patch("book_recommender.service.reset"),
     ):
         async with factory() as session:
-            # No settings row — should configure with enabled=False
+            # No settings row — stored_hash is None, current_hash is "none" → reconfigure
             await rec_mod._configure_recommender(session)
 
-    assert rec_mod._last_config_hash == "none"
+    mock_configure.assert_called_once()
 
 
 async def test_configure_recommender_skips_when_hash_unchanged(engine):
-    """When hash matches, _configure_recommender returns early without reconfiguring."""
+    """When DB hash matches current settings, _configure_recommender returns early."""
     import app.services.recommendations as rec_mod
-
-    rec_mod._last_config_hash = "none"  # pre-set to match None settings
-
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    # Insert settings row and pre-populate recommender_config_hash with the current hash
+    async with factory() as session:
+        async with session.begin():
+            await session.execute(sqlite_insert(Settings).values(id=1))
+        row = await session.get(Settings, 1)
+        row.recommender_config_hash = _settings_hash(row)
+        await session.commit()
 
     called = []
 
@@ -118,14 +120,52 @@ async def test_configure_recommender_skips_when_hash_unchanged(engine):
         async with factory() as session:
             await rec_mod._configure_recommender(session)
 
-    assert called == []  # should have returned early
+    assert called == []  # hash unchanged → early return
+
+
+async def test_configure_recommender_redetects_after_settings_change(engine):
+    """After settings change, the next call must reconfigure — not return stale results.
+
+    This is the regression guard for issue #64: all workers read the persisted
+    recommender_config_hash from the DB, so a hash mismatch is visible to every
+    process, not just the one that handled the PATCH.
+    """
+    import app.services.recommendations as rec_mod
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    # Initial state: settings row with hash matching current field values
+    async with factory() as session:
+        async with session.begin():
+            await session.execute(sqlite_insert(Settings).values(id=1))
+        row = await session.get(Settings, 1)
+        row.recommender_config_hash = _settings_hash(row)
+        await session.commit()
+
+    # Simulate a settings change (toggle recommender_enabled) from another worker
+    async with factory() as session:
+        async with session.begin():
+            row = await session.get(Settings, 1)
+            row.recommender_enabled = True  # hash will now differ from stored value
+
+    configure_calls = []
+
+    with (
+        patch("book_recommender.service.reset"),
+        patch("book_recommender._config.configure", side_effect=lambda *a, **kw: configure_calls.append(1)),
+        patch("book_recommender._config.RecommenderConfig"),
+        patch("app.services.recommendations.app_settings") as mock_settings,
+    ):
+        mock_settings.DATABASE_URL = "sqlite+aiosqlite:////tmp/test.db"
+        async with factory() as session:
+            await rec_mod._configure_recommender(session)
+
+    assert configure_calls, "configure must be called when DB hash is stale after settings change"
 
 
 async def test_get_status_disabled(engine):
     import app.services.recommendations as rec_mod
-
-    rec_mod._last_config_hash = None  # reset
-
     from sqlalchemy.ext.asyncio import async_sessionmaker
 
     factory = async_sessionmaker(engine, expire_on_commit=False)

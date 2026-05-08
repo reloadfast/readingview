@@ -27,6 +27,9 @@ class Settings(Base):
     llm_model: Mapped[str | None] = mapped_column(String, nullable=True)
     llm_api_key_enc: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted
 
+    # Recommender config fingerprint — shared across workers; stale on settings change
+    recommender_config_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # Notifications
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     apprise_url: Mapped[str | None] = mapped_column(String, nullable=True)  # encrypted
