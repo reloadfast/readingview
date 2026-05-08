@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -11,9 +11,10 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
-import { BookOpen, Clock, TrendingUp, Flame } from "lucide-react";
+import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
 import { Card, CardContent, Skeleton, Select } from "@/components/ui";
 import { useStatistics, useYearlyStats, useRecap } from "@/hooks/useStatistics";
+import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
 import type { RecapStats, AuthorCount, GenreCount } from "@/lib/api";
 
@@ -287,6 +288,188 @@ function RecapSection({ data }: { data: RecapStats }) {
 }
 
 // ---------------------------------------------------------------------------
+// Goal card
+// ---------------------------------------------------------------------------
+
+const RING_R = 54;
+const RING_C = 2 * Math.PI * RING_R;
+
+function GoalRing({ pct }: { pct: number }) {
+  const dash = Math.min(pct, 1) * RING_C;
+  return (
+    <svg width="140" height="140" viewBox="0 0 140 140" className="flex-shrink-0">
+      <circle cx="70" cy="70" r={RING_R} fill="none" stroke="var(--color-border)" strokeWidth="12" />
+      <circle
+        cx="70"
+        cy="70"
+        r={RING_R}
+        fill="none"
+        stroke="var(--color-chart-1)"
+        strokeWidth="12"
+        strokeDasharray={`${dash} ${RING_C}`}
+        strokeLinecap="round"
+        transform="rotate(-90 70 70)"
+        style={{ transition: "stroke-dasharray 0.4s ease" }}
+      />
+    </svg>
+  );
+}
+
+function paceLabel(booksFinished: number, target: number, year: string): string {
+  const now = new Date();
+  const y = Number(year);
+  if (y !== now.getFullYear()) return "";
+  const startOfYear = new Date(y, 0, 1).getTime();
+  const endOfYear = new Date(y + 1, 0, 1).getTime();
+  const elapsed = (now.getTime() - startOfYear) / (endOfYear - startOfYear);
+  const expected = target * elapsed;
+  if (booksFinished >= expected) return "On track";
+  const behind = Math.ceil(expected - booksFinished);
+  return `Behind by ${behind}`;
+}
+
+function GoalCard({ booksFinished, year }: { booksFinished: number; year: string }) {
+  const goals = useGoals();
+  const setGoal = useSetGoal();
+  const [editing, setEditing] = useState(false);
+  const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const goal = goals.data?.find((g) => g.year === Number(year));
+  const target = goal?.target_books ?? 0;
+  const pct = target > 0 ? booksFinished / target : 0;
+  const pace = target > 0 ? paceLabel(booksFinished, target, year) : "";
+
+  function startEdit() {
+    setInput(target > 0 ? String(target) : "");
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+  }
+
+  function saveEdit() {
+    const val = parseInt(input, 10);
+    if (!val || val <= 0) { setEditing(false); return; }
+    setGoal.mutate({ year: Number(year), target: val }, { onSuccess: () => setEditing(false) });
+  }
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") saveEdit();
+    if (e.key === "Escape") cancelEdit();
+  }
+
+  if (goals.isLoading) return <Skeleton className="h-36 w-full rounded-xl" />;
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-text-primary">Reading Goal</h2>
+        {!editing && (
+          <button
+            onClick={startEdit}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            {target > 0 ? "Edit goal" : "Set goal"}
+          </button>
+        )}
+      </div>
+
+      <Card>
+        <CardContent>
+          {target === 0 && !editing ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+              <p className="text-sm text-text-secondary">No goal set for {year}.</p>
+              <button
+                onClick={startEdit}
+                className="text-sm font-medium text-accent hover:underline"
+              >
+                Set a reading goal
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-6">
+              <div className="relative flex-shrink-0">
+                <GoalRing pct={pct} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-text-primary leading-none">
+                    {booksFinished}
+                  </span>
+                  <span className="text-xs text-text-secondary">of {target}</span>
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <p className="text-text-primary font-medium">
+                  {booksFinished >= target
+                    ? "Goal reached!"
+                    : `${target - booksFinished} book${target - booksFinished === 1 ? "" : "s"} to go`}
+                </p>
+                {pace && (
+                  <span
+                    className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${
+                      pace === "On track"
+                        ? "bg-green-500/10 text-green-500"
+                        : "bg-amber-500/10 text-amber-500"
+                    }`}
+                  >
+                    {pace}
+                  </span>
+                )}
+                <div className="w-full bg-border rounded-full h-1.5 mt-2">
+                  <div
+                    className="bg-chart-1 h-1.5 rounded-full transition-all"
+                    style={{ width: `${Math.min(pct * 100, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-text-secondary">
+                  {Math.round(Math.min(pct, 1) * 100)}% complete
+                </p>
+              </div>
+            </div>
+          )}
+
+          {editing && (
+            <div className="mt-4 pt-4 border-t border-border flex items-center gap-2">
+              <label className="text-sm text-text-secondary flex-shrink-0">
+                Target for {year}:
+              </label>
+              <input
+                ref={inputRef}
+                type="number"
+                min={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKeyDown}
+                className="w-20 text-sm px-2 py-1 rounded-md border border-border bg-surface text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                placeholder="24"
+              />
+              <span className="text-sm text-text-secondary">books</span>
+              <button
+                onClick={saveEdit}
+                disabled={setGoal.isPending}
+                className="ml-2 p-1 rounded-md text-green-500 hover:bg-green-500/10 transition-colors"
+              >
+                <Check className="w-4 h-4" />
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="p-1 rounded-md text-text-secondary hover:bg-surface-hover transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
 
@@ -350,6 +533,9 @@ export default function StatisticsPage() {
           </>
         )}
       </div>
+
+      {/* Reading goal */}
+      <GoalCard booksFinished={booksInYear} year={year} />
 
       {/* Charts / lists / recap — or empty state */}
       {noData ? (

@@ -568,6 +568,26 @@ export function getRecommenderStatus(): Promise<RecommenderStatus> {
 }
 
 // ---------------------------------------------------------------------------
+// Goals
+// ---------------------------------------------------------------------------
+
+export interface ReadingGoal {
+  year: number;
+  target_books: number;
+}
+
+export function getGoals(): Promise<ReadingGoal[]> {
+  return apiFetch("/goals");
+}
+
+export function setGoal(year: number, target_books: number): Promise<ReadingGoal> {
+  return apiFetch(`/goals/${year}`, {
+    method: "PUT",
+    body: JSON.stringify({ target_books }),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Health
 // ---------------------------------------------------------------------------
 

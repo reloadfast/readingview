@@ -11,6 +11,7 @@ from .api import (
     collections,
     connections,
     covers,
+    goals,
     health,
     library,
     narrators,
@@ -44,6 +45,7 @@ app.include_router(narrators.router, prefix="/api")
 app.include_router(collections.router, prefix="/api")
 app.include_router(backup.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
+app.include_router(goals.router, prefix="/api")
 
 _dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 
