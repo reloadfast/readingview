@@ -99,7 +99,7 @@ async def test_get_user_listening_stats():
 
 async def test_cover_url():
     c = _client()
-    assert c.cover_url("item-1") == "http://abs.test/api/items/item-1/cover"
+    assert c.cover_url("item-1") == "/api/cover/item-1"
 
 
 async def test_get_library_series_single_page():

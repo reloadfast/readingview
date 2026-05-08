@@ -10,7 +10,7 @@ def _mock_abs(items=None, progress=None, stats=None, sessions=None, libraries=No
     mock.get_user_listening_stats.return_value = stats or {"totalTime": 0, "items": {}}
     mock.get_user_listening_sessions.return_value = sessions or []
     mock.get_libraries.return_value = libraries or []
-    mock.cover_url.side_effect = lambda item_id: f"http://abs.test/api/items/{item_id}/cover"
+    mock.cover_url.side_effect = lambda item_id: f"/api/cover/{item_id}"
     return mock
 
 
