@@ -28,6 +28,9 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 RUN mkdir -p /data && chown -R 99:100 /data
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 LABEL org.opencontainers.image.title="ReadingView"
 LABEL org.opencontainers.image.description="Self-hosted audiobook dashboard for Audiobookshelf"
 LABEL org.opencontainers.image.source="https://forgejo.moseisley.es/Wind/readingview"
@@ -43,4 +46,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -sf http://localhost:8000/api/health || exit 1
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/entrypoint.sh"]
