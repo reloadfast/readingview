@@ -10,7 +10,9 @@ async def _configure_abs(client):
     await client.patch("/api/settings", json={"abs_url": "http://abs.test", "abs_token": "t"})
 
 
-def _mock_response(status_code: int = 200, content: bytes = b"img", content_type: str = "image/jpeg"):
+def _mock_response(
+    status_code: int = 200, content: bytes = b"img", content_type: str = "image/jpeg"
+):
     r = MagicMock(spec=httpx.Response)
     r.status_code = status_code
     r.content = content
