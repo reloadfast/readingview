@@ -1,5 +1,6 @@
 """ABS-dependent route tests: 503 without config, happy path with mocked client."""
 
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 
@@ -162,3 +163,34 @@ async def test_library_item_not_found(client):
     with patch("app.api.library.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/library/no-such-id")
     assert r.status_code == 404
+
+
+# --- statistics year default resolved at request time, not import time ---
+
+
+async def test_statistics_yearly_default_year_resolved_at_request_time(client):
+    await _configure_abs(client)
+    mock = _mock_abs()
+    fake_dt = datetime(2042, 6, 1)
+    with (
+        patch("app.api.statistics.AudiobookshelfClient", return_value=mock),
+        patch("app.api.statistics.datetime") as mock_datetime,
+    ):
+        mock_datetime.now.return_value = fake_dt
+        r = await client.get("/api/statistics/yearly")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2042"
+
+
+async def test_statistics_recap_default_year_resolved_at_request_time(client):
+    await _configure_abs(client)
+    mock = _mock_abs()
+    fake_dt = datetime(2042, 6, 1)
+    with (
+        patch("app.api.statistics.AudiobookshelfClient", return_value=mock),
+        patch("app.api.statistics.datetime") as mock_datetime,
+    ):
+        mock_datetime.now.return_value = fake_dt
+        r = await client.get("/api/statistics/recap")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2042"

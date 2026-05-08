@@ -41,9 +41,10 @@ async def get_statistics(db: AsyncSession = Depends(get_db)) -> OverallStats:
 
 @router.get("/statistics/yearly", response_model=YearlyStats)
 async def get_yearly_stats(
-    year: str = Query(default=str(datetime.now().year)),
+    year: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> YearlyStats:
+    resolved_year = year or str(datetime.now().year)
     async with db.begin():
         client = await _get_client(db)
 
@@ -55,14 +56,15 @@ async def get_yearly_stats(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return stats_svc.compute_yearly_stats(year, progress_map, listening_stats)
+    return stats_svc.compute_yearly_stats(resolved_year, progress_map, listening_stats)
 
 
 @router.get("/statistics/recap", response_model=RecapStats)
 async def get_recap(
-    year: str = Query(default=str(datetime.now().year)),
+    year: str | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> RecapStats:
+    resolved_year = year or str(datetime.now().year)
     async with db.begin():
         client = await _get_client(db)
 
@@ -74,4 +76,4 @@ async def get_recap(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return stats_svc.compute_recap(year, progress_map, listening_stats)
+    return stats_svc.compute_recap(resolved_year, progress_map, listening_stats)
