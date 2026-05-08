@@ -3,10 +3,12 @@ from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crypto import decrypt
 from ..db import get_db
+from ..models.notes import BookNote
 from ..models.settings import Settings
 from ..schemas.library import BookProgress, LibraryBook, SeriesEntry
 from ..services.audiobookshelf import AudiobookshelfClient
@@ -126,12 +128,16 @@ async def get_library(
 
     if search:
         q = search.lower()
+        async with db.begin():
+            rows = (await db.execute(select(BookNote))).scalars().all()
+        notes_map = {r.abs_item_id: r.body.lower() for r in rows}
         books = [
             b
             for b in books
             if q in b.title.lower()
             or q in b.authors.lower()
             or any(q in s.name.lower() for s in b.series)
+            or q in notes_map.get(b.id, "")
         ]
 
     books = _sort_books(books, sort)

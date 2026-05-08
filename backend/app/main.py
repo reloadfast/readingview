@@ -14,6 +14,7 @@ from .api import (
     health,
     library,
     narrators,
+    notes,
     recommendations,
     releases,
     series,
@@ -35,6 +36,7 @@ app.include_router(releases.router, prefix="/api")
 app.include_router(narrators.router, prefix="/api")
 app.include_router(collections.router, prefix="/api")
 app.include_router(backup.router, prefix="/api")
+app.include_router(notes.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(goals.router, prefix="/api")
 
