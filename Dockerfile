@@ -18,14 +18,15 @@ ENV PYTHONPATH=/app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -r -u 1001 appuser
+RUN groupadd -g 100 appgroup 2>/dev/null || true \
+    && useradd -r -u 99 -g 100 appuser
 
 COPY backend/ ./backend/
 RUN pip install --no-cache-dir -e ./backend/
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-RUN mkdir -p /data && chown -R appuser /data
+RUN mkdir -p /data && chown -R 99:100 /data
 
 LABEL org.opencontainers.image.title="ReadingView"
 LABEL org.opencontainers.image.description="Self-hosted audiobook dashboard for Audiobookshelf"
