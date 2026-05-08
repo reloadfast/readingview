@@ -7,8 +7,9 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.engine import make_url
 
 from ..config import settings
 
@@ -18,14 +19,20 @@ _ALLOWED_FILENAMES = {"readingview.db"}
 
 
 def _db_path() -> Path:
-    url = settings.DATABASE_URL
-    # strip driver prefix: sqlite+aiosqlite:////path → /path
-    raw = url.split("sqlite", 1)[-1].removeprefix("+aiosqlite").lstrip(":")
-    return Path(raw.lstrip("/")).resolve() if not raw.startswith("/") else Path(raw)
+    database = make_url(settings.DATABASE_URL).database or ""
+    return Path(database).resolve()
+
+
+def _check_backup_token(authorization: str | None = Header(default=None)) -> None:
+    token = settings.BACKUP_TOKEN
+    if not token:
+        return
+    if authorization != f"Bearer {token}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @router.get("/backup")
-async def download_backup() -> StreamingResponse:
+async def download_backup(_: None = Depends(_check_backup_token)) -> StreamingResponse:
     db = _db_path()
     if not db.exists():
         raise HTTPException(status_code=404, detail="Database file not found")
@@ -46,36 +53,47 @@ async def download_backup() -> StreamingResponse:
 
 
 @router.post("/restore", status_code=200)
-async def restore_backup(file: UploadFile) -> dict:
-    data = await file.read()
-
+async def restore_backup(
+    file: UploadFile,
+    _: None = Depends(_check_backup_token),
+) -> dict:
+    max_bytes = settings.BACKUP_MAX_RESTORE_BYTES
+    upload_fd, upload_path = tempfile.mkstemp(suffix=".tar.gz")
     try:
-        buf = io.BytesIO(data)
-        with tarfile.open(fileobj=buf, mode="r:gz") as tar:
-            members = tar.getmembers()
-            for m in members:
-                if m.name not in _ALLOWED_FILENAMES:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Unexpected file in archive: {m.name}",
-                    )
+        written = 0
+        with os.fdopen(upload_fd, "wb") as out:
+            while True:
+                chunk = await file.read(65536)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise HTTPException(status_code=413, detail="Upload exceeds size limit")
+                out.write(chunk)
 
-            if not members:
-                raise HTTPException(status_code=400, detail="Archive is empty")
+        try:
+            with tarfile.open(upload_path, mode="r:gz") as tar:
+                members = tar.getmembers()
+                for m in members:
+                    if m.name not in _ALLOWED_FILENAMES:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Unexpected file in archive: {m.name}",
+                        )
 
-            # Extract DB to temp file for integrity check
-            db_member = next((m for m in members if m.name == "readingview.db"), members[0])
-            buf.seek(0)
-            with tarfile.open(fileobj=buf, mode="r:gz") as tar2:
-                f = tar2.extractfile(db_member)
+                if not members:
+                    raise HTTPException(status_code=400, detail="Archive is empty")
+
+                db_member = next((m for m in members if m.name == "readingview.db"), members[0])
+                f = tar.extractfile(db_member)
                 if f is None:
                     raise HTTPException(status_code=400, detail="Cannot read DB from archive")
+
                 tmp_fd, tmp_path = tempfile.mkstemp(suffix=".db")
                 try:
-                    with os.fdopen(tmp_fd, "wb") as out:
-                        shutil.copyfileobj(f, out)
+                    with os.fdopen(tmp_fd, "wb") as db_out:
+                        shutil.copyfileobj(f, db_out)
 
-                    # Integrity check
                     conn = sqlite3.connect(tmp_path)
                     try:
                         cur = conn.execute("PRAGMA integrity_check")
@@ -89,7 +107,6 @@ async def restore_backup(file: UploadFile) -> dict:
                     finally:
                         conn.close()
 
-                    # Replace DB
                     target = _db_path()
                     target.parent.mkdir(parents=True, exist_ok=True)
                     os.replace(tmp_path, str(target))
@@ -103,12 +120,17 @@ async def restore_backup(file: UploadFile) -> dict:
                     except FileNotFoundError:
                         pass
 
-    except HTTPException:
-        raise
-    except tarfile.TarError as exc:
-        raise HTTPException(status_code=400, detail=f"Invalid tar.gz file: {exc}") from exc
+        except HTTPException:
+            raise
+        except tarfile.TarError as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid tar.gz file: {exc}") from exc
 
-    # Dispose engine so next request gets fresh connections to the new DB
+    finally:
+        try:
+            os.unlink(upload_path)
+        except FileNotFoundError:
+            pass
+
     from ..db import engine
 
     await engine.dispose()

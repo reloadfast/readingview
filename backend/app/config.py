@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     PORT: int = 8000
     GIT_SHA: str = "dev"
+    BACKUP_TOKEN: str | None = None
+    BACKUP_MAX_RESTORE_BYTES: int = 1024 * 1024 * 1024  # 1 GiB
 
 
 settings = Settings()  # type: ignore[call-arg]
