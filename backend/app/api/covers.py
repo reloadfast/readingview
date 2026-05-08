@@ -26,7 +26,7 @@ async def get_cover(
     if not row or not row.abs_url or not row.abs_token:
         return Response(status_code=503, content="ABS not configured")
 
-    etag = f'"{hashlib.sha1(item_id.encode()).hexdigest()[:16]}"'  # noqa: S324
+    etag = f'"{hashlib.sha1(item_id.encode(), usedforsecurity=False).hexdigest()[:16]}"'
     if if_none_match == etag:
         return Response(status_code=304)
 
