@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crypto import encrypt
@@ -14,12 +15,10 @@ _API_TO_COL = {"llm_api_key": "llm_api_key_enc"}
 
 
 async def _get_or_create(db: AsyncSession) -> Settings:
-    row = await db.get(Settings, 1)
-    if row is None:
-        row = Settings(id=1)
-        db.add(row)
-        await db.flush()
-    return row
+    await db.execute(
+        sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
+    )
+    return await db.get(Settings, 1)
 
 
 def _mask(row: Settings) -> SettingsRead:

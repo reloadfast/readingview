@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 
@@ -64,3 +66,12 @@ async def test_patch_notifications(client):
     assert data["notify_days_before"] == 3
     assert data["notify_time"] == "08:00"
     assert data["timezone"] == "Europe/Madrid"
+
+
+async def test_concurrent_first_requests_both_succeed(client):
+    r1, r2 = await asyncio.gather(
+        client.get("/api/settings"),
+        client.get("/api/settings"),
+    )
+    assert r1.status_code == 200
+    assert r2.status_code == 200
