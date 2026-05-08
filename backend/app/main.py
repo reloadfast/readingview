@@ -10,6 +10,7 @@ from .api import (
     backup,
     collections,
     connections,
+    covers,
     health,
     library,
     narrators,
@@ -31,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/api")
+app.include_router(covers.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(connections.router, prefix="/api")
 app.include_router(library.router, prefix="/api")

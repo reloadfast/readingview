@@ -37,7 +37,7 @@ def _make_item(
 
 
 def _cover(item_id: str) -> str:
-    return f"http://abs.test/api/items/{item_id}/cover"
+    return f"/api/cover/{item_id}"
 
 
 # --- _parse_progress ---
@@ -97,7 +97,7 @@ def test_item_to_book_fields():
     assert book.title == "My Book"
     assert book.authors == "An Author"
     assert book.duration == 7200.0
-    assert book.cover_url == "http://abs.test/api/items/id-1/cover"
+    assert book.cover_url == "/api/cover/id-1"
     assert book.progress is None
 
 

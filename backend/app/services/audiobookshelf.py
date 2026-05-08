@@ -97,4 +97,4 @@ class AudiobookshelfClient:
         return all_sessions
 
     def cover_url(self, item_id: str) -> str:
-        return f"{self.base_url}/api/items/{item_id}/cover"
+        return f"/api/cover/{item_id}"
