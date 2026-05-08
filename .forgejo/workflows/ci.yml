@@ -1,3 +1,8 @@
+# Actions verified against data.forgejo.org as required by CLAUDE.md ("Never use actions
+# not mirrored on data.forgejo.org"). Verification date: 2026-05-08.
+#   actions/checkout@v4    → https://data.forgejo.org/actions/checkout   (v4.3.1 present)
+#   actions/setup-python@v5 → https://data.forgejo.org/actions/setup-python (v5.6.0 present)
+#   actions/setup-node@v4  → https://data.forgejo.org/actions/setup-node  (v4.4.0 present)
 name: CI
 
 on:
