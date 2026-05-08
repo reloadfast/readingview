@@ -51,6 +51,7 @@ def extract_releases(docs: list[dict], author_name: str) -> list[dict]:
                 "title": title,
                 "author_name": author_name,
                 "release_date": release_date,
+                "release_date_confirmed": year is not None,
                 "ol_key": work_key,
                 "link_url": _ol_work_url(work_key) if work_key else None,
                 "source": "openlibrary",

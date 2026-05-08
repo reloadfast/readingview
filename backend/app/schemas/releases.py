@@ -32,6 +32,12 @@ class ReleaseOut(BaseModel):
         from_attributes = True
 
 
+class PatchReleaseRequest(BaseModel):
+    release_date_confirmed: bool | None = None
+    release_date: str | None = None
+    notes: str | None = None
+
+
 class RefreshError(BaseModel):
     author: str
     message: str

@@ -3,8 +3,10 @@ import {
   addTrackedAuthor,
   getReleases,
   getTrackedAuthors,
+  patchRelease,
   refreshReleases,
   removeTrackedAuthor,
+  type PatchReleaseRequest,
   type TrackAuthorRequest,
 } from "../lib/api";
 
@@ -36,6 +38,17 @@ export function useRemoveTrackedAuthor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => removeTrackedAuthor(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["releases"] });
+    },
+  });
+}
+
+export function usePatchRelease() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: PatchReleaseRequest & { id: number }) =>
+      patchRelease(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["releases"] });
     },
