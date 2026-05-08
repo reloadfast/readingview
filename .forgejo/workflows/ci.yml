@@ -110,15 +110,16 @@ jobs:
           echo "Health OK"
           docker rm -f smoke
 
-      - name: Configure Docker push concurrency
-        run: |
-          sudo mkdir -p /etc/docker && echo '{"max-concurrent-uploads": 2}' | sudo tee /etc/docker/daemon.json
-          sudo kill -HUP $(sudo cat /var/run/docker.pid)
-          sleep 2
-          echo "${{ secrets.FORGEJO_TOKEN }}" | docker login ${{ env.REGISTRY }} -u Wind --password-stdin
+      - name: Log in to registry
+        run: echo "${{ secrets.FORGEJO_TOKEN }}" | docker login ${{ env.REGISTRY }} -u Wind --password-stdin
 
       - name: Push image
-        run: docker push --all-tags ${{ env.IMAGE }}
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          curl -sL https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin crane
+          docker save ${{ env.IMAGE }}:latest | crane push --jobs 1 - ${{ env.IMAGE }}:latest
+          crane tag ${{ env.IMAGE }}:latest sha-${SHA}
 
       - name: Prune images
         if: success()
