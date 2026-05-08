@@ -18,7 +18,9 @@ async def _get_or_create(db: AsyncSession) -> Settings:
     await db.execute(
         sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
     )
-    return await db.get(Settings, 1)
+    row = await db.get(Settings, 1)
+    assert row is not None
+    return row
 
 
 def _mask(row: Settings) -> SettingsRead:
