@@ -186,9 +186,16 @@ export interface ReleaseOut {
   source: string | null;
 }
 
+export interface RefreshError {
+  author: string;
+  message: string;
+}
+
 export interface RefreshResult {
   added: number;
   skipped: number;
+  failed: number;
+  errors: RefreshError[];
 }
 
 export interface NarratorBook {

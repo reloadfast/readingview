@@ -82,6 +82,7 @@ const RELEASE_COLUMNS: Column<ReleaseOut>[] = [
 function ReleasesTab() {
   const [authorFilter, setAuthorFilter] = useState(AUTHOR_ALL);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [lastFailedCount, setLastFailedCount] = useState(0);
 
   const releases     = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined);
   const tracked      = useTrackedAuthors();
@@ -104,12 +105,20 @@ function ReleasesTab() {
           {lastRefreshed && (
             <span className="text-xs text-text-secondary">
               Last refreshed: {lastRefreshed.toLocaleTimeString()}
+              {lastFailedCount > 0 && (
+                <span className="ml-2 text-red-400">({lastFailedCount} failed)</span>
+              )}
             </span>
           )}
           <button
             disabled={refresh.isPending}
             onClick={() =>
-              refresh.mutate(undefined, { onSuccess: () => setLastRefreshed(new Date()) })
+              refresh.mutate(undefined, {
+                onSuccess: (result) => {
+                  setLastRefreshed(new Date());
+                  setLastFailedCount(result.failed);
+                },
+              })
             }
             className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
           >

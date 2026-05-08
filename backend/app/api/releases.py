@@ -1,3 +1,4 @@
+import logging
 import time
 
 import httpx
@@ -8,12 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_db
 from ..models.releases import Release, ReleaseTrackedAuthor
 from ..schemas.releases import (
+    RefreshError,
     RefreshResult,
     ReleaseOut,
     ReleaseTrackedAuthorOut,
     TrackAuthorRequest,
 )
 from ..services import release_tracker as rt_svc
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -126,11 +130,18 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
 
     added = 0
     skipped = 0
+    failed = 0
+    errors: list[RefreshError] = []
 
     for author in authors:
         try:
             docs = await rt_svc.fetch_author_works(author.name)
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
+            logger.warning(
+                "Failed to fetch works for author %r: %s", author.name, type(exc).__name__
+            )
+            failed += 1
+            errors.append(RefreshError(author=author.name, message=type(exc).__name__))
             continue
 
         releases = rt_svc.extract_releases(docs, author.name)
@@ -165,4 +176,4 @@ async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
                 )
                 added += 1
 
-    return RefreshResult(added=added, skipped=skipped)
+    return RefreshResult(added=added, skipped=skipped, failed=failed, errors=errors)
