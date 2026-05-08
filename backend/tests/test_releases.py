@@ -71,3 +71,5 @@ async def test_refresh_no_tracked_authors(client):
     data = r.json()
     assert data["added"] == 0
     assert data["skipped"] == 0
+    assert data["failed"] == 0
+    assert data["errors"] == []

@@ -32,6 +32,13 @@ class ReleaseOut(BaseModel):
         from_attributes = True
 
 
+class RefreshError(BaseModel):
+    author: str
+    message: str
+
+
 class RefreshResult(BaseModel):
     added: int
     skipped: int
+    failed: int = 0
+    errors: list[RefreshError] = []
