@@ -1,26 +1,17 @@
 import asyncio
 from typing import Literal
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..crypto import decrypt
+from ..api.deps import abs_client
 from ..db import get_db
-from ..models.settings import Settings
+from ..models.notes import BookNote
 from ..schemas.library import BookProgress, LibraryBook, SeriesEntry
 from ..services.audiobookshelf import AudiobookshelfClient
 
 router = APIRouter()
-
-_NOT_CONFIGURED = {"detail": "ABS connection not configured"}
-
-
-async def _get_client(db: AsyncSession) -> AudiobookshelfClient:
-    row = await db.get(Settings, 1)
-    if not row or not row.abs_url or not row.abs_token:
-        raise HTTPException(status_code=503, detail="ABS connection not configured")
-    return AudiobookshelfClient(row.abs_url, decrypt(row.abs_token))
 
 
 def _parse_progress(raw: dict, duration: float) -> BookProgress:
@@ -112,26 +103,25 @@ async def get_library(
     ),
     page: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=200),
+    client: AudiobookshelfClient = Depends(abs_client),
     db: AsyncSession = Depends(get_db),
 ) -> list[LibraryBook]:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        items, progress_map = await _parallel_fetch(client)
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    items, progress_map = await _parallel_fetch(client)
 
     books = [_item_to_book(item, progress_map, client.cover_url) for item in items]
 
     if search:
         q = search.lower()
+        async with db.begin():
+            rows = (await db.execute(select(BookNote))).scalars().all()
+        notes_map = {r.abs_item_id: r.body.lower() for r in rows}
         books = [
             b
             for b in books
             if q in b.title.lower()
             or q in b.authors.lower()
             or any(q in s.name.lower() for s in b.series)
+            or q in notes_map.get(b.id, "")
         ]
 
     books = _sort_books(books, sort)
@@ -148,18 +138,12 @@ async def _parallel_fetch(client: AudiobookshelfClient):
 
 @router.get("/library/in-progress", response_model=list[LibraryBook])
 async def get_in_progress(
-    db: AsyncSession = Depends(get_db),
+    client: AudiobookshelfClient = Depends(abs_client),
 ) -> list[LibraryBook]:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        items_task = asyncio.create_task(client.get_user_items_in_progress())
-        progress_task = asyncio.create_task(client.get_media_progress_map())
-        items = await items_task
-        progress_map = await progress_task
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    items_task = asyncio.create_task(client.get_user_items_in_progress())
+    progress_task = asyncio.create_task(client.get_media_progress_map())
+    items = await items_task
+    progress_map = await progress_task
 
     return [_item_to_book(item, progress_map, client.cover_url) for item in items]
 
@@ -167,18 +151,12 @@ async def get_in_progress(
 @router.get("/library/{item_id}", response_model=LibraryBook)
 async def get_library_item(
     item_id: str,
-    db: AsyncSession = Depends(get_db),
+    client: AudiobookshelfClient = Depends(abs_client),
 ) -> LibraryBook:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        item_task = asyncio.create_task(client.get_item(item_id))
-        progress_task = asyncio.create_task(client.get_media_progress_map())
-        item = await item_task
-        progress_map = await progress_task
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    item_task = asyncio.create_task(client.get_item(item_id))
+    progress_task = asyncio.create_task(client.get_media_progress_map())
+    item = await item_task
+    progress_map = await progress_task
 
     if item is None:
         raise HTTPException(status_code=404, detail="Item not found")

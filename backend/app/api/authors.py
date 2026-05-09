@@ -5,10 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..crypto import decrypt
+from ..api.deps import abs_client
 from ..db import get_db
 from ..models.authors import TrackedAuthor
-from ..models.settings import Settings
 from ..schemas.authors import FollowRequest, LibraryAuthor, OLAuthorResult, TrackedAuthorOut
 from ..services.audiobookshelf import AudiobookshelfClient
 from ..services.openlibrary import OpenLibraryClient
@@ -16,13 +15,6 @@ from ..services.openlibrary import OpenLibraryClient
 router = APIRouter()
 
 _OL = OpenLibraryClient()
-
-
-async def _get_abs_client(db: AsyncSession) -> AudiobookshelfClient:
-    row = await db.get(Settings, 1)
-    if not row or not row.abs_url or not row.abs_token:
-        raise HTTPException(status_code=503, detail="ABS connection not configured")
-    return AudiobookshelfClient(row.abs_url, decrypt(row.abs_token))
 
 
 def _extract_abs_authors(items: list[dict]) -> list[LibraryAuthor]:
@@ -71,13 +63,10 @@ async def search_authors(q: str = Query(..., min_length=1)) -> list[OLAuthorResu
 
 
 @router.get("/authors/library", response_model=list[LibraryAuthor])
-async def get_library_authors(db: AsyncSession = Depends(get_db)) -> list[LibraryAuthor]:
-    async with db.begin():
-        client = await _get_abs_client(db)
-    try:
-        items = await client.get_all_library_items()
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+async def get_library_authors(
+    client: AudiobookshelfClient = Depends(abs_client),
+) -> list[LibraryAuthor]:
+    items = await client.get_all_library_items()
     return _extract_abs_authors(items)
 
 

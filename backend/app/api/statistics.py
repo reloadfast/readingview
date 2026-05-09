@@ -1,13 +1,9 @@
 import asyncio
 from datetime import datetime
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, Query
 
-from ..crypto import decrypt
-from ..db import get_db
-from ..models.settings import Settings
+from ..api.deps import abs_client
 from ..schemas.statistics import OverallStats, RecapStats, YearlyStats
 from ..services import statistics as stats_svc
 from ..services.audiobookshelf import AudiobookshelfClient
@@ -15,26 +11,15 @@ from ..services.audiobookshelf import AudiobookshelfClient
 router = APIRouter()
 
 
-async def _get_client(db: AsyncSession) -> AudiobookshelfClient:
-    row = await db.get(Settings, 1)
-    if not row or not row.abs_url or not row.abs_token:
-        raise HTTPException(status_code=503, detail="ABS connection not configured")
-    return AudiobookshelfClient(row.abs_url, decrypt(row.abs_token))
-
-
 @router.get("/statistics", response_model=OverallStats)
-async def get_statistics(db: AsyncSession = Depends(get_db)) -> OverallStats:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        progress_map, listening_stats, sessions = await asyncio.gather(
-            client.get_media_progress_map(),
-            client.get_user_listening_stats(),
-            client.get_user_listening_sessions(),
-        )
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+async def get_statistics(
+    client: AudiobookshelfClient = Depends(abs_client),
+) -> OverallStats:
+    progress_map, listening_stats, sessions = await asyncio.gather(
+        client.get_media_progress_map(),
+        client.get_user_listening_stats(),
+        client.get_user_listening_sessions(),
+    )
 
     return stats_svc.compute_overall_stats(progress_map, listening_stats, sessions)
 
@@ -42,18 +27,12 @@ async def get_statistics(db: AsyncSession = Depends(get_db)) -> OverallStats:
 @router.get("/statistics/yearly", response_model=YearlyStats)
 async def get_yearly_stats(
     year: str = Query(default=str(datetime.now().year)),
-    db: AsyncSession = Depends(get_db),
+    client: AudiobookshelfClient = Depends(abs_client),
 ) -> YearlyStats:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        progress_map, listening_stats = await asyncio.gather(
-            client.get_media_progress_map(),
-            client.get_user_listening_stats(),
-        )
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    progress_map, listening_stats = await asyncio.gather(
+        client.get_media_progress_map(),
+        client.get_user_listening_stats(),
+    )
 
     return stats_svc.compute_yearly_stats(year, progress_map, listening_stats)
 
@@ -61,17 +40,11 @@ async def get_yearly_stats(
 @router.get("/statistics/recap", response_model=RecapStats)
 async def get_recap(
     year: str = Query(default=str(datetime.now().year)),
-    db: AsyncSession = Depends(get_db),
+    client: AudiobookshelfClient = Depends(abs_client),
 ) -> RecapStats:
-    async with db.begin():
-        client = await _get_client(db)
-
-    try:
-        progress_map, listening_stats = await asyncio.gather(
-            client.get_media_progress_map(),
-            client.get_user_listening_stats(),
-        )
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    progress_map, listening_stats = await asyncio.gather(
+        client.get_media_progress_map(),
+        client.get_user_listening_stats(),
+    )
 
     return stats_svc.compute_recap(year, progress_map, listening_stats)
