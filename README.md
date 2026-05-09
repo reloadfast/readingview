@@ -97,8 +97,6 @@ See [`.env.example`](.env.example) for the full template.
 ## Documentation
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Docker, Docker Compose, reverse proxy, local dev, updating
-- **[NOTIFICATIONS.md](NOTIFICATIONS.md)** — Apprise notification setup (Telegram, Discord, etc.)
-- **[OPEN_LIBRARY_USER_GUIDE.md](OPEN_LIBRARY_USER_GUIDE.md)** — Release tracker search guide
 
 ## License
 
