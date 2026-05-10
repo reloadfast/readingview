@@ -2,11 +2,8 @@ import asyncio
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..crypto import decrypt
-from ..db import get_db
-from ..models.settings import Settings
+from ..api.deps import abs_client
 from ..schemas.narrators import NarratorDetail, NarratorSummary
 from ..services import narrators as narrator_svc
 from ..services.audiobookshelf import AudiobookshelfClient
@@ -14,18 +11,10 @@ from ..services.audiobookshelf import AudiobookshelfClient
 router = APIRouter()
 
 
-async def _get_client(db: AsyncSession) -> AudiobookshelfClient:
-    row = await db.get(Settings, 1)
-    if not row or not row.abs_url or not row.abs_token:
-        raise HTTPException(status_code=503, detail="ABS connection not configured")
-    return AudiobookshelfClient(row.abs_url, decrypt(row.abs_token))
-
-
 @router.get("/narrators", response_model=list[NarratorSummary])
-async def list_narrators(db: AsyncSession = Depends(get_db)) -> list[NarratorSummary]:
-    async with db.begin():
-        client = await _get_client(db)
-
+async def list_narrators(
+    client: AudiobookshelfClient = Depends(abs_client),
+) -> list[NarratorSummary]:
     try:
         items, progress_map = await asyncio.gather(
             client.get_all_library_items(),
@@ -40,11 +29,8 @@ async def list_narrators(db: AsyncSession = Depends(get_db)) -> list[NarratorSum
 @router.get("/narrators/{narrator_name}", response_model=NarratorDetail)
 async def get_narrator(
     narrator_name: str,
-    db: AsyncSession = Depends(get_db),
+    client: AudiobookshelfClient = Depends(abs_client),
 ) -> NarratorDetail:
-    async with db.begin():
-        client = await _get_client(db)
-
     try:
         items, progress_map = await asyncio.gather(
             client.get_all_library_items(),
