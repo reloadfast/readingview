@@ -24,7 +24,7 @@ async def clear_cover_cache() -> JSONResponse:
     if not (cache := get()):
         return JSONResponse({"ok": True})
     await cache.clear()
-    return JSONResponse({"ok": True, "cleared": True})
+    return JSONResponse({"status": "OK"})
 
 
 @router.get("/cover/{item_id}")

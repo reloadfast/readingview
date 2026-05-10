@@ -65,7 +65,7 @@ class CoverCache:
     async def clear_key(self, key: str) -> None:
         filepath = self._base / _hash_key(key)
         if filepath.exists():
-            size = await asyncio.to_thread(filepath.stat).st_size
+            size = (await asyncio.to_thread(filepath.stat)).st_size
             await asyncio.to_thread(filepath.unlink)
             lock = await self._ensure_lock()
             async with lock:
