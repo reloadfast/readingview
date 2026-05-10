@@ -133,9 +133,7 @@ async def unfollow_author(
 ) -> None:
     async with db.begin():
         row = (
-            await db.execute(
-                select(TrackedAuthor).where(TrackedAuthor.ol_key == author_key)
-            )
+            await db.execute(select(TrackedAuthor).where(TrackedAuthor.ol_key == author_key))
         ).scalar_one_or_none()
         if row is None:
             raise HTTPException(status_code=404, detail="Author not followed")
