@@ -1,0 +1,3641 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ReadingView",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cover/{item_id}": {
+      "get": {
+        "summary": "Get Cover",
+        "operationId": "get_cover_api_cover__item_id__get",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          },
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsRead"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch Settings",
+        "operationId": "patch_settings_api_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/llm/test-connection": {
+      "post": {
+        "summary": "Test Llm Connection",
+        "operationId": "test_llm_connection_api_llm_test_connection_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LLMTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestConnectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/abs/test-connection": {
+      "post": {
+        "summary": "Test Abs Connection",
+        "operationId": "test_abs_connection_api_abs_test_connection_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ABSTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestConnectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library": {
+      "get": {
+        "summary": "Get Library",
+        "operationId": "get_library_api_library_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "title",
+                "progress_asc",
+                "progress_desc",
+                "updated",
+                "finished"
+              ],
+              "type": "string",
+              "default": "updated",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryBook"
+                  },
+                  "title": "Response Get Library Api Library Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/in-progress": {
+      "get": {
+        "summary": "Get In Progress",
+        "operationId": "get_in_progress_api_library_in_progress_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryBook"
+                  },
+                  "type": "array",
+                  "title": "Response Get In Progress Api Library In Progress Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/{item_id}": {
+      "get": {
+        "summary": "Get Library Item",
+        "operationId": "get_library_item_api_library__item_id__get",
+        "parameters": [
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryBook"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/statistics": {
+      "get": {
+        "summary": "Get Statistics",
+        "operationId": "get_statistics_api_statistics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OverallStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/statistics/yearly": {
+      "get": {
+        "summary": "Get Yearly Stats",
+        "operationId": "get_yearly_stats_api_statistics_yearly_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "2026",
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YearlyStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/statistics/recap": {
+      "get": {
+        "summary": "Get Recap",
+        "operationId": "get_recap_api_statistics_recap_get",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "2026",
+              "title": "Year"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecapStats"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/authors/search": {
+      "get": {
+        "summary": "Search Authors",
+        "operationId": "search_authors_api_authors_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OLAuthorResult"
+                  },
+                  "title": "Response Search Authors Api Authors Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/authors/library": {
+      "get": {
+        "summary": "Get Library Authors",
+        "operationId": "get_library_authors_api_authors_library_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LibraryAuthor"
+                  },
+                  "type": "array",
+                  "title": "Response Get Library Authors Api Authors Library Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/authors": {
+      "get": {
+        "summary": "List Followed Authors",
+        "operationId": "list_followed_authors_api_authors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TrackedAuthorOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Followed Authors Api Authors Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Follow Author",
+        "operationId": "follow_author_api_authors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackedAuthorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/authors/{author_key}": {
+      "delete": {
+        "summary": "Unfollow Author",
+        "operationId": "unfollow_author_api_authors__author_key__delete",
+        "parameters": [
+          {
+            "name": "author_key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Author Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/series": {
+      "get": {
+        "summary": "List Series",
+        "operationId": "list_series_api_series_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SeriesSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Series Api Series Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/series/{series_name}": {
+      "get": {
+        "summary": "Get Series",
+        "operationId": "get_series_api_series__series_name__get",
+        "parameters": [
+          {
+            "name": "series_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Series Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/tracked-authors": {
+      "get": {
+        "summary": "List Tracked Authors",
+        "operationId": "list_tracked_authors_api_releases_tracked_authors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseTrackedAuthorOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Tracked Authors Api Releases Tracked Authors Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Track Author",
+        "operationId": "track_author_api_releases_tracked_authors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrackAuthorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseTrackedAuthorOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/tracked-authors/{author_id}": {
+      "delete": {
+        "summary": "Untrack Author",
+        "operationId": "untrack_author_api_releases_tracked_authors__author_id__delete",
+        "parameters": [
+          {
+            "name": "author_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Author Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases": {
+      "get": {
+        "summary": "List Releases",
+        "operationId": "list_releases_api_releases_get",
+        "parameters": [
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleaseOut"
+                  },
+                  "title": "Response List Releases Api Releases Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/{release_id}": {
+      "patch": {
+        "summary": "Patch Release",
+        "operationId": "patch_release_api_releases__release_id__patch",
+        "parameters": [
+          {
+            "name": "release_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Release Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchReleaseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/releases/refresh": {
+      "post": {
+        "summary": "Refresh Releases",
+        "operationId": "refresh_releases_api_releases_refresh_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/narrators": {
+      "get": {
+        "summary": "List Narrators",
+        "operationId": "list_narrators_api_narrators_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NarratorSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Narrators Api Narrators Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/narrators/{narrator_name}": {
+      "get": {
+        "summary": "Get Narrator",
+        "operationId": "get_narrator_api_narrators__narrator_name__get",
+        "parameters": [
+          {
+            "name": "narrator_name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Narrator Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarratorDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections": {
+      "get": {
+        "summary": "List Collections",
+        "operationId": "list_collections_api_collections_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CollectionOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Collections Api Collections Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Collection",
+        "operationId": "create_collection_api_collections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}": {
+      "get": {
+        "summary": "Get Collection",
+        "operationId": "get_collection_api_collections__collection_id__get",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Patch Collection",
+        "operationId": "patch_collection_api_collections__collection_id__patch",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Collection",
+        "operationId": "delete_collection_api_collections__collection_id__delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/items": {
+      "post": {
+        "summary": "Add Item",
+        "operationId": "add_item_api_collections__collection_id__items_post",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/items/{item_id}": {
+      "delete": {
+        "summary": "Remove Item",
+        "operationId": "remove_item_api_collections__collection_id__items__item_id__delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Collection Id"
+            }
+          },
+          {
+            "name": "item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/backup": {
+      "get": {
+        "summary": "Download Backup",
+        "operationId": "download_backup_api_backup_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/restore": {
+      "post": {
+        "summary": "Restore Backup",
+        "operationId": "restore_backup_api_restore_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_restore_backup_api_restore_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Restore Backup Api Restore Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{abs_item_id}": {
+      "get": {
+        "summary": "Get Note",
+        "operationId": "get_note_api_notes__abs_item_id__get",
+        "parameters": [
+          {
+            "name": "abs_item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Abs Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Upsert Note",
+        "operationId": "upsert_note_api_notes__abs_item_id__put",
+        "parameters": [
+          {
+            "name": "abs_item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Abs Item Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotePut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Note",
+        "operationId": "delete_note_api_notes__abs_item_id__delete",
+        "parameters": [
+          {
+            "name": "abs_item_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Abs Item Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations": {
+      "get": {
+        "summary": "Recommendations",
+        "operationId": "recommendations_api_recommendations_get",
+        "parameters": [
+          {
+            "name": "book_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Book Ids"
+            }
+          },
+          {
+            "name": "prompt",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Prompt"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Recommendations Api Recommendations Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations/ingest": {
+      "post": {
+        "summary": "Ingest",
+        "operationId": "ingest_api_recommendations_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recommendations/status": {
+      "get": {
+        "summary": "Recommendations Status",
+        "operationId": "recommendations_status_api_recommendations_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/goals": {
+      "get": {
+        "summary": "List Goals",
+        "operationId": "list_goals_api_goals_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReadingGoalOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Goals Api Goals Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/goals/{year}": {
+      "put": {
+        "summary": "Upsert Goal",
+        "operationId": "upsert_goal_api_goals__year__put",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadingGoalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadingGoalOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ABSTestRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "token": {
+            "type": "string",
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url",
+          "token"
+        ],
+        "title": "ABSTestRequest"
+      },
+      "AddItemRequest": {
+        "properties": {
+          "abs_item_id": {
+            "type": "string",
+            "title": "Abs Item Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "abs_item_id"
+        ],
+        "title": "AddItemRequest"
+      },
+      "AuthorCount": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "books": {
+            "type": "integer",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "books"
+        ],
+        "title": "AuthorCount"
+      },
+      "Body_restore_backup_api_restore_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_restore_backup_api_restore_post"
+      },
+      "BookProgress": {
+        "properties": {
+          "is_finished": {
+            "type": "boolean",
+            "title": "Is Finished"
+          },
+          "progress_pct": {
+            "type": "number",
+            "title": "Progress Pct"
+          },
+          "current_time": {
+            "type": "number",
+            "title": "Current Time"
+          },
+          "time_remaining": {
+            "type": "number",
+            "title": "Time Remaining"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "last_update": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Update"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_finished",
+          "progress_pct",
+          "current_time",
+          "time_remaining"
+        ],
+        "title": "BookProgress"
+      },
+      "BookSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "author",
+          "duration"
+        ],
+        "title": "BookSummary"
+      },
+      "CollectionDetail": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count"
+          },
+          "item_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Item Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "created_at",
+          "book_count",
+          "item_ids"
+        ],
+        "title": "CollectionDetail"
+      },
+      "CollectionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "created_at",
+          "book_count"
+        ],
+        "title": "CollectionOut"
+      },
+      "CreateCollectionRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CreateCollectionRequest"
+      },
+      "FollowRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ol_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ol Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FollowRequest"
+      },
+      "GenreCount": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "books": {
+            "type": "integer",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "books"
+        ],
+        "title": "GenreCount"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngestRequest": {
+        "properties": {
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "work_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Key"
+          }
+        },
+        "type": "object",
+        "title": "IngestRequest"
+      },
+      "IngestResponse": {
+        "properties": {
+          "book_id": {
+            "type": "string",
+            "title": "Book Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "book_id"
+        ],
+        "title": "IngestResponse"
+      },
+      "LLMTestRequest": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "title": "Endpoint"
+          },
+          "llm_type": {
+            "type": "string",
+            "title": "Llm Type",
+            "default": "ollama"
+          },
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "endpoint"
+        ],
+        "title": "LLMTestRequest"
+      },
+      "LibraryAuthor": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "book_count"
+        ],
+        "title": "LibraryAuthor"
+      },
+      "LibraryBook": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "authors": {
+            "type": "string",
+            "title": "Authors"
+          },
+          "narrator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesEntry"
+            },
+            "type": "array",
+            "title": "Series",
+            "default": []
+          },
+          "cover_url": {
+            "type": "string",
+            "title": "Cover Url"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "genres": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Genres",
+            "default": []
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "published_year": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Year"
+          },
+          "isbn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Isbn"
+          },
+          "asin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asin"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "authors",
+          "cover_url",
+          "duration"
+        ],
+        "title": "LibraryBook"
+      },
+      "MonthlyPoint": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "books": {
+            "type": "integer",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "books"
+        ],
+        "title": "MonthlyPoint"
+      },
+      "NarratorBook": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "duration_formatted": {
+            "type": "string",
+            "title": "Duration Formatted"
+          },
+          "is_finished": {
+            "type": "boolean",
+            "title": "Is Finished"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "author",
+          "duration",
+          "duration_formatted",
+          "is_finished"
+        ],
+        "title": "NarratorBook"
+      },
+      "NarratorDetail": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count"
+          },
+          "total_hours": {
+            "type": "number",
+            "title": "Total Hours"
+          },
+          "finished_count": {
+            "type": "integer",
+            "title": "Finished Count"
+          },
+          "books": {
+            "items": {
+              "$ref": "#/components/schemas/NarratorBook"
+            },
+            "type": "array",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "book_count",
+          "total_hours",
+          "finished_count",
+          "books"
+        ],
+        "title": "NarratorDetail"
+      },
+      "NarratorSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "book_count": {
+            "type": "integer",
+            "title": "Book Count"
+          },
+          "total_hours": {
+            "type": "number",
+            "title": "Total Hours"
+          },
+          "finished_count": {
+            "type": "integer",
+            "title": "Finished Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "book_count",
+          "total_hours",
+          "finished_count"
+        ],
+        "title": "NarratorSummary"
+      },
+      "NoteOut": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "NoteOut"
+      },
+      "NotePut": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "NotePut"
+      },
+      "OLAuthorResult": {
+        "properties": {
+          "ol_key": {
+            "type": "string",
+            "title": "Ol Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "death_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Date"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "top_work": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Work"
+          },
+          "work_count": {
+            "type": "integer",
+            "title": "Work Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "ol_key",
+          "name"
+        ],
+        "title": "OLAuthorResult"
+      },
+      "OverallStats": {
+        "properties": {
+          "books_completed": {
+            "type": "integer",
+            "title": "Books Completed"
+          },
+          "hours_listened": {
+            "type": "number",
+            "title": "Hours Listened"
+          },
+          "avg_books_per_month": {
+            "type": "number",
+            "title": "Avg Books Per Month"
+          },
+          "unique_authors": {
+            "type": "integer",
+            "title": "Unique Authors"
+          },
+          "streak": {
+            "$ref": "#/components/schemas/StreakInfo"
+          },
+          "by_year": {
+            "items": {
+              "$ref": "#/components/schemas/YearlyPoint"
+            },
+            "type": "array",
+            "title": "By Year"
+          }
+        },
+        "type": "object",
+        "required": [
+          "books_completed",
+          "hours_listened",
+          "avg_books_per_month",
+          "unique_authors",
+          "streak",
+          "by_year"
+        ],
+        "title": "OverallStats"
+      },
+      "PatchCollectionRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "PatchCollectionRequest"
+      },
+      "PatchReleaseRequest": {
+        "properties": {
+          "release_date_confirmed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date Confirmed"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "PatchReleaseRequest"
+      },
+      "ReadDuration": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "days": {
+            "type": "number",
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "days"
+        ],
+        "title": "ReadDuration"
+      },
+      "ReadingGoalOut": {
+        "properties": {
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "target_books": {
+            "type": "integer",
+            "title": "Target Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "target_books"
+        ],
+        "title": "ReadingGoalOut"
+      },
+      "ReadingGoalRequest": {
+        "properties": {
+          "target_books": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Target Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "target_books"
+        ],
+        "title": "ReadingGoalRequest"
+      },
+      "RecapStats": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "books_finished": {
+            "type": "integer",
+            "title": "Books Finished"
+          },
+          "hours_listened": {
+            "type": "number",
+            "title": "Hours Listened"
+          },
+          "hours_of_content": {
+            "type": "number",
+            "title": "Hours Of Content"
+          },
+          "active_months": {
+            "type": "integer",
+            "title": "Active Months"
+          },
+          "top_authors": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorCount"
+            },
+            "type": "array",
+            "title": "Top Authors"
+          },
+          "longest_book": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shortest_book": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fastest_read": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadDuration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slowest_read": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReadDuration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly_pace": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPoint"
+            },
+            "type": "array",
+            "title": "Monthly Pace"
+          },
+          "top_series": {
+            "items": {
+              "$ref": "#/components/schemas/GenreCount"
+            },
+            "type": "array",
+            "title": "Top Series"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "books_finished",
+          "hours_listened",
+          "hours_of_content",
+          "active_months",
+          "top_authors",
+          "monthly_pace",
+          "top_series"
+        ],
+        "title": "RecapStats"
+      },
+      "RefreshError": {
+        "properties": {
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "author",
+          "message"
+        ],
+        "title": "RefreshError"
+      },
+      "RefreshResult": {
+        "properties": {
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/RefreshError"
+            },
+            "type": "array",
+            "title": "Errors",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "added",
+          "skipped"
+        ],
+        "title": "RefreshResult"
+      },
+      "ReleaseOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "author_name": {
+            "type": "string",
+            "title": "Author Name"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "release_date_confirmed": {
+            "type": "boolean",
+            "title": "Release Date Confirmed"
+          },
+          "book_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book Number"
+          },
+          "ol_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ol Key"
+          },
+          "link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Url"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "author_name",
+          "release_date",
+          "release_date_confirmed",
+          "book_number",
+          "ol_key",
+          "link_url",
+          "notes",
+          "source"
+        ],
+        "title": "ReleaseOut"
+      },
+      "ReleaseTrackedAuthorOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ol_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ol Key"
+          },
+          "added_at": {
+            "type": "integer",
+            "title": "Added At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ol_key",
+          "added_at"
+        ],
+        "title": "ReleaseTrackedAuthorOut"
+      },
+      "SeriesBook": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "sequence": {
+            "type": "string",
+            "title": "Sequence"
+          },
+          "is_finished": {
+            "type": "boolean",
+            "title": "Is Finished"
+          },
+          "progress": {
+            "type": "number",
+            "title": "Progress"
+          },
+          "duration": {
+            "type": "number",
+            "title": "Duration"
+          },
+          "duration_formatted": {
+            "type": "string",
+            "title": "Duration Formatted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "author",
+          "sequence",
+          "is_finished",
+          "progress",
+          "duration",
+          "duration_formatted"
+        ],
+        "title": "SeriesBook"
+      },
+      "SeriesDetail": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "finished": {
+            "type": "integer",
+            "title": "Finished"
+          },
+          "in_progress": {
+            "type": "integer",
+            "title": "In Progress"
+          },
+          "not_started": {
+            "type": "integer",
+            "title": "Not Started"
+          },
+          "percent_complete": {
+            "type": "number",
+            "title": "Percent Complete"
+          },
+          "books": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesBook"
+            },
+            "type": "array",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "author",
+          "total",
+          "finished",
+          "in_progress",
+          "not_started",
+          "percent_complete",
+          "books"
+        ],
+        "title": "SeriesDetail"
+      },
+      "SeriesEntry": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sequence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SeriesEntry"
+      },
+      "SeriesSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "finished": {
+            "type": "integer",
+            "title": "Finished"
+          },
+          "in_progress": {
+            "type": "integer",
+            "title": "In Progress"
+          },
+          "not_started": {
+            "type": "integer",
+            "title": "Not Started"
+          },
+          "percent_complete": {
+            "type": "number",
+            "title": "Percent Complete"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "author",
+          "total",
+          "finished",
+          "in_progress",
+          "not_started",
+          "percent_complete"
+        ],
+        "title": "SeriesSummary"
+      },
+      "SettingsPatch": {
+        "properties": {
+          "abs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Url"
+          },
+          "abs_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Token"
+          },
+          "recommender_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Enabled"
+          },
+          "recommender_vector_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Vector Backend"
+          },
+          "recommender_embed_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Embed Model"
+          },
+          "recommender_top_k": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Top K"
+          },
+          "recommender_min_similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Min Similarity"
+          },
+          "recommender_explanations_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recommender Explanations Enabled"
+          },
+          "llm_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Type"
+          },
+          "llm_endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Endpoint"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key"
+          },
+          "notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notifications Enabled"
+          },
+          "apprise_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apprise Url"
+          },
+          "notify_days_before": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify Days Before"
+          },
+          "notify_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify Time"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SettingsPatch"
+      },
+      "SettingsRead": {
+        "properties": {
+          "abs_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Url"
+          },
+          "abs_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Token"
+          },
+          "recommender_enabled": {
+            "type": "boolean",
+            "title": "Recommender Enabled"
+          },
+          "recommender_vector_backend": {
+            "type": "string",
+            "title": "Recommender Vector Backend"
+          },
+          "recommender_embed_model": {
+            "type": "string",
+            "title": "Recommender Embed Model"
+          },
+          "recommender_top_k": {
+            "type": "integer",
+            "title": "Recommender Top K"
+          },
+          "recommender_min_similarity": {
+            "type": "number",
+            "title": "Recommender Min Similarity"
+          },
+          "recommender_explanations_enabled": {
+            "type": "boolean",
+            "title": "Recommender Explanations Enabled"
+          },
+          "llm_type": {
+            "type": "string",
+            "title": "Llm Type"
+          },
+          "llm_endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Endpoint"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "llm_api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Api Key"
+          },
+          "notifications_enabled": {
+            "type": "boolean",
+            "title": "Notifications Enabled"
+          },
+          "apprise_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apprise Url"
+          },
+          "notify_days_before": {
+            "type": "integer",
+            "title": "Notify Days Before"
+          },
+          "notify_time": {
+            "type": "string",
+            "title": "Notify Time"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "abs_url",
+          "abs_token",
+          "recommender_enabled",
+          "recommender_vector_backend",
+          "recommender_embed_model",
+          "recommender_top_k",
+          "recommender_min_similarity",
+          "recommender_explanations_enabled",
+          "llm_type",
+          "llm_endpoint",
+          "llm_model",
+          "llm_api_key",
+          "notifications_enabled",
+          "apprise_url",
+          "notify_days_before",
+          "notify_time",
+          "timezone"
+        ],
+        "title": "SettingsRead"
+      },
+      "StatusResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "vector_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vector Backend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "model",
+          "vector_backend"
+        ],
+        "title": "StatusResponse"
+      },
+      "StreakInfo": {
+        "properties": {
+          "current": {
+            "type": "integer",
+            "title": "Current"
+          },
+          "longest": {
+            "type": "integer",
+            "title": "Longest"
+          },
+          "total_days": {
+            "type": "integer",
+            "title": "Total Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current",
+          "longest",
+          "total_days"
+        ],
+        "title": "StreakInfo"
+      },
+      "TestConnectionResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Models"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "TestConnectionResponse"
+      },
+      "TrackAuthorRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ol_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ol Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "TrackAuthorRequest"
+      },
+      "TrackedAuthorOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "ol_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ol Key"
+          },
+          "photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Url"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "death_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Death Date"
+          },
+          "followed_at": {
+            "type": "integer",
+            "title": "Followed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ol_key",
+          "photo_url",
+          "bio",
+          "birth_date",
+          "death_date",
+          "followed_at"
+        ],
+        "title": "TrackedAuthorOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "YearlyPoint": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "books": {
+            "type": "integer",
+            "title": "Books"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "books"
+        ],
+        "title": "YearlyPoint"
+      },
+      "YearlyStats": {
+        "properties": {
+          "year": {
+            "type": "string",
+            "title": "Year"
+          },
+          "books_in_year": {
+            "type": "integer",
+            "title": "Books In Year"
+          },
+          "monthly_chart": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyPoint"
+            },
+            "type": "array",
+            "title": "Monthly Chart"
+          },
+          "top_authors": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorCount"
+            },
+            "type": "array",
+            "title": "Top Authors"
+          },
+          "top_narrators": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorCount"
+            },
+            "type": "array",
+            "title": "Top Narrators"
+          },
+          "genre_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/GenreCount"
+            },
+            "type": "array",
+            "title": "Genre Breakdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "year",
+          "books_in_year",
+          "monthly_chart",
+          "top_authors",
+          "top_narrators",
+          "genre_breakdown"
+        ],
+        "title": "YearlyStats"
+      }
+    }
+  }
+}
