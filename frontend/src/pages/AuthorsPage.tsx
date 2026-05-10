@@ -65,7 +65,7 @@ function AuthorCard({
 
   return (
     <div className="flex items-start gap-4 p-4 rounded-xl bg-surface border border-border">
-      <AuthorPhoto url={author.photo_url} name={author.name} />
+      <AuthorPhoto url={author.photo_url ?? null} name={author.name} />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-semibold text-text-primary">{author.name}</p>
@@ -143,7 +143,7 @@ function FollowSearch({ followedKeys }: { followedKeys: Set<string> }) {
             const already = followedKeys.has(result.ol_key);
             return (
               <div key={result.ol_key} className="flex items-center gap-3 px-4 py-3 bg-surface">
-                <AuthorPhoto url={result.photo_url} name={result.name} />
+                <AuthorPhoto url={result.photo_url ?? null} name={result.name} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary">{result.name}</p>
                   {result.top_work && (
