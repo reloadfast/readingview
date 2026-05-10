@@ -1,5 +1,3 @@
-import os
-
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -20,12 +18,14 @@ from .api import (
     recommendations,
     releases,
     series,
-    settings as settings_router,
     statistics,
+)
+from .api import (
+    settings as settings_router,
 )
 from .config import settings
 
-_cache_instance: "services.cover_cache.CoverCache | None" = None
+app = FastAPI(title="ReadingView")
 
 if settings.COVER_CACHE_ENABLED:
     from .services.cover_cache import initialize as _init_cache
@@ -35,18 +35,9 @@ if settings.COVER_CACHE_ENABLED:
         settings.COVER_CACHE_MAX_SIZE,
     )
 
-_cache_instance: object | None = None
-
-if settings.COVER_CACHE_ENABLED:
-    from .services.cover_cache import initialize
-
-    _cache_instance = initialize(settings.COVER_CACHE_DIR, settings.COVER_CACHE_MAX_SIZE)
-
-app = FastAPI(title="ReadingView")
-
 app.include_router(health.router, prefix="/api")
 app.include_router(covers.router, prefix="/api")
-app.include_router(settings.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
 app.include_router(connections.router, prefix="/api")
 app.include_router(library.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")
