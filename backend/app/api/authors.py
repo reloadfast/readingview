@@ -9,6 +9,7 @@ from ..api.deps import abs_client
 from ..db import get_db
 from ..models.authors import TrackedAuthor
 from ..schemas.authors import FollowRequest, LibraryAuthor, OLAuthorResult, TrackedAuthorOut
+from ..services.audiobookshelf import AudiobookshelfClient
 from ..services.openlibrary import OpenLibraryClient
 
 router = APIRouter()

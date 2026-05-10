@@ -1,6 +1,6 @@
 """ABS-dependent route tests: 503 without config, happy path with mocked client."""
 
-from unittest.mock import AsyncMock, patch as _patch
+from unittest.mock import AsyncMock, patch
 
 
 def _mock_abs(items=None, progress=None, stats=None, sessions=None, libraries=None):

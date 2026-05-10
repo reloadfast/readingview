@@ -1,7 +1,7 @@
 import asyncio
 
 import httpx
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..api.deps import abs_client
 from ..schemas.series import SeriesDetail, SeriesSummary

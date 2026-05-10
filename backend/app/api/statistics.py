@@ -3,7 +3,6 @@ from datetime import datetime
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..api.deps import abs_client
 from ..schemas.statistics import OverallStats, RecapStats, YearlyStats
