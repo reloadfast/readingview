@@ -2,16 +2,29 @@ import hashlib
 
 import httpx
 from fastapi import APIRouter, Depends, Header
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crypto import decrypt
 from ..db import get_db
 from ..models.settings import Settings
+from ..services.cover_cache import get
 
 router = APIRouter()
 
 _TIMEOUT = 15.0
+
+
+def _compute_etag(data: bytes) -> str:
+    return f'"{hashlib.sha256(data, usedforsecurity=False).hexdigest()[:16]}"'
+
+
+@router.delete("/cache")
+async def clear_cover_cache() -> JSONResponse:
+    if not (cache := get()):
+        return JSONResponse({"ok": True})
+    await cache.clear()
+    return JSONResponse({"status": "OK"})
 
 
 @router.get("/cover/{item_id}")
@@ -25,6 +38,21 @@ async def get_cover(
 
     if not row or not row.abs_url or not row.abs_token:
         return Response(status_code=503, content="ABS not configured")
+
+    if cache := get():
+        cached = await cache.get(item_id)
+        if cached is not None:
+            etag = _compute_etag(cached)
+            if if_none_match == etag:
+                return Response(status_code=304)
+            return Response(
+                content=cached,
+                media_type="image/jpeg",
+                headers={
+                    "Cache-Control": "public, max-age=86400",
+                    "ETag": etag,
+                },
+            )
 
     etag = f'"{hashlib.sha1(item_id.encode(), usedforsecurity=False).hexdigest()[:16]}"'
     if if_none_match == etag:
@@ -43,6 +71,9 @@ async def get_cover(
         return Response(status_code=404)
     if not r.is_success:
         return Response(status_code=502)
+
+    if cache := get():
+        await cache.put(item_id, r.content)
 
     return Response(
         content=r.content,

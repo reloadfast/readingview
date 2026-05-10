@@ -18,15 +18,26 @@ from .api import (
     recommendations,
     releases,
     series,
-    settings,
     statistics,
 )
+from .api import (
+    settings as settings_router,
+)
+from .config import settings
 
 app = FastAPI(title="ReadingView")
 
+if settings.COVER_CACHE_ENABLED:
+    from .services.cover_cache import initialize as _init_cache
+
+    _cache_instance = _init_cache(
+        settings.COVER_CACHE_DIR,
+        settings.COVER_CACHE_MAX_SIZE,
+    )
+
 app.include_router(health.router, prefix="/api")
 app.include_router(covers.router, prefix="/api")
-app.include_router(settings.router, prefix="/api")
+app.include_router(settings_router.router, prefix="/api")
 app.include_router(connections.router, prefix="/api")
 app.include_router(library.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")

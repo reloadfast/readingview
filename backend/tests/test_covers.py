@@ -85,8 +85,9 @@ async def test_cover_502_on_abs_server_error(client):
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.get = AsyncMock(return_value=_mock_response(500))
 
-    with patch("app.api.covers.httpx.AsyncClient", return_value=mock_client):
-        r = await client.get("/api/cover/item-1")
+    with patch("app.api.covers.get", return_value=None):
+        with patch("app.api.covers.httpx.AsyncClient", return_value=mock_client):
+            r = await client.get("/api/cover/item-1")
 
     assert r.status_code == 502
 
@@ -98,7 +99,8 @@ async def test_cover_502_on_network_error(client):
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.get = AsyncMock(side_effect=httpx.RequestError("connection refused"))
 
-    with patch("app.api.covers.httpx.AsyncClient", return_value=mock_client):
-        r = await client.get("/api/cover/item-1")
+    with patch("app.api.covers.get", return_value=None):
+        with patch("app.api.covers.httpx.AsyncClient", return_value=mock_client):
+            r = await client.get("/api/cover/item-1")
 
     assert r.status_code == 502
