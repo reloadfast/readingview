@@ -1,313 +1,88 @@
 // ---------------------------------------------------------------------------
-// Types — mirror Pydantic schemas exactly
+// Schema types — generated from backend OpenAPI spec
 // ---------------------------------------------------------------------------
 
-export interface SeriesEntry {
-  name: string;
-  sequence: string | null;
-}
+import type {
+  AddItemRequest,
+  ABSTestRequest,
+  CollectionDetail,
+  CollectionOut,
+  CreateCollectionRequest,
+  FollowRequest,
+  IngestRequest,
+  IngestResponse,
+  LLMTestRequest,
+  LibraryAuthor,
+  LibraryBook,
+  NoteOut,
+  OverallStats,
+  PatchCollectionRequest,
+  ReleaseOut,
+  ReleaseTrackedAuthorOut,
+  SettingsPatch,
+  SettingsRead,
+  TestConnectionResponse,
+  TrackAuthorRequest,
+  TrackedAuthorOut,
+  YearlyStats,
+  RecapStats,
+  SeriesSummary,
+  SeriesDetail,
+  NarratorSummary,
+  NarratorDetail,
+  OLAuthorResult,
+  RefreshResult,
+  PatchReleaseRequest,
+} from "./api.schemas";
 
-export interface BookProgress {
-  is_finished: boolean;
-  progress_pct: number;
-  current_time: number;
-  time_remaining: number;
-  started_at: number | null;
-  finished_at: number | null;
-  last_update: number | null;
-}
-
-export interface LibraryBook {
-  id: string;
-  title: string;
-  authors: string;
-  narrator: string | null;
-  series: SeriesEntry[];
-  cover_url: string;
-  duration: number;
-  genres: string[];
-  description: string | null;
-  published_year: string | null;
-  isbn: string | null;
-  asin: string | null;
-  progress: BookProgress | null;
-}
-
-export interface StreakInfo {
-  current: number;
-  longest: number;
-  total_days: number;
-}
-
-export interface YearlyPoint {
-  year: string;
-  books: number;
-}
-
-export interface OverallStats {
-  books_completed: number;
-  hours_listened: number;
-  avg_books_per_month: number;
-  unique_authors: number;
-  streak: StreakInfo;
-  by_year: YearlyPoint[];
-}
-
-export interface MonthlyPoint {
-  month: string;
-  books: number;
-}
-
-export interface AuthorCount {
-  name: string;
-  books: number;
-}
-
-export interface GenreCount {
-  name: string;
-  books: number;
-}
-
-export interface YearlyStats {
-  year: string;
-  books_in_year: number;
-  monthly_chart: MonthlyPoint[];
-  top_authors: AuthorCount[];
-  top_narrators: AuthorCount[];
-  genre_breakdown: GenreCount[];
-}
-
-export interface BookSummary {
-  id: string;
-  title: string;
-  author: string;
-  duration: number;
-}
-
-export interface ReadDuration {
-  id: string;
-  title: string;
-  days: number;
-}
-
-export interface RecapStats {
-  year: string;
-  books_finished: number;
-  hours_listened: number;
-  hours_of_content: number;
-  active_months: number;
-  top_authors: AuthorCount[];
-  longest_book: BookSummary | null;
-  shortest_book: BookSummary | null;
-  fastest_read: ReadDuration | null;
-  slowest_read: ReadDuration | null;
-  monthly_pace: MonthlyPoint[];
-  top_series: GenreCount[];
-}
-
-export interface TrackedAuthorOut {
-  id: number;
-  name: string;
-  ol_key: string | null;
-  photo_url: string | null;
-  bio: string | null;
-  birth_date: string | null;
-  death_date: string | null;
-  followed_at: number;
-}
-
-export interface LibraryAuthor {
-  name: string;
-  book_count: number;
-}
-
-export interface OLAuthorResult {
-  ol_key: string;
-  name: string;
-  birth_date: string | null;
-  death_date: string | null;
-  photo_url: string | null;
-  top_work: string | null;
-  work_count: number;
-}
-
-export interface FollowRequest {
-  name: string;
-  ol_key?: string | null;
-}
-
-export interface SeriesSummary {
-  name: string;
-  author: string;
-  total: number;
-  finished: number;
-  in_progress: number;
-  not_started: number;
-  percent_complete: number;
-}
-
-export interface SeriesBook {
-  id: string;
-  title: string;
-  author: string;
-  sequence: string;
-  is_finished: boolean;
-  progress: number;
-  duration: number;
-  duration_formatted: string;
-}
-
-export interface SeriesDetail extends SeriesSummary {
-  books: SeriesBook[];
-}
-
-export interface ReleaseTrackedAuthorOut {
-  id: number;
-  name: string;
-  ol_key: string | null;
-  added_at: number;
-}
-
-export interface TrackAuthorRequest {
-  name: string;
-  ol_key?: string | null;
-}
-
-export interface ReleaseOut {
-  id: number;
-  title: string;
-  author_name: string;
-  release_date: string | null;
-  release_date_confirmed: boolean;
-  book_number: string | null;
-  ol_key: string | null;
-  link_url: string | null;
-  notes: string | null;
-  source: string | null;
-}
-
-export interface RefreshError {
-  author: string;
-  message: string;
-}
-
-export interface RefreshResult {
-  added: number;
-  skipped: number;
-  failed: number;
-  errors: RefreshError[];
-}
-
-export interface NarratorBook {
-  id: string;
-  title: string;
-  author: string;
-  duration: number;
-  duration_formatted: string;
-  is_finished: boolean;
-}
-
-export interface NarratorSummary {
-  name: string;
-  book_count: number;
-  total_hours: number;
-  finished_count: number;
-}
-
-export interface NarratorDetail extends NarratorSummary {
-  books: NarratorBook[];
-}
-
-export interface CollectionOut {
-  id: number;
-  name: string;
-  description: string | null;
-  created_at: string;
-  book_count: number;
-}
-
-export interface CollectionDetail extends CollectionOut {
-  item_ids: string[];
-}
-
-export interface CreateCollectionRequest {
-  name: string;
-  description?: string | null;
-}
-
-export interface PatchCollectionRequest {
-  name?: string | null;
-  description?: string | null;
-}
-
-export interface AddItemRequest {
-  abs_item_id: string;
-}
-
-export interface SettingsRead {
-  abs_url: string | null;
-  abs_token: string | null;
-  recommender_enabled: boolean;
-  recommender_vector_backend: string;
-  recommender_embed_model: string;
-  recommender_top_k: number;
-  recommender_min_similarity: number;
-  recommender_explanations_enabled: boolean;
-  llm_type: string;
-  llm_endpoint: string | null;
-  llm_model: string | null;
-  llm_api_key: string | null;
-  notifications_enabled: boolean;
-  apprise_url: string | null;
-  notify_days_before: number;
-  notify_time: string;
-  timezone: string;
-}
-
-export type SettingsPatch = Partial<Omit<SettingsRead, "abs_token" | "llm_api_key" | "apprise_url">> & {
-  abs_token?: string | null;
-  llm_api_key?: string | null;
-  apprise_url?: string | null;
-};
-
-export interface LLMTestRequest {
-  endpoint: string;
-  llm_type?: string;
-  api_key?: string | null;
-}
-
-export interface ABSTestRequest {
-  url: string;
-  token: string;
-}
-
-export interface TestConnectionResponse {
-  ok: boolean;
-  models: string[] | null;
-  error: string | null;
-  metadata: Record<string, unknown> | null;
-}
-
-export interface IngestRequest {
-  isbn?: string | null;
-  title?: string | null;
-  author?: string | null;
-  work_key?: string | null;
-}
-
-export interface IngestResponse {
-  book_id: string;
-}
-
-export interface RecommenderStatus {
-  enabled: boolean;
-  model: string | null;
-  vector_backend: string | null;
-}
-
-export interface Recommendation {
-  [key: string]: unknown;
-}
+export type {
+  AddItemRequest,
+  ABSTestRequest,
+  AuthorCount,
+  BookProgress,
+  BookSummary,
+  CollectionDetail,
+  CollectionOut,
+  CreateCollectionRequest,
+  FollowRequest,
+  GenreCount,
+  IngestRequest,
+  IngestResponse,
+  LLMTestRequest,
+  LibraryAuthor,
+  LibraryBook,
+  MonthlyPoint,
+  NarratorBook,
+  NarratorDetail,
+  NarratorSummary,
+  NoteOut,
+  NotePut,
+  OLAuthorResult,
+  OverallStats,
+  PatchCollectionRequest,
+  PatchReleaseRequest,
+  ReadDuration,
+  ReadingGoalOut,
+  ReadingGoalRequest,
+  RecapStats,
+  RefreshError,
+  RefreshResult,
+  ReleaseOut,
+  ReleaseTrackedAuthorOut,
+  SeriesBook,
+  SeriesDetail,
+  SeriesEntry,
+  SeriesSummary,
+  SettingsPatch,
+  SettingsRead,
+  StatusResponse,
+  StreakInfo,
+  TestConnectionResponse,
+  TrackAuthorRequest,
+  TrackedAuthorOut,
+  YearlyPoint,
+  YearlyStats,
+} from "./api.schemas";
 
 // ---------------------------------------------------------------------------
 // Core fetch helper
@@ -459,11 +234,6 @@ export function refreshReleases(): Promise<RefreshResult> {
   return apiFetch("/releases/refresh", { method: "POST" });
 }
 
-export interface PatchReleaseRequest {
-  release_date_confirmed?: boolean;
-  release_date?: string | null;
-  notes?: string | null;
-}
 
 export function patchRelease(id: number, body: PatchReleaseRequest): Promise<ReleaseOut> {
   return apiFetch(`/releases/${id}`, { method: "PATCH", body: JSON.stringify(body) });
@@ -551,6 +321,16 @@ export interface RecommendationParams {
   prompt?: string;
 }
 
+export interface Recommendation {
+  [key: string]: unknown;
+}
+
+export interface RecommenderStatus {
+  enabled: boolean;
+  model: string | null;
+  vector_backend: string | null;
+}
+
 export function getRecommendations(params?: RecommendationParams): Promise<Recommendation[]> {
   const q = new URLSearchParams();
   if (params?.book_ids?.length) q.set("book_ids", params.book_ids.join(","));
@@ -591,9 +371,6 @@ export function setGoal(year: number, target_books: number): Promise<ReadingGoal
 // Notes
 // ---------------------------------------------------------------------------
 
-export interface NoteOut {
-  body: string | null;
-}
 
 export function getNote(absItemId: string): Promise<NoteOut> {
   return apiFetch(`/notes/${encodeURIComponent(absItemId)}`);
