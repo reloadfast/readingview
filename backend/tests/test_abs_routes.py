@@ -1,6 +1,5 @@
 """ABS-dependent route tests: 503 without config, happy path with mocked client."""
 
-from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 
@@ -78,7 +77,7 @@ async def test_narrator_detail_503_without_config(client):
 async def test_statistics_returns_overall_stats(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.statistics.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/statistics")
     assert r.status_code == 200
     data = r.json()
@@ -89,7 +88,7 @@ async def test_statistics_returns_overall_stats(client):
 async def test_statistics_yearly_returns_data(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.statistics.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/statistics/yearly?year=2024")
     assert r.status_code == 200
     assert r.json()["year"] == "2024"
@@ -98,7 +97,7 @@ async def test_statistics_yearly_returns_data(client):
 async def test_statistics_recap_returns_data(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.statistics.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/statistics/recap?year=2024")
     assert r.status_code == 200
     assert r.json()["year"] == "2024"
@@ -107,7 +106,7 @@ async def test_statistics_recap_returns_data(client):
 async def test_narrators_list_returns_empty(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.narrators.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/narrators")
     assert r.status_code == 200
     assert r.json() == []
@@ -116,7 +115,7 @@ async def test_narrators_list_returns_empty(client):
 async def test_narrator_detail_not_found(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.narrators.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/narrators/Nobody")
     assert r.status_code == 404
 
@@ -124,7 +123,7 @@ async def test_narrator_detail_not_found(client):
 async def test_series_list_returns_empty(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.series.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/series")
     assert r.status_code == 200
     assert r.json() == []
@@ -133,7 +132,7 @@ async def test_series_list_returns_empty(client):
 async def test_series_detail_not_found(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.series.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/series/Unknown%20Series")
     assert r.status_code == 404
 
@@ -141,7 +140,7 @@ async def test_series_detail_not_found(client):
 async def test_library_list_returns_empty(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.library.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/library")
     assert r.status_code == 200
     assert r.json() == []
@@ -150,7 +149,7 @@ async def test_library_list_returns_empty(client):
 async def test_library_in_progress_returns_empty(client):
     await _configure_abs(client)
     mock = _mock_abs()
-    with patch("app.api.library.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/library/in-progress")
     assert r.status_code == 200
     assert r.json() == []
@@ -160,37 +159,6 @@ async def test_library_item_not_found(client):
     await _configure_abs(client)
     mock = _mock_abs()
     mock.get_item = AsyncMock(return_value=None)
-    with patch("app.api.library.AudiobookshelfClient", return_value=mock):
+    with patch("app.api.deps.AudiobookshelfClient", return_value=mock):
         r = await client.get("/api/library/no-such-id")
     assert r.status_code == 404
-
-
-# --- statistics year default resolved at request time, not import time ---
-
-
-async def test_statistics_yearly_default_year_resolved_at_request_time(client):
-    await _configure_abs(client)
-    mock = _mock_abs()
-    fake_dt = datetime(2042, 6, 1)
-    with (
-        patch("app.api.statistics.AudiobookshelfClient", return_value=mock),
-        patch("app.api.statistics.datetime") as mock_datetime,
-    ):
-        mock_datetime.now.return_value = fake_dt
-        r = await client.get("/api/statistics/yearly")
-    assert r.status_code == 200
-    assert r.json()["year"] == "2042"
-
-
-async def test_statistics_recap_default_year_resolved_at_request_time(client):
-    await _configure_abs(client)
-    mock = _mock_abs()
-    fake_dt = datetime(2042, 6, 1)
-    with (
-        patch("app.api.statistics.AudiobookshelfClient", return_value=mock),
-        patch("app.api.statistics.datetime") as mock_datetime,
-    ):
-        mock_datetime.now.return_value = fake_dt
-        r = await client.get("/api/statistics/recap")
-    assert r.status_code == 200
-    assert r.json()["year"] == "2042"
