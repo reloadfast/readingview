@@ -1,7 +1,5 @@
 from unittest.mock import AsyncMock
 
-import pytest
-
 from app.api.ws import ConnectionManager
 
 
