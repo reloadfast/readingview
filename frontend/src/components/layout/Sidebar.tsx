@@ -8,6 +8,7 @@ import {
   BookMarked,
   Calendar,
   FolderOpen,
+  Sparkles,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -29,8 +30,9 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/narrators",   icon: Mic,             label: "Narrators"             },
   { to: "/series",      icon: BookMarked,      label: "Series"                },
   { to: "/releases",    icon: Calendar,        label: "Releases"              },
-  { to: "/collections", icon: FolderOpen,      label: "Collections"           },
-  { to: "/settings",    icon: Settings,        label: "Settings"              },
+  { to: "/collections",    icon: FolderOpen, label: "Collections"    },
+  { to: "/recommendations", icon: Sparkles,   label: "Recommendations" },
+  { to: "/settings",       icon: Settings,   label: "Settings"       },
 ];
 
 interface SidebarProps {
