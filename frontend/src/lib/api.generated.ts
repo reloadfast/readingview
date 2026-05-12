@@ -573,6 +573,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test Notification */
+        post: operations["test_notification_api_notifications_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/digest/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Digest */
+        post: operations["preview_digest_api_notifications_digest_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notifications/digest/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send Digest */
+        post: operations["send_digest_api_notifications_digest_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/recommendations": {
         parameters: {
             query?: never;
@@ -700,7 +751,10 @@ export interface components {
         };
         /** Body_restore_backup_api_restore_post */
         Body_restore_backup_api_restore_post: {
-            /** File */
+            /**
+             * File
+             * Format: binary
+             */
             file: string;
         };
         /** BookProgress */
@@ -765,6 +819,26 @@ export interface components {
             name: string;
             /** Description */
             description?: string | null;
+        };
+        /** DigestPreview */
+        DigestPreview: {
+            /** Subject */
+            subject: string;
+            /** Body */
+            body: string;
+            /** Count */
+            count: number;
+            /** Releases */
+            releases: components["schemas"]["DigestReleaseItem"][];
+        };
+        /** DigestReleaseItem */
+        DigestReleaseItem: {
+            /** Title */
+            title: string;
+            /** Author Name */
+            author_name: string;
+            /** Release Date */
+            release_date: string | null;
         };
         /** FeedbackRequest */
         FeedbackRequest: {
@@ -928,6 +1002,13 @@ export interface components {
         NotePut: {
             /** Body */
             body: string;
+        };
+        /** NotificationResult */
+        NotificationResult: {
+            /** Ok */
+            ok: boolean;
+            /** Error */
+            error?: string | null;
         };
         /** OLAuthorResult */
         OLAuthorResult: {
@@ -1286,10 +1367,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /** YearlyPoint */
         YearlyPoint: {
@@ -2487,6 +2564,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    test_notification_api_notifications_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResult"];
+                };
+            };
+        };
+    };
+    preview_digest_api_notifications_digest_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestPreview"];
+                };
+            };
+        };
+    };
+    send_digest_api_notifications_digest_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationResult"];
                 };
             };
         };
