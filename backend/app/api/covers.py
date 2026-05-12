@@ -3,12 +3,11 @@ import hashlib
 import httpx
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crypto import decrypt
-from ..db import get_db
 from ..models.settings import Settings
 from ..services.cover_cache import get
+from .deps import current_settings
 
 router = APIRouter()
 
@@ -31,12 +30,9 @@ async def clear_cover_cache() -> JSONResponse:
 async def get_cover(
     item_id: str,
     if_none_match: str | None = Header(default=None),
-    db: AsyncSession = Depends(get_db),
+    settings: Settings | None = Depends(current_settings),
 ) -> Response:
-    async with db.begin():
-        row = await db.get(Settings, 1)
-
-    if not row or not row.abs_url or not row.abs_token:
+    if not settings or not settings.abs_url or not settings.abs_token:
         return Response(status_code=503, content="ABS not configured")
 
     if cache := get():
@@ -58,8 +54,8 @@ async def get_cover(
     if if_none_match == etag:
         return Response(status_code=304)
 
-    url = f"{row.abs_url.rstrip('/')}/api/items/{item_id}/cover"
-    headers = {"Authorization": f"Bearer {decrypt(row.abs_token)}"}
+    url = f"{settings.abs_url.rstrip('/')}/api/items/{item_id}/cover"
+    headers = {"Authorization": f"Bearer {decrypt(settings.abs_token)}"}
 
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
