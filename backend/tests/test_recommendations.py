@@ -36,6 +36,22 @@ async def test_ingest_returns_404_when_disabled(client):
     assert r.status_code == 404
 
 
+async def test_feedback_returns_404_when_disabled(client):
+    r = await client.post(
+        "/api/recommendations/book-1/feedback",
+        json={"vote": 1},
+    )
+    assert r.status_code == 404
+
+
+async def test_feedback_returns_422_for_invalid_vote(client):
+    r = await client.post(
+        "/api/recommendations/book-1/feedback",
+        json={"vote": 0},
+    )
+    assert r.status_code == 422
+
+
 async def test_no_ollama_calls_when_disabled(client):
     with patch("httpx.AsyncClient.get") as mock_get:
         await client.get("/api/recommendations")

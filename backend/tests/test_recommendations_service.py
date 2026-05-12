@@ -160,6 +160,52 @@ async def test_configure_recommender_redetects_after_settings_change(engine):
     assert configure_calls, "configure must be called when DB hash is stale after settings change"
 
 
+def test_downvoted_books_excluded_from_recommend():
+    """Down-voted books (net feedback < 0) must not appear in recommend() output."""
+    from unittest.mock import MagicMock, patch
+
+    from book_recommender import service as svc
+
+    cfg_mock = MagicMock()
+    cfg_mock.enabled = True
+    cfg_mock.top_k = 5
+    cfg_mock.min_similarity = 0.1
+    cfg_mock.enable_explanations = False
+
+    db_mock = MagicMock()
+    db_mock.get_feedback_scores.return_value = {"downvoted-book": -1, "ok-book": 0}
+    db_mock.get_book.side_effect = lambda bid: {
+        "id": bid,
+        "title": f"Book {bid}",
+        "authors": ["Author"],
+        "description": None,
+        "subjects": [],
+        "cover_id": None,
+        "work_key": None,
+    }
+    db_mock.get_embedding.return_value = [0.1] * 16
+
+    backend_mock = MagicMock()
+    backend_mock.search.return_value = [("downvoted-book", 0.9), ("ok-book", 0.8)]
+
+    ollama_mock = MagicMock()
+    ollama_mock.embed.return_value = [0.1] * 16
+
+    with (
+        patch.object(svc, "_initialized", True),
+        patch.object(svc, "_db", db_mock),
+        patch.object(svc, "_backend", backend_mock),
+        patch.object(svc, "_ollama", ollama_mock),
+        patch("book_recommender.service.get_config", return_value=cfg_mock),
+        patch.object(svc, "_rebuild_index_if_needed"),
+    ):
+        results = svc.recommend(liked_book_ids=["source-book"])
+
+    ids = [r["book_id"] for r in results]
+    assert "downvoted-book" not in ids
+    assert "ok-book" in ids
+
+
 async def test_get_status_disabled(engine):
     factory = async_sessionmaker(engine, expire_on_commit=False)
 

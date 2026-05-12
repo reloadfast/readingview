@@ -3,7 +3,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..services.recommendations import get_recommendations, get_status, run_ingest
+from ..services.recommendations import (
+    get_recommendations,
+    get_status,
+    run_ingest,
+    submit_feedback_for_book,
+)
 
 router = APIRouter()
 
@@ -63,3 +68,28 @@ async def ingest(
 async def recommendations_status(db: AsyncSession = Depends(get_db)) -> StatusResponse:
     status = await get_status(db)
     return StatusResponse(**status)
+
+
+class FeedbackRequest(BaseModel):
+    vote: int
+
+
+@router.post("/recommendations/{book_id}/feedback", status_code=204)
+async def feedback(
+    book_id: str,
+    body: FeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    if body.vote not in (1, -1):
+        raise HTTPException(status_code=422, detail="vote must be 1 or -1")
+
+    status = await get_status(db)
+    if not status["enabled"]:
+        raise HTTPException(status_code=404, detail="Book recommender is not enabled")
+
+    from book_recommender._exceptions import BookRecommenderDisabledError
+
+    try:
+        await submit_feedback_for_book(db, book_id, body.vote)
+    except BookRecommenderDisabledError as exc:
+        raise HTTPException(status_code=404, detail="Book recommender is not enabled") from exc

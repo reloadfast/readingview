@@ -3,6 +3,7 @@ import {
   getRecommendations,
   getRecommenderStatus,
   ingestBook,
+  submitFeedback,
   type IngestRequest,
   type RecommendationParams,
 } from "../lib/api";
@@ -26,6 +27,17 @@ export function useIngestBook() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: IngestRequest) => ingestBook(body),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+  });
+}
+
+export function useSubmitFeedback() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bookId, vote }: { bookId: string; vote: 1 | -1 }) =>
+      submitFeedback(bookId, vote),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["recommendations"] });
     },

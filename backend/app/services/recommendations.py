@@ -108,6 +108,21 @@ async def run_ingest(
         return None
 
 
+async def submit_feedback_for_book(
+    db: AsyncSession,
+    book_id: str,
+    vote: int,
+) -> None:
+    await _configure_recommender(db)
+    from book_recommender._exceptions import BookRecommenderDisabledError
+    from book_recommender.service import submit_feedback
+
+    try:
+        submit_feedback(book_id, vote)
+    except BookRecommenderDisabledError as exc:
+        raise exc
+
+
 async def get_status(db: AsyncSession) -> dict:
     await _configure_recommender(db)
     from book_recommender._config import get_config

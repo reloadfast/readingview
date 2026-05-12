@@ -8,8 +8,9 @@ import AuthorsPage     from "@/pages/AuthorsPage";
 import NarratorsPage   from "@/pages/NarratorsPage";
 import SeriesPage      from "@/pages/SeriesPage";
 import ReleasesPage    from "@/pages/ReleasesPage";
-import CollectionsPage from "@/pages/CollectionsPage";
-import SettingsPage    from "@/pages/SettingsPage";
+import CollectionsPage      from "@/pages/CollectionsPage";
+import RecommendationsPage  from "@/pages/RecommendationsPage";
+import SettingsPage         from "@/pages/SettingsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,8 +29,9 @@ const router = createBrowserRouter([
       { path: "/narrators",   element: <NarratorsPage />   },
       { path: "/series",      element: <SeriesPage />      },
       { path: "/releases",    element: <ReleasesPage />    },
-      { path: "/collections", element: <CollectionsPage /> },
-      { path: "/settings",    element: <SettingsPage />    },
+      { path: "/collections",    element: <CollectionsPage />     },
+      { path: "/recommendations", element: <RecommendationsPage /> },
+      { path: "/settings",       element: <SettingsPage />        },
     ],
   },
 ]);

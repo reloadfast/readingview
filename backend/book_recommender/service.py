@@ -136,6 +136,8 @@ def recommend(
         if book_id in exclude:
             continue
         fb = feedback_scores.get(book_id, 0)
+        if fb < 0:
+            continue
         adjusted_score = score + (fb * 0.05)
         if adjusted_score < cfg.min_similarity:
             continue
@@ -164,6 +166,7 @@ def recommend(
             "work_key": book.get("work_key"),
             "score": round(score, 4),
             "explanation": None,
+            "feedback": feedback_scores.get(book_id, 0),
         }
         if cfg.enable_explanations:
             rec["explanation"] = _generate_explanation(source_books, free_text_prompt, book)

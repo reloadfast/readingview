@@ -329,7 +329,16 @@ export interface RecommendationParams {
 }
 
 export interface Recommendation {
-  [key: string]: unknown;
+  book_id: string;
+  title: string;
+  authors: string[];
+  description: string | null;
+  subjects: string[];
+  cover_id: number | null;
+  work_key: string | null;
+  score: number;
+  explanation: string | null;
+  feedback: number;
 }
 
 export interface RecommenderStatus {
@@ -352,6 +361,13 @@ export function ingestBook(body: IngestRequest): Promise<IngestResponse> {
 
 export function getRecommenderStatus(): Promise<RecommenderStatus> {
   return apiFetch("/recommendations/status");
+}
+
+export function submitFeedback(bookId: string, vote: 1 | -1): Promise<void> {
+  return apiFetch(`/recommendations/${encodeURIComponent(bookId)}/feedback`, {
+    method: "POST",
+    body: JSON.stringify({ vote }),
+  });
 }
 
 // ---------------------------------------------------------------------------
