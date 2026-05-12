@@ -751,7 +751,10 @@ export interface components {
         };
         /** Body_restore_backup_api_restore_post */
         Body_restore_backup_api_restore_post: {
-            /** File */
+            /**
+             * File
+             * Format: binary
+             */
             file: string;
         };
         /** BookProgress */
@@ -1364,10 +1367,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
         };
         /** YearlyPoint */
         YearlyPoint: {
