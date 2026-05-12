@@ -122,11 +122,13 @@ async def test_get_all_library_items_aggregates():
     items_data = {"results": [{"id": "book-1"}]}
 
     http = AsyncMock()
-    http.get = AsyncMock(side_effect=[
-        _mock_resp(libs_data),   # get_libraries
-        _mock_resp(items_data),  # get_library_items("lib-a")
-        _mock_resp(items_data),  # get_library_items("lib-b")
-    ])
+    http.get = AsyncMock(
+        side_effect=[
+            _mock_resp(libs_data),  # get_libraries
+            _mock_resp(items_data),  # get_library_items("lib-a")
+            _mock_resp(items_data),  # get_library_items("lib-b")
+        ]
+    )
     c._http = http
     result = await c.get_all_library_items()
     assert len(result) == 2  # one item per library
