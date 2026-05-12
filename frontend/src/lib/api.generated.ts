@@ -209,6 +209,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/statistics/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Heatmap */
+        get: operations["get_heatmap_api_statistics_heatmap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/authors/search": {
         parameters: {
             query?: never;
@@ -746,6 +763,11 @@ export interface components {
             /** Books */
             books: number;
         };
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
         /** HeatmapData */
         HeatmapData: {
             /** Year */
@@ -759,11 +781,6 @@ export interface components {
             date: string;
             /** Minutes */
             minutes: number;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
         };
         /** IngestRequest */
         IngestRequest: {

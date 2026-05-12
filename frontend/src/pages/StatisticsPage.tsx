@@ -518,7 +518,7 @@ function ActivityHeatmap({ data, year }: { data: HeatmapPoint[]; year: string })
     const firstDay = new Date(Number(year), m, 1);
     const dayIndex = Math.floor((firstDay.getTime() - jan1.getTime()) / 86400000);
     const col = Math.floor((startOffset + dayIndex) / 7);
-    monthLabelX.push({ label: MONTHS[m]!, x: 24 + col * STEP });
+    if (m < MONTHS.length) monthLabelX.push({ label: MONTHS[m] as string, x: 24 + col * STEP });
   }
 
   function onMouseEnter(e: React.MouseEvent<SVGRectElement>, date: string, minutes: number) {
