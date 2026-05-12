@@ -261,6 +261,7 @@ def test_compute_recap_empty_year():
 # compute_heatmap
 # ---------------------------------------------------------------------------
 
+
 def _session(year: int, month: int, day: int, seconds: int) -> dict:
     return {
         "updatedAt": _ts(year, month, day),
@@ -270,9 +271,9 @@ def _session(year: int, month: int, day: int, seconds: int) -> dict:
 
 def test_compute_heatmap_basic():
     sessions = [
-        _session(2024, 3, 5, 3600),   # 60 min
-        _session(2024, 3, 5, 1800),   # 30 min — same day, should sum to 90
-        _session(2024, 6, 1, 7200),   # 120 min
+        _session(2024, 3, 5, 3600),  # 60 min
+        _session(2024, 3, 5, 1800),  # 30 min — same day, should sum to 90
+        _session(2024, 6, 1, 7200),  # 120 min
     ]
     result = compute_heatmap("2024", sessions)
     assert result.year == "2024"
