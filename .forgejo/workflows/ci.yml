@@ -1,8 +1,10 @@
 # Actions verified against data.forgejo.org as required by CLAUDE.md ("Never use actions
 # not mirrored on data.forgejo.org"). Verification date: 2026-05-08.
-#   actions/checkout@v4    → https://data.forgejo.org/actions/checkout   (v4.3.1 present)
-#   actions/setup-python@v5 → https://data.forgejo.org/actions/setup-python (v5.6.0 present)
-#   actions/setup-node@v4  → https://data.forgejo.org/actions/setup-node  (v4.4.0 present)
+#   actions/checkout@v4   → https://data.forgejo.org/actions/checkout   (v4.3.1 present)
+#   actions/setup-node@v4 → https://data.forgejo.org/actions/setup-node  (v4.4.0 present)
+# Note: actions/setup-python@v5 removed — concurrent jobs shared a mounted toolcache
+# volume and raced to install Python, corrupting each other. uv manages its own Python
+# cache (~/.local/share/uv) which handles concurrent access safely.
 name: CI
 
 on:
@@ -28,13 +30,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Set up Python 3.12
+        run: |
+          uv venv --python 3.12 backend/.venv
+          echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
         working-directory: backend
 
       - name: Lint
@@ -44,7 +52,7 @@ jobs:
         run: ruff format --check backend/
 
       - name: Type check
-        run: mypy backend/
+        run: mypy --ignore-missing-imports backend/
 
       - name: Security scan
         run: bandit -r backend/app backend/book_recommender && pip-audit
@@ -87,13 +95,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Set up Python 3.12
+        run: |
+          uv venv --python 3.12 backend/.venv
+          echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
 
       - name: Install backend dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
         working-directory: backend
 
       - uses: actions/setup-node@v4

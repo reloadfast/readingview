@@ -193,6 +193,7 @@ def test_downvoted_books_excluded_from_recommend():
         patch.object(svc, "_ollama", ollama_mock),
         patch("book_recommender.service.get_config", return_value=cfg_mock),
         patch.object(svc, "_rebuild_index_if_needed"),
+        patch("book_recommender.service._compute_query_vector", return_value=[0.1] * 16),
     ):
         results = svc.recommend(liked_book_ids=["source-book"])
 

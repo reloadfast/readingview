@@ -36,10 +36,11 @@ Designed for single-user, self-hosted deployments. No cloud services required.
 
 ### Notifications (optional)
 - **Apprise integration** — supports 100+ services (Telegram, Discord, Slack, Gotify, ntfy, email, and more)
-- **Scheduled digests** — daily or weekly release notification emails via background scheduler
-- **Manual digest** — preview and send upcoming release summaries on demand
-- **Connection status** — live indicator showing configured notification services
+- **Daily digest** — scheduled background job sends upcoming-release summaries at a configured time and timezone
+- **Manual digest** — send or preview the upcoming-release digest on demand via API
+- **Test connection** — verify your Apprise URL directly from the Settings UI
 - Configured through the **Settings UI** — no env vars needed after initial setup
+- See [NOTIFICATIONS.md](NOTIFICATIONS.md) for full configuration details
 
 ### Book Recommender (optional)
 - **Local AI** — runs entirely on your machine via [Ollama](https://ollama.com/), no cloud APIs
