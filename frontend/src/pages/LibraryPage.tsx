@@ -13,7 +13,7 @@ import {
   ThumbsUp,
   X,
 } from "lucide-react";
-import { Badge, Input, Select, Skeleton } from "@/components/ui";
+import { Badge, CoverImage, Input, Select, Skeleton } from "@/components/ui";
 import { useInProgress, useLibrary } from "@/hooks/useLibrary";
 import { useDeleteNote, useNote, useSaveNote } from "@/hooks/useNotes";
 import { useRecommendations, useSubmitFeedback } from "@/hooks/useRecommendations";
@@ -28,25 +28,6 @@ const SORT_OPTIONS: { value: NonNullable<LibraryParams["sort"]>; label: string }
   { value: "progress_asc", label: "Progress" },
   { value: "finished", label: "Recently Finished" },
 ];
-
-function CoverImage({ book }: { book: LibraryBook }) {
-  const [errored, setErrored] = useState(false);
-  const src = !errored && book.cover_url ? book.cover_url : null;
-  return (
-    <div className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center">
-      {src ? (
-        <img
-          src={src}
-          alt={book.title}
-          className="w-full h-full object-cover"
-          onError={() => setErrored(true)}
-        />
-      ) : (
-        <BookOpen className="w-8 h-8 text-text-secondary opacity-40" />
-      )}
-    </div>
-  );
-}
 
 function SimilarRecCard({ rec }: { rec: Recommendation }) {
   const [localFeedback, setLocalFeedback] = useState(rec.feedback);
