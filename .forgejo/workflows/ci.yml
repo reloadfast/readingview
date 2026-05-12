@@ -82,6 +82,50 @@ jobs:
         run: pnpm audit
         working-directory: frontend
 
+  openapi-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install backend dependencies
+        run: pip install -e ".[dev]"
+        working-directory: backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Enable corepack
+        run: corepack enable && corepack prepare --activate
+        working-directory: frontend
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: frontend
+
+      - name: Export OpenAPI spec
+        env:
+          SECRET_KEY: ci-openapi-check
+          DATABASE_URL: "sqlite+aiosqlite:////tmp/openapi-check.db"
+          COVER_CACHE_ENABLED: "false"
+        run: |
+          cd backend
+          python -c "import json,sys; sys.path.insert(0,'.'); from app.main import app; print(json.dumps(app.openapi()))" > /tmp/openapi.json
+
+      - name: Regenerate types
+        run: pnpm openapi --spec-path /tmp/openapi.json
+        working-directory: frontend
+
+      - name: Fail if api.generated.ts is out of date
+        run: |
+          git diff --exit-code frontend/src/lib/api.generated.ts \
+            || { echo "api.generated.ts is out of date — run: pnpm openapi"; exit 1; }
+
   docker:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
