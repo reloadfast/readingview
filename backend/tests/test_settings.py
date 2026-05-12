@@ -68,6 +68,21 @@ async def test_patch_notifications(client):
     assert data["timezone"] == "Europe/Madrid"
 
 
+async def test_get_settings_releases_refresh_cron_default(client):
+    r = await client.get("/api/settings")
+    assert r.status_code == 200
+    assert r.json()["releases_refresh_cron"] == "0 6 * * *"
+
+
+async def test_patch_releases_refresh_cron(client):
+    r = await client.patch("/api/settings", json={"releases_refresh_cron": "0 8 * * *"})
+    assert r.status_code == 200
+    assert r.json()["releases_refresh_cron"] == "0 8 * * *"
+
+    r2 = await client.get("/api/settings")
+    assert r2.json()["releases_refresh_cron"] == "0 8 * * *"
+
+
 async def test_concurrent_first_requests_both_succeed(client):
     r1, r2 = await asyncio.gather(
         client.get("/api/settings"),

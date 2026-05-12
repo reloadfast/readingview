@@ -37,3 +37,6 @@ class Settings(Base):
     notify_days_before: Mapped[int] = mapped_column(Integer, default=7)
     notify_time: Mapped[str] = mapped_column(String, default="09:00")
     timezone: Mapped[str] = mapped_column(String, default="UTC")
+
+    # Release auto-refresh
+    releases_refresh_cron: Mapped[str] = mapped_column(String, default="0 6 * * *")

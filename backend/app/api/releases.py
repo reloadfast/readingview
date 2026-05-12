@@ -1,7 +1,6 @@
 import logging
 import time
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +10,6 @@ from ..db import get_db
 from ..models.releases import Release, ReleaseTrackedAuthor
 from ..schemas.releases import (
     PatchReleaseRequest,
-    RefreshError,
     RefreshResult,
     ReleaseOut,
     ReleaseTrackedAuthorOut,
@@ -145,59 +143,4 @@ async def patch_release(
 
 @router.post("/releases/refresh", response_model=RefreshResult)
 async def refresh_releases(db: AsyncSession = Depends(get_db)) -> RefreshResult:
-    async with db.begin():
-        authors = (await db.execute(select(ReleaseTrackedAuthor))).scalars().all()
-
-    if not authors:
-        return RefreshResult(added=0, skipped=0)
-
-    added = 0
-    skipped = 0
-    failed = 0
-    errors: list[RefreshError] = []
-
-    for author in authors:
-        try:
-            docs = await rt_svc.fetch_author_works(author.name)
-        except httpx.HTTPError as exc:
-            logger.warning(
-                "Failed to fetch works for author %r: %s", author.name, type(exc).__name__
-            )
-            failed += 1
-            errors.append(RefreshError(author=author.name, message=type(exc).__name__))
-            continue
-
-        releases = rt_svc.extract_releases(docs, author.name)
-
-        async with db.begin():
-            existing_keys = set(
-                (await db.execute(select(Release.ol_key).where(Release.author_id == author.id)))
-                .scalars()
-                .all()
-            )
-            existing_titles = set(
-                (await db.execute(select(Release.title).where(Release.author_id == author.id)))
-                .scalars()
-                .all()
-            )
-
-            for rel in releases:
-                ol_key = rel["ol_key"]
-                title = rel["title"]
-                if (ol_key and ol_key in existing_keys) or title in existing_titles:
-                    skipped += 1
-                    continue
-                db.add(
-                    Release(
-                        author_id=author.id,
-                        title=title,
-                        release_date=rel["release_date"],
-                        release_date_confirmed=rel.get("release_date_confirmed", False),
-                        ol_key=ol_key or None,
-                        link_url=rel["link_url"],
-                        source=rel["source"],
-                    )
-                )
-                added += 1
-
-    return RefreshResult(added=added, skipped=skipped, failed=failed, errors=errors)
+    return await rt_svc.run_refresh(db)
