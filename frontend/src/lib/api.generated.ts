@@ -746,6 +746,20 @@ export interface components {
             /** Books */
             books: number;
         };
+        /** HeatmapData */
+        HeatmapData: {
+            /** Year */
+            year: string;
+            /** Data */
+            data: components["schemas"]["HeatmapPoint"][];
+        };
+        /** HeatmapPoint */
+        HeatmapPoint: {
+            /** Date */
+            date: string;
+            /** Minutes */
+            minutes: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1611,6 +1625,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecapStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_heatmap_api_statistics_heatmap_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeatmapData"];
                 };
             };
             /** @description Validation Error */

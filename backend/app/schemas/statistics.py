@@ -71,3 +71,13 @@ class RecapStats(BaseModel):
     slowest_read: ReadDuration | None = None
     monthly_pace: list[MonthlyPoint]
     top_series: list[GenreCount]
+
+
+class HeatmapPoint(BaseModel):
+    date: str  # "YYYY-MM-DD"
+    minutes: int
+
+
+class HeatmapData(BaseModel):
+    year: str
+    data: list[HeatmapPoint]
