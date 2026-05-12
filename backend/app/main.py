@@ -21,6 +21,7 @@ from .api import (
     library,
     narrators,
     notes,
+    notifications,
     recommendations,
     releases,
     series,
@@ -82,19 +83,22 @@ def _configure_logging() -> None:
 _configure_logging()
 
 
-async def _get_refresh_cron() -> str:
+async def _get_scheduler_settings() -> tuple[str, str, str]:
     async with _AsyncSession() as db:
         await db.execute(
             sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
         )
         row = await db.get(Settings, 1)
-    return row.releases_refresh_cron if row else "0 6 * * *"
+    refresh_cron = row.releases_refresh_cron if row else "0 6 * * *"
+    notify_time = row.notify_time if row else "09:00"
+    notify_timezone = row.timezone if row else "UTC"
+    return refresh_cron, notify_time, notify_timezone
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    cron = await _get_refresh_cron()
-    await scheduler_svc.start(cron)
+    refresh_cron, notify_time, notify_timezone = await _get_scheduler_settings()
+    await scheduler_svc.start(refresh_cron, notify_time, notify_timezone)
     yield
     scheduler_svc.stop()
 
@@ -122,6 +126,7 @@ app.include_router(narrators.router, prefix="/api")
 app.include_router(collections.router, prefix="/api")
 app.include_router(backup.router, prefix="/api")
 app.include_router(notes.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
 app.include_router(recommendations.router, prefix="/api")
 app.include_router(goals.router, prefix="/api")
 

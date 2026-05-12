@@ -71,4 +71,7 @@ async def patch_settings(
     if "releases_refresh_cron" in updates and updates["releases_refresh_cron"]:
         scheduler_svc.reschedule_refresh(updates["releases_refresh_cron"])
 
+    if any(k in updates for k in ("notify_time", "timezone")):
+        scheduler_svc.reschedule_digest(row.notify_time, row.timezone)
+
     return _mask(row)

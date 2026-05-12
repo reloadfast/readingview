@@ -411,6 +411,40 @@ export function deleteNote(absItemId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export interface NotificationResult {
+  ok: boolean;
+  error?: string | null;
+}
+
+export interface DigestReleaseItem {
+  title: string;
+  author_name: string;
+  release_date: string | null;
+}
+
+export interface DigestPreview {
+  subject: string;
+  body: string;
+  count: number;
+  releases: DigestReleaseItem[];
+}
+
+export function testNotifications(): Promise<NotificationResult> {
+  return apiFetch("/notifications/test", { method: "POST" });
+}
+
+export function digestPreview(): Promise<DigestPreview> {
+  return apiFetch("/notifications/digest/preview", { method: "POST" });
+}
+
+export function digestSend(): Promise<NotificationResult> {
+  return apiFetch("/notifications/digest/send", { method: "POST" });
+}
+
+// ---------------------------------------------------------------------------
 // Health
 // ---------------------------------------------------------------------------
 

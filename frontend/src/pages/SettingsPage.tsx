@@ -6,6 +6,7 @@ import {
   downloadBackup,
   testAbsConnection,
   testLlmConnection,
+  testNotifications,
   uploadRestore,
   type SettingsPatch,
   type SettingsRead,
@@ -166,6 +167,22 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
   const [notifyTime, setNotifyTime] = useState(settings.notify_time);
   const [timezone, setTimezone] = useState(settings.timezone);
 
+  const [testStatus, setTestStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestStatus(null);
+    try {
+      const res = await testNotifications();
+      setTestStatus({ ok: res.ok, msg: res.ok ? "Notification sent." : (res.error ?? "Delivery failed") });
+    } catch (e) {
+      setTestStatus({ ok: false, msg: String(e) });
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleSave = () => {
     const patch: SettingsPatch = {
       notifications_enabled: enabled,
@@ -234,7 +251,16 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleTest}
+          disabled={testing || !settings.apprise_url}
+          pendingText="Sending…"
+        >
+          Test Connection
+        </Button>
         <Button
           size="sm"
           onClick={handleSave}
@@ -245,6 +271,10 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
         </Button>
         {saved && <InlineFeedback text="Saved." />}
       </div>
+
+      {testStatus && (
+        <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />
+      )}
     </section>
   );
 }
