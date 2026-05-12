@@ -9,6 +9,7 @@ import type {
   CollectionOut,
   CreateCollectionRequest,
   FollowRequest,
+  HeatmapData,
   IngestRequest,
   IngestResponse,
   LLMTestRequest,
@@ -46,6 +47,8 @@ export type {
   CreateCollectionRequest,
   FollowRequest,
   GenreCount,
+  HeatmapData,
+  HeatmapPoint,
   IngestRequest,
   IngestResponse,
   LLMTestRequest,
@@ -165,6 +168,10 @@ export function getYearlyStats(year: string): Promise<YearlyStats> {
 
 export function getRecap(year: string): Promise<RecapStats> {
   return apiFetch(`/statistics/recap?year=${encodeURIComponent(year)}`);
+}
+
+export function getHeatmap(year: string): Promise<HeatmapData> {
+  return apiFetch(`/statistics/heatmap?year=${encodeURIComponent(year)}`);
 }
 
 // ---------------------------------------------------------------------------

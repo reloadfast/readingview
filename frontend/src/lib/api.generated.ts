@@ -209,6 +209,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/statistics/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Heatmap */
+        get: operations["get_heatmap_api_statistics_heatmap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/authors/search": {
         parameters: {
             query?: never;
@@ -750,6 +767,20 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HeatmapData */
+        HeatmapData: {
+            /** Year */
+            year: string;
+            /** Data */
+            data: components["schemas"]["HeatmapPoint"][];
+        };
+        /** HeatmapPoint */
+        HeatmapPoint: {
+            /** Date */
+            date: string;
+            /** Minutes */
+            minutes: number;
         };
         /** IngestRequest */
         IngestRequest: {
@@ -1611,6 +1642,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecapStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_heatmap_api_statistics_heatmap_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HeatmapData"];
                 };
             };
             /** @description Validation Error */

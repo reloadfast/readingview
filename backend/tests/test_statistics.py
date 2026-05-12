@@ -9,6 +9,7 @@ from app.services.statistics import (
     _get_finished_books,
     _group_by_month,
     _group_by_year,
+    compute_heatmap,
     compute_overall_stats,
     compute_recap,
     compute_yearly_stats,
@@ -254,3 +255,53 @@ def test_compute_recap_empty_year():
     recap = compute_recap("2099", _PROGRESS_MAP, _LISTENING_STATS)
     assert recap.books_finished == 0
     assert recap.longest_book is None
+
+
+# ---------------------------------------------------------------------------
+# compute_heatmap
+# ---------------------------------------------------------------------------
+
+
+def _session(year: int, month: int, day: int, seconds: int) -> dict:
+    return {
+        "updatedAt": _ts(year, month, day),
+        "timeListening": seconds,
+    }
+
+
+def test_compute_heatmap_basic():
+    sessions = [
+        _session(2024, 3, 5, 3600),  # 60 min
+        _session(2024, 3, 5, 1800),  # 30 min — same day, should sum to 90
+        _session(2024, 6, 1, 7200),  # 120 min
+    ]
+    result = compute_heatmap("2024", sessions)
+    assert result.year == "2024"
+    assert len(result.data) == 2
+    by_date = {p.date: p.minutes for p in result.data}
+    assert by_date["2024-03-05"] == 90
+    assert by_date["2024-06-01"] == 120
+
+
+def test_compute_heatmap_filters_other_years():
+    sessions = [
+        _session(2023, 12, 31, 3600),
+        _session(2024, 1, 1, 1800),
+        _session(2025, 1, 1, 600),
+    ]
+    result = compute_heatmap("2024", sessions)
+    assert len(result.data) == 1
+    assert result.data[0].date == "2024-01-01"
+    assert result.data[0].minutes == 30
+
+
+def test_compute_heatmap_empty():
+    result = compute_heatmap("2024", [])
+    assert result.year == "2024"
+    assert result.data == []
+
+
+def test_compute_heatmap_skips_missing_ts():
+    sessions = [{"timeListening": 3600}]  # no updatedAt/startedAt
+    result = compute_heatmap("2024", sessions)
+    assert result.data == []

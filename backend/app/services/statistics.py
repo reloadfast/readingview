@@ -6,6 +6,8 @@ from ..schemas.statistics import (
     AuthorCount,
     BookSummary,
     GenreCount,
+    HeatmapData,
+    HeatmapPoint,
     MonthlyPoint,
     OverallStats,
     ReadDuration,
@@ -257,3 +259,23 @@ def compute_recap(
         monthly_pace=monthly_pace,
         top_series=top_series,
     )
+
+
+def compute_heatmap(year: str, sessions: list[dict]) -> HeatmapData:
+    daily: dict[str, int] = defaultdict(int)
+    for s in sessions:
+        ts = s.get("updatedAt") or s.get("startedAt")
+        if not ts:
+            continue
+        try:
+            dt = datetime.fromtimestamp(ts / 1000)
+        except (ValueError, TypeError, OSError):
+            continue
+        if str(dt.year) != year:
+            continue
+        day = dt.strftime("%Y-%m-%d")
+        seconds = s.get("timeListening", 0) or 0
+        daily[day] += int(seconds / 60)
+
+    data = [HeatmapPoint(date=d, minutes=m) for d, m in sorted(daily.items())]
+    return HeatmapData(year=year, data=data)

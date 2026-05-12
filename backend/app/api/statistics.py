@@ -5,7 +5,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..api.deps import abs_client
-from ..schemas.statistics import OverallStats, RecapStats, YearlyStats
+from ..schemas.statistics import HeatmapData, OverallStats, RecapStats, YearlyStats
 from ..services import statistics as stats_svc
 from ..services.audiobookshelf import AudiobookshelfClient
 
@@ -58,3 +58,16 @@ async def get_recap(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return stats_svc.compute_recap(year, progress_map, listening_stats)
+
+
+@router.get("/statistics/heatmap", response_model=HeatmapData)
+async def get_heatmap(
+    year: str = Query(default=str(datetime.now().year)),
+    client: AudiobookshelfClient = Depends(abs_client),
+) -> HeatmapData:
+    try:
+        sessions = await client.get_user_listening_sessions()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return stats_svc.compute_heatmap(year, sessions)

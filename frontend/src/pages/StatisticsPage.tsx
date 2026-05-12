@@ -13,10 +13,10 @@ import {
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
 import { Card, CardContent, Skeleton, Select } from "@/components/ui";
-import { useStatistics, useYearlyStats, useRecap } from "@/hooks/useStatistics";
+import { useStatistics, useYearlyStats, useRecap, useHeatmap } from "@/hooks/useStatistics";
 import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
-import type { RecapStats, AuthorCount, GenreCount } from "@/lib/api";
+import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -470,6 +470,163 @@ function GoalCard({ booksFinished, year }: { booksFinished: number; year: string
 }
 
 // ---------------------------------------------------------------------------
+// Activity heatmap
+// ---------------------------------------------------------------------------
+
+const CELL = 11;
+const GAP = 2;
+const STEP = CELL + GAP;
+const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function heatmapColor(minutes: number, max: number): string {
+  if (minutes === 0 || max === 0) return "var(--color-border)";
+  const ratio = minutes / max;
+  if (ratio < 0.25) return "oklch(72% 0.17 160 / 30%)";
+  if (ratio < 0.5) return "oklch(72% 0.17 160 / 55%)";
+  if (ratio < 0.75) return "oklch(72% 0.17 160 / 80%)";
+  return "var(--color-accent-positive)";
+}
+
+interface TooltipState {
+  x: number;
+  y: number;
+  date: string;
+  minutes: number;
+}
+
+function ActivityHeatmap({ data, year }: { data: HeatmapPoint[]; year: string }) {
+  const [tip, setTip] = useState<TooltipState | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const byDate = new Map<string, number>(data.map((p) => [p.date, p.minutes]));
+  const max = data.reduce((m, p) => Math.max(m, p.minutes), 0);
+
+  const jan1 = new Date(`${year}-01-01`);
+  const startDow = jan1.getDay(); // 0=Sun
+  const startOffset = startDow === 0 ? 6 : startDow - 1; // shift so Mon=0
+
+  const totalDays = (Number(year) % 4 === 0 && (Number(year) % 100 !== 0 || Number(year) % 400 === 0)) ? 366 : 365;
+  const totalCells = startOffset + totalDays;
+  const cols = Math.ceil(totalCells / 7);
+
+  const svgW = cols * STEP - GAP + 24; // +24 for day labels on left
+  const svgH = 7 * STEP - GAP + 20;   // +20 for month labels on top
+
+  const monthLabelX: { label: string; x: number }[] = [];
+  for (let m = 0; m < 12; m++) {
+    const firstDay = new Date(Number(year), m, 1);
+    const dayIndex = Math.floor((firstDay.getTime() - jan1.getTime()) / 86400000);
+    const col = Math.floor((startOffset + dayIndex) / 7);
+    if (m < MONTHS.length) monthLabelX.push({ label: MONTHS[m] as string, x: 24 + col * STEP });
+  }
+
+  function onMouseEnter(e: React.MouseEvent<SVGRectElement>, date: string, minutes: number) {
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    if (!svgRect) return;
+    setTip({
+      x: e.clientX - svgRect.left,
+      y: e.clientY - svgRect.top,
+      date,
+      minutes,
+    });
+  }
+
+  const cells: React.ReactNode[] = [];
+  for (let i = 0; i < cols * 7; i++) {
+    const dayIndex = i - startOffset;
+    if (dayIndex < 0 || dayIndex >= totalDays) continue;
+    const col = Math.floor(i / 7);
+    const row = i % 7;
+    const d = new Date(jan1.getTime() + dayIndex * 86400000);
+    const dateStr = d.toISOString().slice(0, 10);
+    const minutes = byDate.get(dateStr) ?? 0;
+    cells.push(
+      <rect
+        key={dateStr}
+        x={24 + col * STEP}
+        y={20 + row * STEP}
+        width={CELL}
+        height={CELL}
+        rx={2}
+        fill={heatmapColor(minutes, max)}
+        onMouseEnter={(e) => onMouseEnter(e, dateStr, minutes)}
+        onMouseLeave={() => setTip(null)}
+        style={{ cursor: minutes > 0 ? "pointer" : "default" }}
+      />
+    );
+  }
+
+  return (
+    <div className="relative overflow-x-auto">
+      <svg
+        ref={svgRef}
+        width={svgW}
+        height={svgH}
+        style={{ display: "block" }}
+      >
+        {/* Month labels */}
+        {monthLabelX.map(({ label, x }) => (
+          <text
+            key={label}
+            x={x}
+            y={13}
+            fontSize={10}
+            fill="var(--color-text-secondary)"
+            fontFamily="inherit"
+          >
+            {label}
+          </text>
+        ))}
+        {/* Day labels */}
+        {DAY_LABELS.map((label, row) => (
+          label ? (
+            <text
+              key={row}
+              x={0}
+              y={20 + row * STEP + CELL - 1}
+              fontSize={10}
+              fill="var(--color-text-secondary)"
+              fontFamily="inherit"
+            >
+              {label}
+            </text>
+          ) : null
+        ))}
+        {cells}
+      </svg>
+
+      {/* Tooltip */}
+      {tip && (
+        <div
+          className="absolute pointer-events-none z-10 px-2 py-1 rounded-md text-xs whitespace-nowrap"
+          style={{
+            left: tip.x + 10,
+            top: tip.y - 28,
+            backgroundColor: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          <span className="font-medium">{tip.date}</span>
+          {" — "}
+          {tip.minutes > 0 ? `${tip.minutes} min` : "No activity"}
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex items-center gap-1.5 mt-2 justify-end">
+        <span className="text-xs text-text-secondary">Less</span>
+        {["var(--color-border)", "oklch(72% 0.17 160 / 30%)", "oklch(72% 0.17 160 / 55%)", "oklch(72% 0.17 160 / 80%)", "var(--color-accent-positive)"].map((c, i) => (
+          <div key={i} className="w-3 h-3 rounded-sm" style={{ backgroundColor: c }} />
+        ))}
+        <span className="text-xs text-text-secondary">More</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
 
@@ -495,6 +652,7 @@ export default function StatisticsPage() {
   const overall = useStatistics();
   const yearly = useYearlyStats(year);
   const recap = useRecap(year);
+  const heatmap = useHeatmap(year);
 
   const statsLoading = overall.isLoading || yearly.isLoading;
   const hasData = !yearly.isLoading && (yearly.data?.books_in_year ?? 0) > 0;
@@ -542,6 +700,20 @@ export default function StatisticsPage() {
         <EmptyState year={year} />
       ) : (
         <>
+          {/* Activity heatmap */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-text-primary">Listening Activity</h2>
+            <Card>
+              <CardContent>
+                {heatmap.isLoading ? (
+                  <ChartSkeleton height={120} />
+                ) : (
+                  <ActivityHeatmap data={heatmap.data?.data ?? []} year={year} />
+                )}
+              </CardContent>
+            </Card>
+          </section>
+
           {/* Monthly breakdown */}
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2>
