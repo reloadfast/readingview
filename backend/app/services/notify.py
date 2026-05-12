@@ -27,12 +27,16 @@ async def upcoming_releases(db: AsyncSession, days_before: int) -> list:
     cutoff = today + datetime.timedelta(days=days_before)
     async with db.begin():
         rows = (
-            await db.execute(
-                select(Release)
-                .options(selectinload(Release.author))
-                .where(Release.is_active.is_(True))
+            (
+                await db.execute(
+                    select(Release)
+                    .options(selectinload(Release.author))
+                    .where(Release.is_active.is_(True))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     return sorted(
         [
             r
