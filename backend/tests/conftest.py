@@ -1,9 +1,10 @@
-import asyncio
 import os
-from pathlib import Path
 
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+
+import asyncio
+from pathlib import Path
 
 import pytest
 from alembic import command
