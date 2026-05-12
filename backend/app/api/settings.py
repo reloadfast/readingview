@@ -6,6 +6,7 @@ from ..crypto import encrypt
 from ..db import get_db
 from ..models.settings import Settings
 from ..schemas.settings import SettingsPatch, SettingsRead
+from ..services import scheduler as scheduler_svc
 
 router = APIRouter()
 
@@ -41,6 +42,7 @@ def _mask(row: Settings) -> SettingsRead:
         notify_days_before=row.notify_days_before,
         notify_time=row.notify_time,
         timezone=row.timezone,
+        releases_refresh_cron=row.releases_refresh_cron,
     )
 
 
@@ -65,5 +67,8 @@ async def patch_settings(
             if api_field in _ENCRYPTED and value is not None:
                 value = encrypt(value)
             setattr(row, api_field, value)
+
+    if "releases_refresh_cron" in updates and updates["releases_refresh_cron"]:
+        scheduler_svc.reschedule_refresh(updates["releases_refresh_cron"])
 
     return _mask(row)

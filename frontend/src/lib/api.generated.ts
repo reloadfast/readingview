@@ -1157,6 +1157,8 @@ export interface components {
             notify_time?: string | null;
             /** Timezone */
             timezone?: string | null;
+            /** Releases Refresh Cron */
+            releases_refresh_cron?: string | null;
         };
         /** SettingsRead */
         SettingsRead: {
@@ -1194,6 +1196,8 @@ export interface components {
             notify_time: string;
             /** Timezone */
             timezone: string;
+            /** Releases Refresh Cron */
+            releases_refresh_cron: string;
         };
         /** StatusResponse */
         StatusResponse: {

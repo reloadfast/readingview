@@ -21,6 +21,8 @@ dependencies = [
     "alembic>=1.14",
     "cryptography>=43",
     "python-multipart>=0.0.9",
+    "apscheduler>=3.10",
+    "apprise>=1.7",
 ]
 
 [project.optional-dependencies]

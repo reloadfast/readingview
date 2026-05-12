@@ -1,4 +1,13 @@
+import logging
+
 import httpx
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..models.releases import Release, ReleaseTrackedAuthor
+from ..schemas.releases import RefreshError, RefreshResult
+
+logger = logging.getLogger(__name__)
 
 _TIMEOUT = 15.0
 _BASE_URL = "https://openlibrary.org"
@@ -61,3 +70,62 @@ def extract_releases(docs: list[dict], author_name: str) -> list[dict]:
 
     releases.sort(key=lambda r: r["release_date"] or "", reverse=True)
     return releases
+
+
+async def run_refresh(db: AsyncSession) -> RefreshResult:
+    """Run a full release refresh and return counts. Suitable for both HTTP and scheduler use."""
+    async with db.begin():
+        authors = (await db.execute(select(ReleaseTrackedAuthor))).scalars().all()
+
+    if not authors:
+        return RefreshResult(added=0, skipped=0)
+
+    added = 0
+    skipped = 0
+    failed = 0
+    errors: list[RefreshError] = []
+
+    for author in authors:
+        try:
+            docs = await fetch_author_works(author.name)
+        except httpx.HTTPError as exc:
+            logger.warning("Failed to fetch works for %r: %s", author.name, type(exc).__name__)
+            failed += 1
+            errors.append(RefreshError(author=author.name, message=type(exc).__name__))
+            continue
+
+        releases = extract_releases(docs, author.name)
+
+        async with db.begin():
+            existing_keys = set(
+                (await db.execute(select(Release.ol_key).where(Release.author_id == author.id)))
+                .scalars()
+                .all()
+            )
+            existing_titles = set(
+                (await db.execute(select(Release.title).where(Release.author_id == author.id)))
+                .scalars()
+                .all()
+            )
+
+            for rel in releases:
+                ol_key = rel["ol_key"]
+                title = rel["title"]
+                if (ol_key and ol_key in existing_keys) or title in existing_titles:
+                    skipped += 1
+                    continue
+                db.add(
+                    Release(
+                        author_id=author.id,
+                        title=title,
+                        release_date=rel["release_date"],
+                        release_date_confirmed=rel.get("release_date_confirmed", False),
+                        ol_key=ol_key or None,
+                        link_url=rel["link_url"],
+                        source=rel["source"],
+                    )
+                )
+                added += 1
+
+    logger.info("Release refresh complete: added=%d skipped=%d failed=%d", added, skipped, failed)
+    return RefreshResult(added=added, skipped=skipped, failed=failed, errors=errors)

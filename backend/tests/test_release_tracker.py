@@ -1,8 +1,14 @@
 """Unit tests for release dedup and sort logic in services/release_tracker.py."""
 
-import pytest
+import time
+from unittest.mock import AsyncMock, patch
 
-from app.services.release_tracker import extract_releases
+import httpx
+import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models.releases import Release, ReleaseTrackedAuthor
+from app.services.release_tracker import extract_releases, run_refresh
 
 pytestmark = pytest.mark.unit
 
@@ -100,3 +106,93 @@ def test_extract_releases_not_confirmed_when_no_year():
     docs = [{"title": "Untitled", "key": "/works/OL1W"}]
     releases = extract_releases(docs, "Author")
     assert releases[0]["release_date_confirmed"] is False
+
+
+# ---------------------------------------------------------------------------
+# run_refresh integration tests (mocked HTTP)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def db(engine):
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as session:
+        yield session
+
+
+_MOCK_DOCS = [
+    {
+        "title": "New Book",
+        "first_publish_year": 2025,
+        "isbn": ["978-1234567890"],
+        "key": "/works/OL999W",
+    }
+]
+
+
+async def test_run_refresh_no_authors(db):
+    result = await run_refresh(db)
+    assert result.added == 0
+    assert result.skipped == 0
+    assert result.failed == 0
+
+
+async def test_run_refresh_adds_new_release(db):
+    async with db.begin():
+        author = ReleaseTrackedAuthor(name="Test Author", added_at=int(time.time() * 1000))
+        db.add(author)
+
+    with patch(
+        "app.services.release_tracker.fetch_author_works",
+        new_callable=AsyncMock,
+        return_value=_MOCK_DOCS,
+    ):
+        result = await run_refresh(db)
+
+    assert result.added == 1
+    assert result.skipped == 0
+    assert result.failed == 0
+
+
+async def test_run_refresh_skips_existing_release(db):
+    async with db.begin():
+        author = ReleaseTrackedAuthor(name="Known Author", added_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        db.add(
+            Release(
+                author_id=author.id,
+                title="New Book",
+                release_date="2025",
+                release_date_confirmed=True,
+                ol_key="/works/OL999W",
+                link_url=None,
+                source="openlibrary",
+            )
+        )
+
+    with patch(
+        "app.services.release_tracker.fetch_author_works",
+        new_callable=AsyncMock,
+        return_value=_MOCK_DOCS,
+    ):
+        result = await run_refresh(db)
+
+    assert result.added == 0
+    assert result.skipped == 1
+
+
+async def test_run_refresh_records_http_failure(db):
+    async with db.begin():
+        author = ReleaseTrackedAuthor(name="Failing Author", added_at=int(time.time() * 1000))
+        db.add(author)
+
+    with patch(
+        "app.services.release_tracker.fetch_author_works",
+        new_callable=AsyncMock,
+        side_effect=httpx.ConnectError("timeout"),
+    ):
+        result = await run_refresh(db)
+
+    assert result.failed == 1
+    assert result.errors[0].author == "Failing Author"

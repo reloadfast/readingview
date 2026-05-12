@@ -29,6 +29,9 @@ class SettingsRead(BaseModel):
     notify_time: str
     timezone: str
 
+    # Release auto-refresh
+    releases_refresh_cron: str
+
 
 class SettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -57,6 +60,9 @@ class SettingsPatch(BaseModel):
     notify_days_before: int | None = None
     notify_time: str | None = None
     timezone: str | None = None
+
+    # Release auto-refresh
+    releases_refresh_cron: str | None = None
 
 
 class LLMTestRequest(BaseModel):

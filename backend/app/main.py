@@ -1,11 +1,14 @@
 import json
 import logging
 import logging.config
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from .api import (
     authors,
@@ -27,6 +30,9 @@ from .api import (
     settings as settings_router,
 )
 from .config import settings
+from .db import _AsyncSession
+from .models.settings import Settings
+from .services import scheduler as scheduler_svc
 
 
 class _JsonFormatter(logging.Formatter):
@@ -75,7 +81,25 @@ def _configure_logging() -> None:
 
 _configure_logging()
 
-app = FastAPI(title="ReadingView")
+
+async def _get_refresh_cron() -> str:
+    async with _AsyncSession() as db:
+        await db.execute(
+            sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
+        )
+        row = await db.get(Settings, 1)
+    return row.releases_refresh_cron if row else "0 6 * * *"
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    cron = await _get_refresh_cron()
+    await scheduler_svc.start(cron)
+    yield
+    scheduler_svc.stop()
+
+
+app = FastAPI(title="ReadingView", lifespan=_lifespan)
 
 if settings.COVER_CACHE_ENABLED:
     from .services.cover_cache import initialize as _init_cache

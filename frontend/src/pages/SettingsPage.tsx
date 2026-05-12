@@ -250,6 +250,51 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
 }
 
 // ---------------------------------------------------------------------------
+// Section: Release Tracker
+// ---------------------------------------------------------------------------
+
+function ReleaseTrackerSection({ settings }: { settings: SettingsRead }) {
+  const update = useUpdateSettings();
+  const { saved, triggerSaved } = useSavedFeedback();
+
+  const [cron, setCron] = useState(settings.releases_refresh_cron);
+
+  const handleSave = () => {
+    update.mutate({ releases_refresh_cron: cron }, { onSuccess: triggerSaved });
+  };
+
+  return (
+    <section className="space-y-4">
+      <SectionHeading>Release Tracker</SectionHeading>
+
+      <FieldRow label="Auto-refresh schedule (cron)" htmlFor="refresh-cron">
+        <Input
+          id="refresh-cron"
+          placeholder="0 6 * * *"
+          value={cron}
+          onChange={(e) => setCron(e.target.value)}
+        />
+        <p className="text-xs text-text-secondary">
+          Standard 5-field cron expression (minute hour day month weekday). Default: daily at 06:00 UTC.
+        </p>
+      </FieldRow>
+
+      <div className="flex items-center gap-3">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={update.isPending}
+          pendingText="Saving…"
+        >
+          Save
+        </Button>
+        {saved && <InlineFeedback text="Saved." />}
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Section: Book Recommender
 // ---------------------------------------------------------------------------
 
@@ -618,6 +663,7 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold text-text-primary">Settings</h1>
       <AbsSection settings={settings} />
       <NotificationsSection settings={settings} />
+      <ReleaseTrackerSection settings={settings} />
       <RecommenderSection settings={settings} />
       <LlmSection settings={settings} />
       <BackupSection />
