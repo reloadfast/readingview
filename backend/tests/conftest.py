@@ -7,11 +7,11 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from alembic import command
 from app.db import get_db
 from app.main import app
 
