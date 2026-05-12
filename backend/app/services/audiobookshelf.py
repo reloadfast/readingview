@@ -83,7 +83,8 @@ class AudiobookshelfClient:
         page = 0
         items_per_page = 100
         while True:
-            r = await self._http.get(f"/me/listening-sessions?itemsPerPage={items_per_page}&page={page}")
+            url = f"/me/listening-sessions?itemsPerPage={items_per_page}&page={page}"
+            r = await self._http.get(url)
             r.raise_for_status()
             data = r.json()
             sessions = data.get("sessions", [])
