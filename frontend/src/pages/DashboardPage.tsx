@@ -1,29 +1,9 @@
-import { useState } from "react";
 import { BookOpen, CheckCircle2, Clock, Flame } from "lucide-react";
-import { Badge, Card, CardContent, Skeleton } from "@/components/ui";
+import { Badge, Card, CardContent, CoverImage, Skeleton } from "@/components/ui";
 import { useInProgress, useLibrary } from "@/hooks/useLibrary";
 import { useStatistics } from "@/hooks/useStatistics";
 import { formatDuration } from "@/lib/utils";
 import type { LibraryBook } from "@/lib/api";
-
-function CoverImage({ book }: { book: LibraryBook }) {
-  const [errored, setErrored] = useState(false);
-  const src = !errored && book.cover_url ? book.cover_url : null;
-  return (
-    <div className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center">
-      {src ? (
-        <img
-          src={src}
-          alt={book.title}
-          className="w-full h-full object-cover"
-          onError={() => setErrored(true)}
-        />
-      ) : (
-        <BookOpen className="w-8 h-8 text-text-secondary opacity-40" />
-      )}
-    </div>
-  );
-}
 
 function StatCardSkeleton() {
   return (
@@ -99,22 +79,13 @@ function InProgressCard({ book }: { book: LibraryBook }) {
 }
 
 function FinishedRow({ book }: { book: LibraryBook }) {
-  const [errored, setErrored] = useState(false);
-  const src = !errored && book.cover_url ? book.cover_url : null;
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
-      <div className="w-10 h-14 flex-shrink-0 bg-surface-hover rounded overflow-hidden flex items-center justify-center">
-        {src ? (
-          <img
-            src={src}
-            alt={book.title}
-            className="w-full h-full object-cover"
-            onError={() => setErrored(true)}
-          />
-        ) : (
-          <BookOpen className="w-4 h-4 text-text-secondary opacity-40" />
-        )}
-      </div>
+      <CoverImage
+        book={book}
+        className="w-10 h-14 flex-shrink-0 bg-surface-hover rounded overflow-hidden flex items-center justify-center"
+        iconClassName="w-4 h-4 text-text-secondary opacity-40"
+      />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-text-primary truncate">{book.title}</p>
         <p className="text-xs text-text-secondary">{book.authors}</p>

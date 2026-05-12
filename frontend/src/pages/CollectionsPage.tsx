@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, BookOpen, FolderOpen, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { Button, Input, Skeleton } from "@/components/ui";
+import { Button, CoverImage, Input, Skeleton } from "@/components/ui";
 import {
   useAddToCollection,
   useCollectionDetail,
@@ -26,29 +26,6 @@ function CollectionCardSkeleton() {
         <Skeleton className="h-3 w-16" />
         <Skeleton className="h-3 w-24" />
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Cover image
-// ---------------------------------------------------------------------------
-
-function CoverImage({ book }: { book: LibraryBook }) {
-  const [errored, setErrored] = useState(false);
-  const src = !errored && book.cover_url ? book.cover_url : null;
-  return (
-    <div className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
-      {src ? (
-        <img
-          src={src}
-          alt={book.title}
-          className="w-full h-full object-cover"
-          onError={() => setErrored(true)}
-        />
-      ) : (
-        <BookOpen className="w-4 h-4 text-text-secondary opacity-40" />
-      )}
     </div>
   );
 }
@@ -283,7 +260,11 @@ function AddBookPanel({
               onChange={() => toggle(book.id)}
               className="accent-accent w-4 h-4 flex-shrink-0"
             />
-            <CoverImage book={book} />
+            <CoverImage
+              book={book}
+              className="w-10 h-14 bg-surface-hover rounded flex items-center justify-center flex-shrink-0 overflow-hidden"
+              iconClassName="w-4 h-4 text-text-secondary opacity-40"
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-text-primary truncate">{book.title}</p>
               <p className="text-xs text-text-secondary truncate">{book.authors}</p>
