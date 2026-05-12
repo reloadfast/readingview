@@ -77,6 +77,7 @@ async def patch_settings(
     if any(k in updates for k in ("abs_url", "abs_token")):
         from ..api.ws import manager as ws_manager
         from ..services import abs_socket as abs_socket_svc
+
         plaintext_token = updates.get("abs_token") or None
         await abs_socket_svc.restart(ws_manager, row.abs_url, plaintext_token)
 

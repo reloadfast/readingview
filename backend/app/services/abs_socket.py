@@ -68,6 +68,7 @@ async def start(
         return
     try:
         from ..crypto import decrypt
+
         abs_token = decrypt(abs_token_enc)
     except Exception:
         logger.warning("Failed to decrypt ABS token; ABS live events disabled")
