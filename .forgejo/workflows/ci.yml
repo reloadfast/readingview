@@ -39,9 +39,10 @@ jobs:
         run: |
           uv venv --python 3.12 backend/.venv
           echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
         working-directory: backend
 
       - name: Lint
@@ -103,9 +104,10 @@ jobs:
         run: |
           uv venv --python 3.12 backend/.venv
           echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
+          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
 
       - name: Install backend dependencies
-        run: pip install -e ".[dev]"
+        run: uv pip install -e ".[dev]"
         working-directory: backend
 
       - uses: actions/setup-node@v4
