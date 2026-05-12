@@ -52,7 +52,8 @@ jobs:
         run: ruff format --check backend/
 
       - name: Type check
-        run: mypy backend/
+        run: mypy .
+        working-directory: backend
 
       - name: Security scan
         run: bandit -r backend/app backend/book_recommender && pip-audit
