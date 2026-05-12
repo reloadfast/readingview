@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "@/components/layout";
+import { WebSocketProvider } from "@/contexts/WebSocketContext";
 import DashboardPage   from "@/pages/DashboardPage";
 import LibraryPage     from "@/pages/LibraryPage";
 import StatisticsPage  from "@/pages/StatisticsPage";
@@ -39,7 +40,9 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <WebSocketProvider queryClient={queryClient}>
+        <RouterProvider router={router} />
+      </WebSocketProvider>
     </QueryClientProvider>
   );
 }

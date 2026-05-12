@@ -30,9 +30,14 @@ from .api import (
 from .api import (
     settings as settings_router,
 )
+from .api import (
+    ws as ws_router,
+)
+from .api.ws import manager as ws_manager
 from .config import settings
 from .db import _AsyncSession
 from .models.settings import Settings
+from .services import abs_socket as abs_socket_svc
 from .services import scheduler as scheduler_svc
 
 
@@ -83,7 +88,7 @@ def _configure_logging() -> None:
 _configure_logging()
 
 
-async def _get_scheduler_settings() -> tuple[str, str, str]:
+async def _get_startup_settings() -> tuple[str, str, str, str | None, str | None]:
     async with _AsyncSession() as db:
         await db.execute(
             sqlite_insert(Settings).values(id=1).on_conflict_do_nothing(index_elements=["id"])
@@ -92,14 +97,19 @@ async def _get_scheduler_settings() -> tuple[str, str, str]:
     refresh_cron = row.releases_refresh_cron if row else "0 6 * * *"
     notify_time = row.notify_time if row else "09:00"
     notify_timezone = row.timezone if row else "UTC"
-    return refresh_cron, notify_time, notify_timezone
+    abs_url = row.abs_url if row else None
+    abs_token_enc = row.abs_token if row else None
+    return refresh_cron, notify_time, notify_timezone, abs_url, abs_token_enc
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
-    refresh_cron, notify_time, notify_timezone = await _get_scheduler_settings()
+    cron_parts = await _get_startup_settings()
+    refresh_cron, notify_time, notify_timezone, abs_url, abs_token_enc = cron_parts
     await scheduler_svc.start(refresh_cron, notify_time, notify_timezone)
+    await abs_socket_svc.start(ws_manager, abs_url, abs_token_enc)
     yield
+    await abs_socket_svc.stop()
     scheduler_svc.stop()
 
 
@@ -113,6 +123,7 @@ if settings.COVER_CACHE_ENABLED:
         settings.COVER_CACHE_MAX_SIZE,
     )
 
+app.include_router(ws_router.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(covers.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")

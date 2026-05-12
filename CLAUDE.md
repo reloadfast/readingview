@@ -15,6 +15,47 @@
 - Confirmed unavailable on `data.forgejo.org`: `aquasecurity/trivy-action`, `github/codeql-action`, `actions/upload-artifact`, `peter-evans/dockerhub-description`. Replace all with CLI equivalents.
 - Trivy: install via `curl | sh`, run as CLI. Exit-code 0 (report, don't block).
 
+### Python in CI — hard-won rules
+
+**Use `uv`, not `actions/setup-python`.** The runner mounts a shared toolcache volume at `/mnt/cache/appdata/ci-tool-cache`. Concurrent jobs both calling `actions/setup-python` race to install Python there and corrupt each other's pip. `uv` avoids this entirely — it manages Python in `~/.local/share/uv` which is safe for concurrent access.
+
+CI pattern for any job needing Python:
+```yaml
+- name: Install uv
+  run: |
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+- name: Set up Python 3.12
+  run: |
+    uv venv --python 3.12 backend/.venv
+    echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
+    echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
+
+- name: Install dependencies
+  run: uv pip install -e ".[dev]"
+  working-directory: backend
+```
+
+Key points:
+- Use `uv pip install`, not bare `pip install -e`. The project build backend (`setuptools>=61`) is below the PEP 660 threshold (64+) that newer pip requires for editable installs. `uv pip` handles it.
+- Write `VIRTUAL_ENV` to `$GITHUB_ENV` so uv knows which venv to target in all subsequent steps.
+- **Do not use Python 3.14 in CI.** The `actions/python-versions` release for 3.14 is broken (missing `mmap` module, pip fails to install). Stay on 3.12.
+
+**mypy must be invoked as `mypy --ignore-missing-imports backend/` from the repo root.** Running `mypy .` from `working-directory: backend` finds `backend/pyproject.toml` and applies `strict = true`, which surfaces ~400 pre-existing violations that have never been enforced. The pre-push hook also uses `--ignore-missing-imports backend/` from root — keep CI identical to the hook.
+
+**Local Python (3.14) and CI Python (3.12) generate different OpenAPI schemas.** The pre-push hook warns about this but does not block — it restores the committed file before pushing. The committed `api.generated.ts` is always the CI (Python 3.12) version. Never commit the locally-regenerated version unless you have verified CI also produces it. Do not run `pnpm openapi` manually and commit the result.
+
+### book_recommender optional dependency rules
+
+`numpy` is an optional dependency of the optional `book_recommender` module. It is **not** installed in the base dev/CI environment. Any test that exercises a code path reaching `_compute_query_vector` (in `book_recommender/service.py`) must mock it:
+
+```python
+patch("book_recommender.service._compute_query_vector", return_value=[0.1] * 16)
+```
+
+Do not add `numpy` to dev dependencies to fix a test — mock the boundary instead.
+
 ## Architecture
 
 ReadingView is a **FastAPI + React** application:
