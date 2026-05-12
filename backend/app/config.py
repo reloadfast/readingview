@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     COVER_CACHE_MAX_SIZE: int = 524288000  # 500 MB in bytes
     BACKUP_TOKEN: str | None = None
     BACKUP_MAX_RESTORE_BYTES: int = 1024 * 1024 * 1024  # 1 GiB
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "text"
 
 
 settings = Settings()  # type: ignore[call-arg]

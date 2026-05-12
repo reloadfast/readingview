@@ -1,3 +1,6 @@
+import json
+import logging
+import logging.config
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -24,6 +27,53 @@ from .api import (
     settings as settings_router,
 )
 from .config import settings
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "time": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+                "level": record.levelname,
+                "logger": record.name,
+                "msg": record.getMessage(),
+            }
+        )
+
+
+def _configure_logging() -> None:
+    use_json = settings.LOG_FORMAT.lower() == "json"
+    level = settings.LOG_LEVEL.upper()
+    cfg: dict = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "text": {
+                "format": "%(asctime)s %(levelname)-8s %(name)s — %(message)s",
+                "datefmt": "%Y-%m-%dT%H:%M:%S",
+            },
+            "json": {
+                "()": _JsonFormatter,
+            },
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "json" if use_json else "text",
+                "stream": "ext://sys.stdout",
+            }
+        },
+        "root": {"level": level, "handlers": ["console"]},
+        "loggers": {
+            "uvicorn": {"propagate": True, "handlers": []},
+            "uvicorn.error": {"propagate": True, "handlers": []},
+            "uvicorn.access": {"propagate": True, "handlers": []},
+        },
+    }
+    logging.config.dictConfig(cfg)
+
+
+_configure_logging()
 
 app = FastAPI(title="ReadingView")
 

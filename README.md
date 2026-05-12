@@ -83,7 +83,7 @@ readingview/
 
 ## Configuration
 
-Four environment variables bootstrap the container. All other settings (Audiobookshelf credentials, notifications, appearance) are managed through the **Settings UI** at `/settings`.
+Environment variables bootstrap the container. All other settings (Audiobookshelf credentials, notifications, appearance) are managed through the **Settings UI** at `/settings`.
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -91,6 +91,8 @@ Four environment variables bootstrap the container. All other settings (Audioboo
 | `SECRET_KEY` | Yes | Long random string for session signing |
 | `PORT` | No | Container port (default: 8000) |
 | `TZ` | No | Timezone (default: UTC) |
+| `LOG_LEVEL` | No | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` (default: `INFO`) |
+| `LOG_FORMAT` | No | Log output format: `text` (human-readable) or `json` (structured, for log aggregators) (default: `text`) |
 
 See [`.env.example`](.env.example) for the full template.
 
