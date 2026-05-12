@@ -7,7 +7,6 @@ import pytest
 
 from app.services.notify import _parse_release_date, build_digest, send
 
-
 # ---------------------------------------------------------------------------
 # _parse_release_date
 # ---------------------------------------------------------------------------

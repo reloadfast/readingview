@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 
 async def test_test_notification_no_apprise_url(client):
     r = await client.post("/api/notifications/test")
