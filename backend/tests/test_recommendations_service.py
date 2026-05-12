@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import app.services.recommendations as rec_mod
@@ -102,10 +101,8 @@ async def test_configure_recommender_skips_when_hash_unchanged(engine):
     """When DB hash matches current settings, _configure_recommender returns early."""
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    # Insert settings row and pre-populate recommender_config_hash with the current hash
+    # Pre-populate recommender_config_hash to match current settings (row seeded by migration)
     async with factory() as session:
-        async with session.begin():
-            await session.execute(sqlite_insert(Settings).values(id=1))
         row = await session.get(Settings, 1)
         row.recommender_config_hash = _settings_hash(row)
         await session.commit()
@@ -128,10 +125,8 @@ async def test_configure_recommender_redetects_after_settings_change(engine):
     """
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    # Initial state: settings row with hash matching current field values
+    # Initial state: settings row with hash matching current field values (row seeded by migration)
     async with factory() as session:
-        async with session.begin():
-            await session.execute(sqlite_insert(Settings).values(id=1))
         row = await session.get(Settings, 1)
         row.recommender_config_hash = _settings_hash(row)
         await session.commit()
