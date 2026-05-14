@@ -5,7 +5,6 @@
 import type {
   AddItemRequest,
   ABSTestRequest,
-  AuthorBook,
   AuthorDetail,
   CollectionDetail,
   CollectionOut,
@@ -41,7 +40,6 @@ import type {
 export type {
   AddItemRequest,
   ABSTestRequest,
-  AuthorBook,
   AuthorCount,
   AuthorDetail,
   BookProgress,

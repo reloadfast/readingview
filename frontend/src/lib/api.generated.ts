@@ -243,6 +243,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/authors/library/{author_name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Library Author Detail */
+        get: operations["get_library_author_detail_api_authors_library__author_name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/authors/library": {
         parameters: {
             query?: never;
@@ -742,12 +759,40 @@ export interface components {
             /** Abs Item Id */
             abs_item_id: string;
         };
+        /** AuthorBook */
+        AuthorBook: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Narrator */
+            narrator: string;
+            /** Duration */
+            duration: number;
+            /** Duration Formatted */
+            duration_formatted: string;
+            /** Is Finished */
+            is_finished: boolean;
+        };
         /** AuthorCount */
         AuthorCount: {
             /** Name */
             name: string;
             /** Books */
             books: number;
+        };
+        /** AuthorDetail */
+        AuthorDetail: {
+            /** Name */
+            name: string;
+            /** Book Count */
+            book_count: number;
+            /** Total Hours */
+            total_hours: number;
+            /** Finished Count */
+            finished_count: number;
+            /** Books */
+            books: components["schemas"]["AuthorBook"][];
         };
         /** Body_restore_backup_api_restore_post */
         Body_restore_backup_api_restore_post: {
@@ -1808,6 +1853,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OLAuthorResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_library_author_detail_api_authors_library__author_name__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                author_name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorDetail"];
                 };
             };
             /** @description Validation Error */
