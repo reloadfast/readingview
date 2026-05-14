@@ -13,10 +13,24 @@ _TIMEOUT = 10.0
 
 
 @router.post("/llm/test-connection", response_model=TestConnectionResponse)
-async def test_llm_connection(req: LLMTestRequest) -> TestConnectionResponse:
+async def test_llm_connection(
+    req: LLMTestRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TestConnectionResponse:
     headers: dict[str, str] = {}
-    if req.api_key:
-        headers["Authorization"] = f"Bearer {req.api_key}"
+    api_key = req.api_key or ""
+    needs_key = req.llm_type in ("ollama_bearer", "openai")
+    if needs_key and not api_key:
+        # Token omitted (page-refresh scenario) — load and decrypt from DB.
+        async with db.begin():
+            row = await db.get(Settings, 1)
+        if row and row.llm_api_key:
+            try:
+                api_key = decrypt(row.llm_api_key)
+            except Exception:
+                return TestConnectionResponse(ok=False, error="Stored API key is corrupted")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
     try:
         async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
