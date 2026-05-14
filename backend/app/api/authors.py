@@ -28,9 +28,17 @@ _OL = OpenLibraryClient()
 def _extract_abs_authors(items: list[dict]) -> list[LibraryAuthor]:
     counts: dict[str, int] = {}
     for item in items:
-        raw_authors = item.get("media", {}).get("metadata", {}).get("authors", [])
-        for a in raw_authors:
-            name = a.get("name", "").strip() if isinstance(a, dict) else str(a).strip()
+        metadata = item.get("media", {}).get("metadata", {})
+        raw_authors = metadata.get("authors", [])
+        if raw_authors:
+            names = [
+                a.get("name", "").strip() if isinstance(a, dict) else str(a).strip()
+                for a in raw_authors
+            ]
+        else:
+            author_name_str = metadata.get("authorName", "").strip()
+            names = [n.strip() for n in author_name_str.split(",") if n.strip()]
+        for name in names:
             if name:
                 counts[name] = counts.get(name, 0) + 1
     return sorted(
