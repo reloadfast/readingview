@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -24,10 +25,13 @@ import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint } from "@/lib/ap
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => {
-  const y = String(CURRENT_YEAR - i);
-  return { value: y, label: y };
-});
+const YEAR_OPTIONS = [
+  { value: "all", label: "All Time" },
+  ...Array.from({ length: 5 }, (_, i) => {
+    const y = String(CURRENT_YEAR - i);
+    return { value: y, label: y };
+  }),
+];
 
 const CHART_COLORS = [
   "var(--color-chart-1)",
@@ -186,10 +190,12 @@ function TopList({
   title,
   items,
   valueLabel = "books",
+  linkPrefix,
 }: {
   title: string;
   items: AuthorCount[];
   valueLabel?: string;
+  linkPrefix: string;
 }) {
   return (
     <div className="space-y-1">
@@ -204,7 +210,12 @@ function TopList({
             <span className="text-xs text-text-secondary w-4 text-right flex-shrink-0">
               {i + 1}
             </span>
-            <span className="text-sm text-text-primary flex-1 truncate">{item.name}</span>
+            <Link
+              to={`${linkPrefix}/${encodeURIComponent(item.name)}`}
+              className="text-sm text-text-primary flex-1 truncate hover:text-accent hover:underline"
+            >
+              {item.name}
+            </Link>
             <span className="text-sm font-medium text-text-secondary flex-shrink-0">
               {item.books} {valueLabel}
             </span>
@@ -634,9 +645,13 @@ function EmptyState({ year }: { year: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
       <BookOpen className="w-12 h-12 text-text-secondary opacity-30" />
-      <p className="text-lg font-medium text-text-primary">No data for {year}</p>
+      <p className="text-lg font-medium text-text-primary">
+        {year === "all" ? "No books finished yet" : `No data for ${year}`}
+      </p>
       <p className="text-sm text-text-secondary">
-        Finish some books this year and they'll show up here.
+        {year === "all"
+          ? "Finish some books and they'll show up here."
+          : "Finish some books this year and they'll show up here."}
       </p>
     </div>
   );
@@ -684,7 +699,11 @@ export default function StatisticsPage() {
           Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)
         ) : (
           <>
-            <StatCard label={`Books in ${year}`} value={booksInYear} icon={BookOpen} />
+            <StatCard
+              label={year === "all" ? "All Books Finished" : `Books in ${year}`}
+              value={booksInYear}
+              icon={BookOpen}
+            />
             <StatCard label="Total Hours" value={totalHours} icon={Clock} />
             <StatCard label="Avg / Month" value={avgPerMonth} icon={TrendingUp} />
             <StatCard label="Longest Streak" value={`${longestStreak}d`} icon={Flame} />
@@ -692,31 +711,35 @@ export default function StatisticsPage() {
         )}
       </div>
 
-      {/* Reading goal */}
-      <GoalCard booksFinished={booksInYear} year={year} />
+      {/* Reading goal — not shown for all-time view */}
+      {year !== "all" && <GoalCard booksFinished={booksInYear} year={year} />}
 
       {/* Charts / lists / recap — or empty state */}
       {noData ? (
         <EmptyState year={year} />
       ) : (
         <>
-          {/* Activity heatmap */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-text-primary">Listening Activity</h2>
-            <Card>
-              <CardContent>
-                {heatmap.isLoading ? (
-                  <ChartSkeleton height={120} />
-                ) : (
-                  <ActivityHeatmap data={heatmap.data?.data ?? []} year={year} />
-                )}
-              </CardContent>
-            </Card>
-          </section>
+          {/* Activity heatmap — year-specific only */}
+          {year !== "all" && (
+            <section className="space-y-4">
+              <h2 className="text-lg font-semibold text-text-primary">Listening Activity</h2>
+              <Card>
+                <CardContent>
+                  {heatmap.isLoading ? (
+                    <ChartSkeleton height={120} />
+                  ) : (
+                    <ActivityHeatmap data={heatmap.data?.data ?? []} year={year} />
+                  )}
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
-          {/* Monthly breakdown */}
+          {/* Monthly / yearly breakdown */}
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2>
+            <h2 className="text-lg font-semibold text-text-primary">
+              {year === "all" ? "Books by Year" : "Monthly Breakdown"}
+            </h2>
             <Card>
               <CardContent>
                 {yearly.isLoading ? (
@@ -766,7 +789,15 @@ export default function StatisticsPage() {
             {/* Authors + Narrators */}
             <div className="space-y-6">
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-text-primary">Top Authors</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-text-primary">Top Authors</h2>
+                  <Link
+                    to="/authors?tab=library&sort=books"
+                    className="text-xs text-text-secondary hover:text-accent transition-colors"
+                  >
+                    View all →
+                  </Link>
+                </div>
                 <Card>
                   <CardContent>
                     {yearly.isLoading ? (
@@ -779,6 +810,7 @@ export default function StatisticsPage() {
                       <TopList
                         title=""
                         items={yearly.data?.top_authors ?? []}
+                        linkPrefix="/authors"
                       />
                     )}
                   </CardContent>
@@ -786,7 +818,15 @@ export default function StatisticsPage() {
               </section>
 
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-text-primary">Top Narrators</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-text-primary">Top Narrators</h2>
+                  <Link
+                    to="/narrators?sort=books"
+                    className="text-xs text-text-secondary hover:text-accent transition-colors"
+                  >
+                    View all →
+                  </Link>
+                </div>
                 <Card>
                   <CardContent>
                     {yearly.isLoading ? (
@@ -799,6 +839,7 @@ export default function StatisticsPage() {
                       <TopList
                         title=""
                         items={yearly.data?.top_narrators ?? []}
+                        linkPrefix="/narrators"
                       />
                     )}
                   </CardContent>
@@ -807,8 +848,8 @@ export default function StatisticsPage() {
             </div>
           </div>
 
-          {/* Year in Recap */}
-          {recap.data && <RecapSection data={recap.data} />}
+          {/* Year in Recap — year-specific only */}
+          {year !== "all" && recap.data && <RecapSection data={recap.data} />}
         </>
       )}
     </div>

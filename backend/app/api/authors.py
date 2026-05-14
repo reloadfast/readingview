@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import httpx
@@ -8,7 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..api.deps import abs_client
 from ..db import get_db
 from ..models.authors import TrackedAuthor
-from ..schemas.authors import FollowRequest, LibraryAuthor, OLAuthorResult, TrackedAuthorOut
+from ..schemas.authors import (
+    AuthorDetail,
+    FollowRequest,
+    LibraryAuthor,
+    OLAuthorResult,
+    TrackedAuthorOut,
+)
+from ..services import authors as author_svc
 from ..services.audiobookshelf import AudiobookshelfClient
 from ..services.openlibrary import OpenLibraryClient
 
@@ -60,6 +68,25 @@ async def search_authors(q: str = Query(..., min_length=1)) -> list[OLAuthorResu
             )
         )
     return results
+
+
+@router.get("/authors/library/{author_name}", response_model=AuthorDetail)
+async def get_library_author_detail(
+    author_name: str,
+    client: AudiobookshelfClient = Depends(abs_client),
+) -> AuthorDetail:
+    try:
+        items, progress_map = await asyncio.gather(
+            client.get_all_library_items(),
+            client.get_media_progress_map(),
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    detail = author_svc.compute_author_detail(author_name, items, progress_map)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Author not found")
+    return detail
 
 
 @router.get("/authors/library", response_model=list[LibraryAuthor])

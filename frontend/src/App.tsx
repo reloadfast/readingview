@@ -12,6 +12,8 @@ import ReleasesPage    from "@/pages/ReleasesPage";
 import CollectionsPage      from "@/pages/CollectionsPage";
 import RecommendationsPage  from "@/pages/RecommendationsPage";
 import SettingsPage         from "@/pages/SettingsPage";
+import AuthorBooksPage      from "@/pages/AuthorBooksPage";
+import NarratorBooksPage    from "@/pages/NarratorBooksPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,7 +29,9 @@ const router = createBrowserRouter([
       { path: "/library",     element: <LibraryPage />     },
       { path: "/statistics",  element: <StatisticsPage />  },
       { path: "/authors",     element: <AuthorsPage />     },
+      { path: "/authors/:name", element: <AuthorBooksPage /> },
       { path: "/narrators",   element: <NarratorsPage />   },
+      { path: "/narrators/:name", element: <NarratorBooksPage /> },
       { path: "/series",      element: <SeriesPage />      },
       { path: "/releases",    element: <ReleasesPage />    },
       { path: "/collections",    element: <CollectionsPage />     },

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronUp, Mic, Search } from "lucide-react";
 import { Badge, Input, Skeleton } from "@/components/ui";
 import { useNarratorDetail, useNarrators } from "@/hooks/useNarrators";
@@ -46,7 +47,13 @@ function NarratorDetailPanel({ name }: { name: string }) {
         <div key={book.id} className="py-2 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm text-text-primary truncate">{book.title}</p>
-            <p className="text-xs text-text-secondary">{book.author}</p>
+            <Link
+          to={`/authors/${encodeURIComponent(book.author)}`}
+          className="text-xs text-text-secondary hover:text-accent hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {book.author}
+        </Link>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-xs text-text-secondary">{book.duration_formatted}</span>
@@ -126,9 +133,16 @@ function EmptyState({ filtered }: { filtered: boolean }) {
 
 export default function NarratorsPage() {
   const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const sortByBooks = searchParams.get("sort") === "books";
   const { data, isLoading } = useNarrators();
 
-  const filtered = (data ?? []).filter((n) =>
+  const sorted = [...(data ?? [])].sort((a, b) =>
+    sortByBooks
+      ? b.book_count - a.book_count
+      : a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+  );
+  const filtered = sorted.filter((n) =>
     search ? n.name.toLowerCase().includes(search.toLowerCase()) : true
   );
 

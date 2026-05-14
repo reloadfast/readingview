@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   followAuthor,
+  getAuthorDetail,
   getAuthors,
   getLibraryAuthors,
   searchAuthors,
@@ -19,6 +20,14 @@ export function useLibraryAuthors() {
   return useQuery({
     queryKey: ["authors", "library"],
     queryFn: getLibraryAuthors,
+  });
+}
+
+export function useAuthorDetail(name: string) {
+  return useQuery({
+    queryKey: ["authors", "detail", name],
+    queryFn: () => getAuthorDetail(name),
+    enabled: Boolean(name),
   });
 }
 

@@ -53,3 +53,5 @@ export type TrackedAuthorOut = components["schemas"]["TrackedAuthorOut"];
 export type ValidationError = components["schemas"]["ValidationError"];
 export type YearlyPoint = components["schemas"]["YearlyPoint"];
 export type YearlyStats = components["schemas"]["YearlyStats"];
+export type AuthorBook = components["schemas"]["AuthorBook"];
+export type AuthorDetail = components["schemas"]["AuthorDetail"];

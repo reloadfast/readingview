@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
@@ -249,9 +249,42 @@ function BookCard({ book }: { book: LibraryBook }) {
     <div className="flex flex-col gap-2">
       <CoverImage book={book} />
       <p className="text-sm font-medium text-text-primary line-clamp-2">{book.title}</p>
-      <p className="text-xs text-text-secondary line-clamp-1">{book.authors}</p>
+      <p className="text-xs text-text-secondary line-clamp-1">
+        {book.authors.split(",").map((a, i, arr) => {
+          const name = a.trim();
+          return (
+            <span key={name}>
+              <Link
+                to={`/authors/${encodeURIComponent(name)}`}
+                className="hover:text-accent hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {name}
+              </Link>
+              {i < arr.length - 1 ? ", " : ""}
+            </span>
+          );
+        })}
+      </p>
       {book.narrator && (
-        <p className="text-xs text-text-secondary line-clamp-1">Narrated by {book.narrator}</p>
+        <p className="text-xs text-text-secondary line-clamp-1">
+          Narrated by{" "}
+          {book.narrator.split(",").map((n, i, arr) => {
+            const name = n.trim();
+            return (
+              <span key={name}>
+                <Link
+                  to={`/narrators/${encodeURIComponent(name)}`}
+                  className="hover:text-accent hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {name}
+                </Link>
+                {i < arr.length - 1 ? ", " : ""}
+              </span>
+            );
+          })}
+        </p>
       )}
       {book.progress && (
         <>

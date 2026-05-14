@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Clock, Flame } from "lucide-react";
 import { Badge, Card, CardContent, CoverImage, Skeleton } from "@/components/ui";
 import { useInProgress, useLibrary } from "@/hooks/useLibrary";
@@ -72,7 +73,19 @@ function InProgressCard({ book }: { book: LibraryBook }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-text-primary truncate">{book.title}</p>
-        <p className="text-xs text-text-secondary truncate">{book.authors}</p>
+        <p className="text-xs text-text-secondary truncate">
+          {book.authors.split(",").map((a, i, arr) => {
+            const name = a.trim();
+            return (
+              <span key={name}>
+                <Link to={`/authors/${encodeURIComponent(name)}`} className="hover:underline">
+                  {name}
+                </Link>
+                {i < arr.length - 1 ? ", " : ""}
+              </span>
+            );
+          })}
+        </p>
         <div
           role="progressbar"
           aria-valuenow={Math.round(pct)}
@@ -103,7 +116,19 @@ function FinishedRow({ book }: { book: LibraryBook }) {
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-text-primary truncate">{book.title}</p>
-        <p className="text-xs text-text-secondary">{book.authors}</p>
+        <p className="text-xs text-text-secondary">
+          {book.authors.split(",").map((a, i, arr) => {
+            const name = a.trim();
+            return (
+              <span key={name}>
+                <Link to={`/authors/${encodeURIComponent(name)}`} className="hover:underline">
+                  {name}
+                </Link>
+                {i < arr.length - 1 ? ", " : ""}
+              </span>
+            );
+          })}
+        </p>
       </div>
       <Badge variant="positive">Done</Badge>
     </div>
