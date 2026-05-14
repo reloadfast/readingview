@@ -195,7 +195,7 @@ def _compute_query_vector(
             prompt_vec = list(emb)
 
     if book_vec is not None and prompt_vec is not None:
-        return [0.6 * b + 0.4 * p for b, p in zip(book_vec, prompt_vec)]
+        return [0.6 * b + 0.4 * p for b, p in zip(book_vec, prompt_vec, strict=True)]
     elif book_vec is not None:
         return book_vec
     elif prompt_vec is not None:
