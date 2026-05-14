@@ -179,29 +179,27 @@ def _compute_query_vector(
     liked_book_ids: list[str] | None,
     free_text_prompt: str | None,
 ) -> list[float] | None:
-    import numpy as np
-
-    book_vec = None
-    prompt_vec = None
+    book_vec: list[float] | None = None
+    prompt_vec: list[float] | None = None
 
     if liked_book_ids:
         embeddings = [_db.get_embedding(bid) for bid in liked_book_ids]
         valid = [e for e in embeddings if e is not None]
         if valid:
-            book_vec = np.mean(valid, axis=0).astype(np.float32)
+            n = len(valid)
+            book_vec = [sum(row[i] for row in valid) / n for i in range(len(valid[0]))]
 
     if free_text_prompt:
         emb = _ollama.embed(free_text_prompt)
         if emb is not None:
-            prompt_vec = np.array(emb, dtype=np.float32)
+            prompt_vec = list(emb)
 
     if book_vec is not None and prompt_vec is not None:
-        merged = 0.6 * book_vec + 0.4 * prompt_vec
-        return merged.tolist()
+        return [0.6 * b + 0.4 * p for b, p in zip(book_vec, prompt_vec)]
     elif book_vec is not None:
-        return book_vec.tolist()
+        return book_vec
     elif prompt_vec is not None:
-        return prompt_vec.tolist()
+        return prompt_vec
     return None
 
 
