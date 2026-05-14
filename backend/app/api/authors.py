@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..api.deps import abs_client
 from ..db import get_db
 from ..models.authors import TrackedAuthor
-from ..schemas.authors import AuthorDetail, FollowRequest, LibraryAuthor, OLAuthorResult, TrackedAuthorOut
+from ..schemas.authors import (
+    AuthorDetail,
+    FollowRequest,
+    LibraryAuthor,
+    OLAuthorResult,
+    TrackedAuthorOut,
+)
 from ..services import authors as author_svc
 from ..services.audiobookshelf import AudiobookshelfClient
 from ..services.openlibrary import OpenLibraryClient
