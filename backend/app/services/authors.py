@@ -19,7 +19,11 @@ def compute_author_detail(
         media = item.get("media", {})
         metadata = media.get("metadata", {})
         raw_authors = metadata.get("authors", [])
-        names = [a.get("name", "").strip() for a in raw_authors if isinstance(a, dict)]
+        if raw_authors:
+            names = [a.get("name", "").strip() for a in raw_authors if isinstance(a, dict)]
+        else:
+            author_name_str = metadata.get("authorName", "").strip()
+            names = [n.strip() for n in author_name_str.split(",") if n.strip()]
         matched = next((n for n in names if n.lower() == author_name.lower()), None)
         if matched is None:
             continue

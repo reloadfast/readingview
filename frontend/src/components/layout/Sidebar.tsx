@@ -12,6 +12,8 @@ import {
   Settings,
   type LucideIcon,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getHealth } from "@/lib/api";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,12 @@ interface SidebarProps {
 }
 
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+  const { data } = useQuery({
+    queryKey: ["health"],
+    queryFn: getHealth,
+    staleTime: Infinity,
+  });
+
   return (
     <aside
       className={cn(
@@ -76,7 +84,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-border p-3">
+      <div className="shrink-0 border-t border-border px-3 py-2 flex items-center justify-between">
+        <span className="text-xs text-text-secondary pl-1">
+          {data?.version ? `v${data.version}` : ""}
+        </span>
         <ThemeToggle />
       </div>
     </aside>
