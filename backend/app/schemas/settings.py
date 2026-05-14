@@ -73,7 +73,7 @@ class LLMTestRequest(BaseModel):
 
 class ABSTestRequest(BaseModel):
     url: str
-    token: str
+    token: str | None = None  # None or "" = fall back to stored token
 
 
 class TestConnectionResponse(BaseModel):

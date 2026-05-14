@@ -735,7 +735,7 @@ export interface components {
             /** Url */
             url: string;
             /** Token */
-            token: string;
+            token?: string | null;
         };
         /** AddItemRequest */
         AddItemRequest: {

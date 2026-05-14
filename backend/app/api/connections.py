@@ -1,6 +1,10 @@
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..crypto import decrypt
+from ..db import get_db
+from ..models.settings import Settings
 from ..schemas.settings import ABSTestRequest, LLMTestRequest, TestConnectionResponse
 
 router = APIRouter()
@@ -28,8 +32,24 @@ async def test_llm_connection(req: LLMTestRequest) -> TestConnectionResponse:
 
 
 @router.post("/abs/test-connection", response_model=TestConnectionResponse)
-async def test_abs_connection(req: ABSTestRequest) -> TestConnectionResponse:
-    headers = {"Authorization": f"Bearer {req.token}"}
+async def test_abs_connection(
+    req: ABSTestRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TestConnectionResponse:
+    token = req.token or ""
+    if not token:
+        # Token omitted (e.g. page-refresh scenario where the UI shows a masked
+        # placeholder) — load and decrypt the stored token from the DB.
+        async with db.begin():
+            row = await db.get(Settings, 1)
+        if not row or not row.abs_token:
+            return TestConnectionResponse(ok=False, error="No API token configured")
+        try:
+            token = decrypt(row.abs_token)
+        except Exception:
+            return TestConnectionResponse(ok=False, error="Stored token is corrupted")
+
+    headers = {"Authorization": f"Bearer {token}"}
     base = req.url.rstrip("/")
 
     try:
