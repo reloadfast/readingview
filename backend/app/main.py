@@ -28,6 +28,9 @@ from .api import (
     statistics,
 )
 from .api import (
+    cache as cache_router,
+)
+from .api import (
     settings as settings_router,
 )
 from .api import (
@@ -37,6 +40,7 @@ from .api.ws import manager as ws_manager
 from .config import settings
 from .db import _AsyncSession
 from .models.settings import Settings
+from .services import abs_cache as abs_cache_svc
 from .services import abs_socket as abs_socket_svc
 from .services import scheduler as scheduler_svc
 
@@ -108,8 +112,11 @@ async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     refresh_cron, notify_time, notify_timezone, abs_url, abs_token_enc = cron_parts
     await scheduler_svc.start(refresh_cron, notify_time, notify_timezone)
     await abs_socket_svc.start(ws_manager, abs_url, abs_token_enc)
+    if abs_url and abs_token_enc:
+        await abs_cache_svc.start(abs_url, abs_token_enc)
     yield
     await abs_socket_svc.stop()
+    await abs_cache_svc.stop()
     scheduler_svc.stop()
 
 
@@ -128,6 +135,7 @@ app.include_router(health.router, prefix="/api")
 app.include_router(covers.router, prefix="/api")
 app.include_router(settings_router.router, prefix="/api")
 app.include_router(connections.router, prefix="/api")
+app.include_router(cache_router.router, prefix="/api")
 app.include_router(library.router, prefix="/api")
 app.include_router(statistics.router, prefix="/api")
 app.include_router(authors.router, prefix="/api")

@@ -5,10 +5,10 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..api.deps import abs_client
+from ..api.deps import abs_cache
 from ..db import get_db
 from ..schemas.library import BookProgress, LibraryBook, SeriesEntry
-from ..services.audiobookshelf import AudiobookshelfClient
+from ..services.abs_cache import AbsDataCache
 
 router = APIRouter()
 
@@ -102,7 +102,7 @@ async def get_library(
     ),
     page: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=200),
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
     db: AsyncSession = Depends(get_db),
 ) -> list[LibraryBook]:
     try:
@@ -116,7 +116,7 @@ async def get_library(
     return books[page * limit : (page + 1) * limit]
 
 
-async def _parallel_fetch(client: AudiobookshelfClient):
+async def _parallel_fetch(client: AbsDataCache):
     items_task = asyncio.create_task(client.get_all_library_items())
     progress_task = asyncio.create_task(client.get_media_progress_map())
     items = await items_task
@@ -126,7 +126,7 @@ async def _parallel_fetch(client: AudiobookshelfClient):
 
 @router.get("/library/in-progress", response_model=list[LibraryBook])
 async def get_in_progress(
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> list[LibraryBook]:
     try:
         items_task = asyncio.create_task(client.get_user_items_in_progress())
@@ -142,7 +142,7 @@ async def get_in_progress(
 @router.get("/library/{item_id}", response_model=LibraryBook)
 async def get_library_item(
     item_id: str,
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> LibraryBook:
     try:
         item_task = asyncio.create_task(client.get_item(item_id))

@@ -3,17 +3,17 @@ import asyncio
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..api.deps import abs_client
+from ..api.deps import abs_cache
 from ..schemas.narrators import NarratorDetail, NarratorSummary
 from ..services import narrators as narrator_svc
-from ..services.audiobookshelf import AudiobookshelfClient
+from ..services.abs_cache import AbsDataCache
 
 router = APIRouter()
 
 
 @router.get("/narrators", response_model=list[NarratorSummary])
 async def list_narrators(
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> list[NarratorSummary]:
     try:
         items, progress_map = await asyncio.gather(
@@ -29,7 +29,7 @@ async def list_narrators(
 @router.get("/narrators/{narrator_name}", response_model=NarratorDetail)
 async def get_narrator(
     narrator_name: str,
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> NarratorDetail:
     try:
         items, progress_map = await asyncio.gather(

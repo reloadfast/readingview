@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..api.deps import abs_client
+from ..api.deps import abs_cache
 from ..db import get_db
 from ..models.authors import TrackedAuthor
 from ..schemas.authors import (
@@ -17,7 +17,7 @@ from ..schemas.authors import (
     TrackedAuthorOut,
 )
 from ..services import authors as author_svc
-from ..services.audiobookshelf import AudiobookshelfClient
+from ..services.abs_cache import AbsDataCache
 from ..services.openlibrary import OpenLibraryClient
 
 router = APIRouter()
@@ -73,7 +73,7 @@ async def search_authors(q: str = Query(..., min_length=1)) -> list[OLAuthorResu
 @router.get("/authors/library/{author_name}", response_model=AuthorDetail)
 async def get_library_author_detail(
     author_name: str,
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> AuthorDetail:
     try:
         items, progress_map = await asyncio.gather(
@@ -91,7 +91,7 @@ async def get_library_author_detail(
 
 @router.get("/authors/library", response_model=list[LibraryAuthor])
 async def get_library_authors(
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
     db: AsyncSession = Depends(get_db),
 ) -> list[LibraryAuthor]:
     try:
