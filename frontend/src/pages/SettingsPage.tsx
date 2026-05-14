@@ -75,7 +75,7 @@ function AbsSection({ settings }: { settings: SettingsRead }) {
     setTesting(true);
     setTestStatus(null);
     try {
-      const res = await testAbsConnection({ url, token: token || "" });
+      const res = await testAbsConnection({ url, token: token || null });
       if (res.ok) {
         const meta = res.metadata;
         const name = meta?.library_name as string | undefined;
