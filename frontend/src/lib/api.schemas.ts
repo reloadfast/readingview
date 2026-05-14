@@ -53,3 +53,20 @@ export type TrackedAuthorOut = components["schemas"]["TrackedAuthorOut"];
 export type ValidationError = components["schemas"]["ValidationError"];
 export type YearlyPoint = components["schemas"]["YearlyPoint"];
 export type YearlyStats = components["schemas"]["YearlyStats"];
+
+export interface AuthorBook {
+  id: string;
+  title: string;
+  narrator: string;
+  duration: number;
+  duration_formatted: string;
+  is_finished: boolean;
+}
+
+export interface AuthorDetail {
+  name: string;
+  book_count: number;
+  total_hours: number;
+  finished_count: number;
+  books: AuthorBook[];
+}

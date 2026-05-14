@@ -149,20 +149,31 @@ def compute_yearly_stats(
     by_year = _group_by_year(finished)
     by_month = _group_by_month(finished)
 
-    year_books = by_year.get(year, [])
+    if year == "all":
+        year_books = finished
+        monthly_chart = [
+            MonthlyPoint(month=yr, books=len(bks))
+            for yr, bks in sorted(by_year.items())
+        ]
+    else:
+        year_books = by_year.get(year, [])
+        monthly_chart = [
+            MonthlyPoint(month=f"{year}-{m:02d}", books=len(by_month.get(f"{year}-{m:02d}", [])))
+            for m in range(1, 13)
+        ]
 
-    monthly_chart = [
-        MonthlyPoint(month=f"{year}-{m:02d}", books=len(by_month.get(f"{year}-{m:02d}", [])))
-        for m in range(1, 13)
-    ]
-
-    author_counts: Counter[str] = Counter(b["author"] for b in year_books)
+    author_counts: Counter[str] = Counter()
+    for b in year_books:
+        for name in (n.strip() for n in b["author"].split(",") if n.strip()):
+            author_counts[name] += 1
     top_authors = [AuthorCount(name=a, books=c) for a, c in author_counts.most_common(5)]
 
     narrator_counts: Counter[str] = Counter()
     for b in year_books:
-        if b.get("narrator"):
-            narrator_counts[b["narrator"]] += 1
+        narrator_str = b.get("narrator", "")
+        if narrator_str:
+            for name in (n.strip() for n in narrator_str.split(",") if n.strip()):
+                narrator_counts[name] += 1
     top_narrators = [AuthorCount(name=n, books=c) for n, c in narrator_counts.most_common(5)]
 
     genre_counts: Counter[str] = Counter()

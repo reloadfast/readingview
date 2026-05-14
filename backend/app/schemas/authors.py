@@ -1,6 +1,23 @@
 from pydantic import BaseModel
 
 
+class AuthorBook(BaseModel):
+    id: str
+    title: str
+    narrator: str
+    duration: float
+    duration_formatted: str
+    is_finished: bool
+
+
+class AuthorDetail(BaseModel):
+    name: str
+    book_count: int
+    total_hours: float
+    finished_count: int
+    books: list[AuthorBook]
+
+
 class TrackedAuthorOut(BaseModel):
     id: int
     name: str

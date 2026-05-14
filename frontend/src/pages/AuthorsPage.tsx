@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Search, User, UserMinus, UserPlus } from "lucide-react";
 import { Badge, Input, Skeleton } from "@/components/ui";
@@ -223,12 +224,18 @@ function LibraryAuthorsTab({
   authors,
   isLoading,
   followedNames,
+  sortByBooks,
 }: {
   authors: LibraryAuthor[];
   isLoading: boolean;
   followedNames: Set<string>;
+  sortByBooks?: boolean;
 }) {
   const follow = useFollowAuthor();
+
+  const sorted = sortByBooks
+    ? [...authors].sort((a, b) => b.book_count - a.book_count)
+    : authors;
 
   if (isLoading) {
     return (
@@ -240,7 +247,7 @@ function LibraryAuthorsTab({
     );
   }
 
-  if (authors.length === 0) {
+  if (sorted.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
         <User className="w-12 h-12 text-text-secondary opacity-30" />
@@ -251,7 +258,7 @@ function LibraryAuthorsTab({
 
   return (
     <div className="space-y-1">
-      {authors.map((a) => {
+      {sorted.map((a) => {
         const already = followedNames.has(a.name);
         return (
           <div
@@ -282,6 +289,11 @@ function LibraryAuthorsTab({
 // ---------------------------------------------------------------------------
 
 export default function AuthorsPage() {
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "library" ? "library" : "followed";
+  const sortByBooks = searchParams.get("sort") === "books";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
   const followed = useAuthors();
   const library = useLibraryAuthors();
 
@@ -299,7 +311,7 @@ export default function AuthorsPage() {
     <div className="space-y-6 p-6">
       <h1 className="text-2xl font-bold text-text-primary">Authors</h1>
 
-      <Tabs.Root defaultValue="followed">
+      <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
         <Tabs.List className="flex gap-1 bg-surface rounded-lg p-1 w-fit">
           <Tabs.Trigger
             value="followed"
@@ -329,6 +341,7 @@ export default function AuthorsPage() {
             authors={library.data ?? []}
             isLoading={library.isLoading}
             followedNames={followedNames}
+            sortByBooks={sortByBooks}
           />
         </Tabs.Content>
       </Tabs.Root>

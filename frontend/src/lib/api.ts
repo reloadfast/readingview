@@ -5,6 +5,8 @@
 import type {
   AddItemRequest,
   ABSTestRequest,
+  AuthorBook,
+  AuthorDetail,
   CollectionDetail,
   CollectionOut,
   CreateCollectionRequest,
@@ -39,7 +41,9 @@ import type {
 export type {
   AddItemRequest,
   ABSTestRequest,
+  AuthorBook,
   AuthorCount,
+  AuthorDetail,
   BookProgress,
   BookSummary,
   CollectionDetail,
@@ -184,6 +188,10 @@ export function getAuthors(): Promise<TrackedAuthorOut[]> {
 
 export function getLibraryAuthors(): Promise<LibraryAuthor[]> {
   return apiFetch("/authors/library");
+}
+
+export function getAuthorDetail(name: string): Promise<AuthorDetail> {
+  return apiFetch(`/authors/library/${encodeURIComponent(name)}`);
 }
 
 export function followAuthor(body: FollowRequest): Promise<TrackedAuthorOut> {
