@@ -152,8 +152,7 @@ def compute_yearly_stats(
     if year == "all":
         year_books = finished
         monthly_chart = [
-            MonthlyPoint(month=yr, books=len(bks))
-            for yr, bks in sorted(by_year.items())
+            MonthlyPoint(month=yr, books=len(bks)) for yr, bks in sorted(by_year.items())
         ]
     else:
         year_books = by_year.get(year, [])

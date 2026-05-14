@@ -18,11 +18,7 @@ def compute_author_detail(
         media = item.get("media", {})
         metadata = media.get("metadata", {})
         raw_authors = metadata.get("authors", [])
-        names = [
-            a.get("name", "").strip()
-            for a in raw_authors
-            if isinstance(a, dict)
-        ]
+        names = [a.get("name", "").strip() for a in raw_authors if isinstance(a, dict)]
         if author_name not in names:
             continue
 
