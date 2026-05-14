@@ -451,6 +451,28 @@ export function digestSend(): Promise<NotificationResult> {
 }
 
 // ---------------------------------------------------------------------------
+// Cache
+// ---------------------------------------------------------------------------
+
+export interface CacheKeyStatus {
+  age_seconds: number;
+  expires_in_seconds: number;
+}
+
+export interface CacheStatus {
+  ttl_seconds: number;
+  cached_keys: Record<string, CacheKeyStatus>;
+}
+
+export function getCacheStatus(): Promise<CacheStatus> {
+  return apiFetch("/cache/status");
+}
+
+export function refreshAbsCache(): Promise<void> {
+  return apiFetch("/cache/refresh", { method: "POST" });
+}
+
+// ---------------------------------------------------------------------------
 // Health
 // ---------------------------------------------------------------------------
 

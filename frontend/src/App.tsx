@@ -17,7 +17,7 @@ import NarratorBooksPage    from "@/pages/NarratorBooksPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 30_000, retry: 1 },
+    queries: { staleTime: 5 * 60_000, retry: 1 },
   },
 });
 

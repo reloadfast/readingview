@@ -4,17 +4,17 @@ from datetime import datetime
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from ..api.deps import abs_client
+from ..api.deps import abs_cache
 from ..schemas.statistics import HeatmapData, OverallStats, RecapStats, YearlyStats
 from ..services import statistics as stats_svc
-from ..services.audiobookshelf import AudiobookshelfClient
+from ..services.abs_cache import AbsDataCache
 
 router = APIRouter()
 
 
 @router.get("/statistics", response_model=OverallStats)
 async def get_statistics(
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> OverallStats:
     try:
         progress_map, listening_stats, sessions = await asyncio.gather(
@@ -31,7 +31,7 @@ async def get_statistics(
 @router.get("/statistics/yearly", response_model=YearlyStats)
 async def get_yearly_stats(
     year: str = Query(default=str(datetime.now().year)),
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> YearlyStats:
     try:
         progress_map, listening_stats = await asyncio.gather(
@@ -47,7 +47,7 @@ async def get_yearly_stats(
 @router.get("/statistics/recap", response_model=RecapStats)
 async def get_recap(
     year: str = Query(default=str(datetime.now().year)),
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> RecapStats:
     try:
         progress_map, listening_stats = await asyncio.gather(
@@ -63,7 +63,7 @@ async def get_recap(
 @router.get("/statistics/heatmap", response_model=HeatmapData)
 async def get_heatmap(
     year: str = Query(default=str(datetime.now().year)),
-    client: AudiobookshelfClient = Depends(abs_client),
+    client: AbsDataCache = Depends(abs_cache),
 ) -> HeatmapData:
     try:
         sessions = await client.get_user_listening_sessions()
