@@ -1,6 +1,7 @@
 """Vector similarity search backends."""
 
 import logging
+import math
 from typing import Any, Protocol
 
 logger = logging.getLogger(__name__)
@@ -13,39 +14,41 @@ class VectorBackend(Protocol):
     def search(self, query: list[float], top_k: int) -> list[tuple[str, float]]: ...
 
 
+def _l2_norm(v: list[float]) -> float:
+    return math.sqrt(sum(x * x for x in v))
+
+
+def _normalize(v: list[float]) -> list[float]:
+    norm = _l2_norm(v)
+    if norm == 0.0:
+        return v
+    return [x / norm for x in v]
+
+
+def _dot(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b, strict=True))
+
+
 class PythonCosineBackend:
-    """Pure-Python cosine similarity using numpy."""
+    """Pure-Python cosine similarity (no external dependencies)."""
 
     def __init__(self) -> None:
         self._ids: list[str] = []
-        self._matrix: Any = None
+        self._normed: list[list[float]] = []
 
     def build(self, ids: list[str], vectors: list[list[float]]) -> None:
-        import numpy as np
-
         self._ids = list(ids)
-        if not vectors:
-            self._matrix = np.empty((0, 0), dtype=np.float32)
-            return
-        mat = np.array(vectors, dtype=np.float32)
-        # Pre-normalize rows for cosine similarity via dot product
-        norms = np.linalg.norm(mat, axis=1, keepdims=True)
-        norms[norms == 0] = 1.0
-        self._matrix = mat / norms
+        self._normed = [_normalize(v) for v in vectors]
 
     def search(self, query: list[float], top_k: int) -> list[tuple[str, float]]:
-        import numpy as np
-
-        if self._matrix is None or len(self._ids) == 0:
+        if not self._ids:
             return []
-        q = np.array(query, dtype=np.float32)
-        norm = np.linalg.norm(q)
-        if norm == 0:
+        q = _normalize(query)
+        if _l2_norm(q) == 0.0:
             return []
-        q = q / norm
-        scores = self._matrix @ q
-        top_indices = np.argsort(scores)[::-1][:top_k]
-        return [(self._ids[i], float(scores[i])) for i in top_indices]
+        scores = [_dot(q, row) for row in self._normed]
+        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+        return [(self._ids[i], scores[i]) for i in top_indices]
 
 
 class FAISSBackend:
