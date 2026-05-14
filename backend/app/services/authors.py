@@ -13,14 +13,17 @@ def compute_author_detail(
     books = []
     total_duration = 0.0
     finished_count = 0
+    canonical_name = author_name
 
     for item in items:
         media = item.get("media", {})
         metadata = media.get("metadata", {})
         raw_authors = metadata.get("authors", [])
         names = [a.get("name", "").strip() for a in raw_authors if isinstance(a, dict)]
-        if author_name not in names:
+        matched = next((n for n in names if n.lower() == author_name.lower()), None)
+        if matched is None:
             continue
+        canonical_name = matched
 
         item_id = item.get("id", "")
         title = metadata.get("title", "Unknown Title")
@@ -48,7 +51,7 @@ def compute_author_detail(
         return None
 
     return AuthorDetail(
-        name=author_name,
+        name=canonical_name,
         book_count=len(books),
         total_hours=round(total_duration / 3600, 1),
         finished_count=finished_count,

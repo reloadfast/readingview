@@ -50,7 +50,9 @@ async def _configure_recommender(db: AsyncSession) -> None:
     current_hash = _settings_hash(row)
     stored_hash = row.recommender_config_hash if row is not None else None
 
-    if current_hash == stored_hash:
+    from book_recommender._config import get_config as _get_config
+
+    if current_hash == stored_hash and _get_config() is not None:
         return
 
     from book_recommender._config import RecommenderConfig, configure
