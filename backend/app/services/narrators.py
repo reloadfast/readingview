@@ -63,11 +63,13 @@ def compute_narrator_detail(
     narrator_name: str, items: list[dict], progress_map: dict
 ) -> NarratorDetail | None:
     nm = _build_narrator_map(items, progress_map)
-    entry = nm.get(narrator_name)
-    if entry is None:
+    lower_map = {k.lower(): k for k in nm}
+    canonical = lower_map.get(narrator_name.lower())
+    if canonical is None:
         return None
+    entry = nm[canonical]
     return NarratorDetail(
-        name=narrator_name,
+        name=canonical,
         book_count=len(entry["books"]),
         total_hours=round(entry["total_duration"] / 3600, 1),
         finished_count=entry["finished"],
