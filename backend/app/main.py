@@ -157,5 +157,8 @@ if _dist.exists():
     app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="assets")
 
     @app.get("/{full_path:path}", include_in_schema=False)
-    async def serve_spa(full_path: str) -> FileResponse:  # noqa: ARG001
+    async def serve_spa(full_path: str) -> FileResponse:
+        candidate = _dist / full_path
+        if candidate.is_file():
+            return FileResponse(str(candidate))
         return FileResponse(str(_dist / "index.html"))
