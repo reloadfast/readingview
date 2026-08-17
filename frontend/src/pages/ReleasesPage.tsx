@@ -178,7 +178,7 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
 
 function ReleasesTab() {
   const [authorFilter, setAuthorFilter] = useState(AUTHOR_ALL);
-  const [includeManual, setIncludeManual] = useState(false);
+  const [includeManual, setIncludeManual] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [lastFailedCount, setLastFailedCount] = useState(0);
 
