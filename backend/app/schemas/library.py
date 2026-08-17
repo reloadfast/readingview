@@ -29,4 +29,5 @@ class LibraryBook(BaseModel):
     published_year: str | None = None
     isbn: str | None = None
     asin: str | None = None
+    added_at: int | None = None  # ABS epoch ms
     progress: BookProgress | None = None

@@ -120,7 +120,11 @@ def test_item_to_book_missing_title_fallback():
 
 
 def _make_book(
-    title: str, progress_pct: float = 0.0, last_update: int = 0, finished_at: int = 0
+    title: str,
+    progress_pct: float = 0.0,
+    last_update: int = 0,
+    finished_at: int = 0,
+    added_at: int = 0,
 ) -> LibraryBook:
     progress = BookProgress(
         is_finished=finished_at > 0,
@@ -138,6 +142,7 @@ def _make_book(
         cover_url="",
         genres=[],
         series=[],
+        added_at=added_at or None,
         progress=progress,
     )
 
@@ -171,6 +176,16 @@ def test_sort_by_updated():
     sorted_books = _sort_books(books, "updated")
     updates = [b.progress.last_update for b in sorted_books]
     assert updates == sorted(updates, reverse=True)
+
+
+def test_sort_by_recently_added():
+    books = [
+        _make_book("A", added_at=100),
+        _make_book("B", added_at=300),
+        _make_book("C", added_at=200),
+    ]
+    sorted_books = _sort_books(books, "recently_added")
+    assert [book.title for book in sorted_books] == ["B", "C", "A"]
 
 
 def test_sort_unknown_key_returns_unchanged():

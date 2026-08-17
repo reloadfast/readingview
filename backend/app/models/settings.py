@@ -40,3 +40,6 @@ class Settings(Base):
 
     # Release auto-refresh
     releases_refresh_cron: Mapped[str] = mapped_column(String, default="0 6 * * *")
+
+    # Library display preferences
+    library_sort_default: Mapped[str] = mapped_column(String, default="title")

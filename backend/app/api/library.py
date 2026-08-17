@@ -1,5 +1,4 @@
 import asyncio
-from typing import Literal
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..api.deps import abs_cache
 from ..db import get_db
+from ..models.settings import Settings
 from ..schemas.library import BookProgress, LibraryBook, SeriesEntry
+from ..schemas.settings import LibrarySort
 from ..services.abs_cache import AbsDataCache
 
 router = APIRouter()
@@ -63,6 +64,7 @@ def _item_to_book(item: dict, progress_map: dict, cover_url_fn) -> LibraryBook:
         published_year=meta.get("publishedYear"),
         isbn=meta.get("isbn"),
         asin=meta.get("asin"),
+        added_at=item.get("addedAt") or item.get("createdAt"),
         progress=progress,
     )
 
@@ -85,6 +87,8 @@ def _sort_books(
             key=lambda b: b.progress.last_update if b.progress and b.progress.last_update else 0,
             reverse=True,
         )
+    if sort == "recently_added":
+        return sorted(books, key=lambda b: b.added_at or 0, reverse=True)
     if sort == "finished":
         return sorted(
             books,
@@ -97,9 +101,7 @@ def _sort_books(
 @router.get("/library", response_model=list[LibraryBook])
 async def get_library(
     search: str | None = Query(default=None),
-    sort: Literal["title", "progress_asc", "progress_desc", "updated", "finished"] = Query(
-        default="updated"
-    ),
+    sort: LibrarySort | None = Query(default=None),
     page: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=200),
     client: AbsDataCache = Depends(abs_cache),
@@ -112,7 +114,9 @@ async def get_library(
 
     books = [_item_to_book(item, progress_map, client.cover_url) for item in items]
 
-    books = _sort_books(books, sort)
+    settings = await db.get(Settings, 1)
+    effective_sort = sort or (settings.library_sort_default if settings else "title")
+    books = _sort_books(books, effective_sort)
     return books[page * limit : (page + 1) * limit]
 
 

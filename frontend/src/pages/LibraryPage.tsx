@@ -9,6 +9,7 @@ import {
   NotebookPen,
   Search,
   Sparkles,
+  Star,
   ThumbsDown,
   ThumbsUp,
   X,
@@ -17,6 +18,7 @@ import { Badge, CoverImage, Input, Select, Skeleton } from "@/components/ui";
 import { useInProgress, useLibrary } from "@/hooks/useLibrary";
 import { useDeleteNote, useNote, useSaveNote } from "@/hooks/useNotes";
 import { useRecommendations, useSubmitFeedback } from "@/hooks/useRecommendations";
+import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import { formatDuration } from "@/lib/utils";
 import type { LibraryBook, LibraryParams, Recommendation } from "@/lib/api";
 
@@ -24,6 +26,7 @@ const PAGE_LIMIT = 20;
 
 const SORT_OPTIONS: { value: NonNullable<LibraryParams["sort"]>; label: string }[] = [
   { value: "title", label: "Title A–Z" },
+  { value: "recently_added", label: "Recently Added" },
   { value: "updated", label: "Recently Updated" },
   { value: "progress_asc", label: "Progress" },
   { value: "finished", label: "Recently Finished" },
@@ -358,10 +361,12 @@ function BookGrid({ books, isLoading }: { books: LibraryBook[] | undefined; isLo
 
 export default function LibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: settings } = useSettings();
+  const updateSettings = useUpdateSettings();
 
   const tab = searchParams.get("tab") ?? "all";
   const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const sort = (searchParams.get("sort") ?? "title") as NonNullable<LibraryParams["sort"]>;
+  const sort = (searchParams.get("sort") ?? settings?.library_sort_default ?? "title") as NonNullable<LibraryParams["sort"]>;
   const urlSearch = searchParams.get("search") ?? "";
 
   const [searchInput, setSearchInput] = useState(urlSearch);
@@ -436,6 +441,10 @@ export default function LibraryPage() {
     );
   }
 
+  function setDefaultSort() {
+    updateSettings.mutate({ library_sort_default: sort });
+  }
+
   const hasNextPage = tab === "all" && (allBooks.data?.length ?? 0) === PAGE_LIMIT;
 
   return (
@@ -469,11 +478,30 @@ export default function LibraryPage() {
               />
             </div>
             {tab === "all" && (
-              <Select
-                options={SORT_OPTIONS}
-                value={sort}
-                onValueChange={setSort}
-              />
+              <div className="flex items-center gap-1">
+                <Select
+                  options={SORT_OPTIONS}
+                  value={sort}
+                  onValueChange={setSort}
+                />
+                <button
+                  type="button"
+                  onClick={setDefaultSort}
+                  disabled={updateSettings.isPending}
+                  title={settings?.library_sort_default === sort ? "Current default sort" : "Set as default sort"}
+                  aria-label={settings?.library_sort_default === sort ? "Current default sort" : "Set as default sort"}
+                  className={`p-2 rounded-md border border-border transition-colors disabled:opacity-40 ${
+                    settings?.library_sort_default === sort
+                      ? "text-amber-400 bg-amber-400/10"
+                      : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                  }`}
+                >
+                  <Star
+                    className="w-4 h-4"
+                    fill={settings?.library_sort_default === sort ? "currentColor" : "none"}
+                  />
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -1096,6 +1096,8 @@ export interface components {
             isbn?: string | null;
             /** Asin */
             asin?: string | null;
+            /** Added At */
+            added_at?: number | null;
             progress?: components["schemas"]["BookProgress"] | null;
         };
         /** ListeningBook */
@@ -1522,6 +1524,8 @@ export interface components {
             timezone?: string | null;
             /** Releases Refresh Cron */
             releases_refresh_cron?: string | null;
+            /** Library Sort Default */
+            library_sort_default?: ("title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished") | null;
         };
         /** SettingsRead */
         SettingsRead: {
@@ -1561,6 +1565,11 @@ export interface components {
             timezone: string;
             /** Releases Refresh Cron */
             releases_refresh_cron: string;
+            /**
+             * Library Sort Default
+             * @enum {string}
+             */
+            library_sort_default: "title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished";
         };
         /** StatisticBook */
         StatisticBook: {
@@ -1923,7 +1932,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string | null;
-                sort?: "title" | "progress_asc" | "progress_desc" | "updated" | "finished";
+                sort?: ("title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished") | null;
                 page?: number;
                 limit?: number;
             };

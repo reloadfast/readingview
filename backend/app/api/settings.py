@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..crypto import encrypt
 from ..db import get_db
 from ..models.settings import Settings
-from ..schemas.settings import SettingsPatch, SettingsRead
+from ..schemas.settings import LibrarySort, SettingsPatch, SettingsRead
 from ..services import scheduler as scheduler_svc
 
 router = APIRouter()
@@ -43,6 +45,7 @@ def _mask(row: Settings) -> SettingsRead:
         notify_time=row.notify_time,
         timezone=row.timezone,
         releases_refresh_cron=row.releases_refresh_cron,
+        library_sort_default=cast(LibrarySort, row.library_sort_default),
     )
 
 

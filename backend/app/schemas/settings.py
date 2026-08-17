@@ -1,4 +1,10 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
+
+LibrarySort = Literal[
+    "title", "recently_added", "progress_asc", "progress_desc", "updated", "finished"
+]
 
 
 class SettingsRead(BaseModel):
@@ -32,6 +38,9 @@ class SettingsRead(BaseModel):
     # Release auto-refresh
     releases_refresh_cron: str
 
+    # Library display preferences
+    library_sort_default: LibrarySort
+
 
 class SettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -63,6 +72,9 @@ class SettingsPatch(BaseModel):
 
     # Release auto-refresh
     releases_refresh_cron: str | None = None
+
+    # Library display preferences
+    library_sort_default: LibrarySort | None = None
 
 
 class LLMTestRequest(BaseModel):

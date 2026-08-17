@@ -134,7 +134,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface LibraryParams {
   search?: string;
-  sort?: "title" | "progress_asc" | "progress_desc" | "updated" | "finished";
+  sort?: "title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished";
   page?: number;
   limit?: number;
 }

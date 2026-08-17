@@ -74,6 +74,15 @@ async def test_get_settings_releases_refresh_cron_default(client):
     assert r.json()["releases_refresh_cron"] == "0 6 * * *"
 
 
+async def test_patch_library_sort_default(client):
+    r = await client.patch("/api/settings", json={"library_sort_default": "recently_added"})
+    assert r.status_code == 200
+    assert r.json()["library_sort_default"] == "recently_added"
+
+    r2 = await client.get("/api/settings")
+    assert r2.json()["library_sort_default"] == "recently_added"
+
+
 async def test_patch_releases_refresh_cron(client):
     r = await client.patch("/api/settings", json={"releases_refresh_cron": "0 8 * * *"})
     assert r.status_code == 200
