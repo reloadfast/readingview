@@ -189,9 +189,8 @@ jobs:
           SHA_IMAGE="${{ env.IMAGE }}:sha-${SHA}"
           LATEST_IMAGE="${{ env.IMAGE }}:latest"
 
-          # Forgejo rate-limits blob upload sessions. Push the image layers once
-          # under the immutable SHA tag, retrying 429s with bounded backoff.
-          # `latest` is then a manifest-only alias and opens no blob upload path.
+          # Forgejo rate-limits blob upload sessions. Push the immutable SHA tag
+          # first, retrying 429s with bounded backoff.
           for ATTEMPT in 1 2 3 4 5; do
             if docker push "$SHA_IMAGE"; then
               break
@@ -205,8 +204,11 @@ jobs:
             sleep "$DELAY"
           done
 
-          docker manifest create "$LATEST_IMAGE" "$SHA_IMAGE"
-          docker manifest push "$LATEST_IMAGE"
+          # The Docker build emits a manifest list, which cannot be used as a
+          # docker manifest create source. After the SHA push, Docker recognizes
+          # all layers as present and this second push only publishes latest.
+          sleep 8
+          docker push "$LATEST_IMAGE"
 
       - name: Prune images
         if: success()
