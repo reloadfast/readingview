@@ -12,6 +12,7 @@ from app.services.statistics import (
     compute_heatmap,
     compute_overall_stats,
     compute_recap,
+    compute_statistics_detail,
     compute_yearly_stats,
 )
 
@@ -299,6 +300,19 @@ def test_compute_heatmap_empty():
     result = compute_heatmap("2024", [])
     assert result.year == "2024"
     assert result.data == []
+
+
+def test_compute_statistics_detail_groups_listening_by_day_and_book():
+    sessions = [
+        {"updatedAt": _ts(2024, 3, 5), "timeListening": 3600, "libraryItemId": "book-2"},
+        {"updatedAt": _ts(2024, 3, 5), "timeListening": 1800, "libraryItemId": "book-2"},
+        {"updatedAt": _ts(2023, 10, 10), "timeListening": 600, "libraryItemId": "book-3"},
+    ]
+    detail = compute_statistics_detail("2024", _PROGRESS_MAP, _LISTENING_STATS, sessions)
+    assert [book.id for book in detail.books] == ["book-2", "book-1"]
+    assert len(detail.listening_days) == 1
+    assert detail.listening_days[0].minutes == 90
+    assert detail.listening_days[0].books[0].title == "Book Two"
 
 
 def test_compute_heatmap_skips_missing_ts():

@@ -260,6 +260,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/statistics/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Statistics Detail */
+        get: operations["get_statistics_detail_api_statistics_detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/authors/search": {
         parameters: {
             query?: never;
@@ -1081,6 +1098,26 @@ export interface components {
             asin?: string | null;
             progress?: components["schemas"]["BookProgress"] | null;
         };
+        /** ListeningBook */
+        ListeningBook: {
+            /** Id */
+            id?: string | null;
+            /** Title */
+            title: string;
+            /** Author */
+            author: string;
+            /** Minutes */
+            minutes: number;
+        };
+        /** ListeningDay */
+        ListeningDay: {
+            /** Date */
+            date: string;
+            /** Minutes */
+            minutes: number;
+            /** Books */
+            books: components["schemas"]["ListeningBook"][];
+        };
         /** ManualReleaseCreate */
         ManualReleaseCreate: {
             /** Author */
@@ -1524,6 +1561,30 @@ export interface components {
             timezone: string;
             /** Releases Refresh Cron */
             releases_refresh_cron: string;
+        };
+        /** StatisticBook */
+        StatisticBook: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Author */
+            author: string;
+            /** Finished At */
+            finished_at?: number | null;
+            /** Duration */
+            duration: number;
+            /** Time Listening */
+            time_listening: number;
+        };
+        /** StatisticsDetail */
+        StatisticsDetail: {
+            /** Year */
+            year: string;
+            /** Books */
+            books: components["schemas"]["StatisticBook"][];
+            /** Listening Days */
+            listening_days: components["schemas"]["ListeningDay"][];
         };
         /** StatusResponse */
         StatusResponse: {
@@ -2043,6 +2104,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HeatmapData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_statistics_detail_api_statistics_detail_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatisticsDetail"];
                 };
             };
             /** @description Validation Error */

@@ -86,6 +86,9 @@ export type {
   YearlyPoint,
   YearlyStats,
 } from "./api.schemas";
+import type { components } from "./api.generated";
+
+export type StatisticsDetail = components["schemas"]["StatisticsDetail"];
 
 // ---------------------------------------------------------------------------
 // Core fetch helper
@@ -172,6 +175,10 @@ export function getRecap(year: string): Promise<RecapStats> {
 
 export function getHeatmap(year: string): Promise<HeatmapData> {
   return apiFetch(`/statistics/heatmap?year=${encodeURIComponent(year)}`);
+}
+
+export function getStatisticsDetail(year: string): Promise<StatisticsDetail> {
+  return apiFetch(`/statistics/detail?year=${encodeURIComponent(year)}`);
 }
 
 // ---------------------------------------------------------------------------

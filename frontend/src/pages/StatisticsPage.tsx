@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import * as Dialog from "@radix-ui/react-dialog";
 import {
   BarChart,
   Bar,
@@ -14,10 +15,10 @@ import {
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
 import { Card, CardContent, Skeleton, Select } from "@/components/ui";
-import { useStatistics, useYearlyStats, useRecap, useHeatmap } from "@/hooks/useStatistics";
+import { useStatistics, useYearlyStats, useRecap, useHeatmap, useStatisticsDetail } from "@/hooks/useStatistics";
 import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
-import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint } from "@/lib/api";
+import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint, StatisticsDetail } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -85,13 +86,15 @@ function StatCard({
   label,
   value,
   icon: Icon,
+  onClick,
 }: {
   label: string;
   value: string | number;
   icon: React.ElementType;
+  onClick?: () => void;
 }) {
-  return (
-    <Card>
+  const content = (
+    <Card className={onClick ? "h-full transition-colors hover:bg-surface-hover" : "h-full"}>
       <CardContent className="flex items-center gap-4">
         <div className="p-2 rounded-lg bg-accent/10 flex-shrink-0">
           <Icon className="w-5 h-5 text-accent" />
@@ -103,13 +106,24 @@ function StatCard({
       </CardContent>
     </Card>
   );
+  return onClick ? (
+    <button onClick={onClick} className="text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+      {content}
+    </button>
+  ) : content;
 }
 
 // ---------------------------------------------------------------------------
 // Monthly bar chart
 // ---------------------------------------------------------------------------
 
-function MonthlyChart({ data }: { data: { month: string; books: number }[] }) {
+function MonthlyChart({
+  data,
+  onMonthClick,
+}: {
+  data: { month: string; books: number }[];
+  onMonthClick?: (month: string) => void;
+}) {
   if (!data.length) return null;
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -136,7 +150,17 @@ function MonthlyChart({ data }: { data: { month: string; books: number }[] }) {
           cursor={CURSOR_STYLE}
           formatter={(v: number) => [v, "Books"]}
         />
-        <Bar dataKey="books" fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+        <Bar
+          dataKey="books"
+          fill="var(--color-chart-1)"
+          radius={[4, 4, 0, 0]}
+          maxBarSize={40}
+          cursor={onMonthClick ? "pointer" : undefined}
+          onClick={(point) => {
+            const month = (point as { month?: string }).month;
+            if (month) onMonthClick?.(month);
+          }}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -236,26 +260,40 @@ interface RecapCardProps {
   sub?: string;
 }
 
-function RecapCard({ label, value, sub }: RecapCardProps) {
-  return (
+function RecapCard({ label, value, sub, onClick }: RecapCardProps & { onClick?: () => void }) {
+  const content = (
     <div className="bg-accent/10 border border-accent/20 rounded-xl p-5 flex flex-col gap-1">
       <p className="text-4xl font-bold text-accent">{value}</p>
       <p className="text-sm font-medium text-text-primary">{label}</p>
       {sub && <p className="text-xs text-text-secondary">{sub}</p>}
     </div>
   );
+  return onClick ? (
+    <button onClick={onClick} className="text-left rounded-xl hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+      {content}
+    </button>
+  ) : content;
 }
 
-function RecapSection({ data }: { data: RecapStats }) {
+function RecapSection({
+  data,
+  onBooksClick,
+  onHoursClick,
+}: {
+  data: RecapStats;
+  onBooksClick: () => void;
+  onHoursClick: () => void;
+}) {
   return (
     <section className="space-y-4">
       <h2 className="text-lg font-semibold text-text-primary">Year in Recap</h2>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <RecapCard label="Books finished" value={data.books_finished} />
+        <RecapCard label="Books finished" value={data.books_finished} onClick={onBooksClick} />
         <RecapCard
           label="Hours listened"
           value={Math.round(data.hours_listened)}
           sub={`${Math.round(data.hours_of_content)} hrs of content`}
+          onClick={onHoursClick}
         />
         <RecapCard label="Active months" value={data.active_months} sub="out of 12" />
         {data.longest_book && (
@@ -506,7 +544,15 @@ interface TooltipState {
   minutes: number;
 }
 
-function ActivityHeatmap({ data, year }: { data: HeatmapPoint[]; year: string }) {
+function ActivityHeatmap({
+  data,
+  year,
+  onDayClick,
+}: {
+  data: HeatmapPoint[];
+  year: string;
+  onDayClick?: (date: string) => void;
+}) {
   const [tip, setTip] = useState<TooltipState | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -563,7 +609,8 @@ function ActivityHeatmap({ data, year }: { data: HeatmapPoint[]; year: string })
         fill={heatmapColor(minutes, max)}
         onMouseEnter={(e) => onMouseEnter(e, dateStr, minutes)}
         onMouseLeave={() => setTip(null)}
-        style={{ cursor: minutes > 0 ? "pointer" : "default" }}
+        onClick={() => minutes > 0 && onDayClick?.(dateStr)}
+        style={{ cursor: minutes > 0 && onDayClick ? "pointer" : "default" }}
       />
     );
   }
@@ -638,6 +685,89 @@ function ActivityHeatmap({ data, year }: { data: HeatmapPoint[]; year: string })
 }
 
 // ---------------------------------------------------------------------------
+// Statistics drill-down
+// ---------------------------------------------------------------------------
+
+type DetailView = { kind: "books"; month?: string } | { kind: "hours" } | { kind: "activity"; date?: string };
+
+function formatFinishedAt(timestamp: number | null | undefined) {
+  return timestamp ? new Date(timestamp).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Finished date unavailable";
+}
+
+function StatisticsDetailDialog({
+  open,
+  onOpenChange,
+  view,
+  detail,
+  isLoading,
+  year,
+  onSelectDay,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  view: DetailView;
+  detail: StatisticsDetail | undefined;
+  isLoading: boolean;
+  year: string;
+  onSelectDay: (date: string) => void;
+}) {
+  const period = view.kind === "books" ? view.month : undefined;
+  const books = period
+    ? (detail?.books ?? []).filter((book) => book.finished_at && new Date(book.finished_at).toISOString().startsWith(period))
+    : detail?.books ?? [];
+  const selectedDay = view.kind === "activity" && view.date
+    ? detail?.listening_days.find((day) => day.date === view.date)
+    : undefined;
+  const title = view.kind === "books"
+    ? period ? `Books finished in ${period.length === 4 ? period : new Date(`${period}-01T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : "Books finished"
+    : view.kind === "hours" ? "Listening time breakdown" : "Listening calendar";
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-xl focus:outline-none">
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <Dialog.Title className="text-lg font-semibold text-text-primary">{title}</Dialog.Title>
+              <p className="text-sm text-text-secondary mt-1">Click a coloured day to see the audiobooks behind it.</p>
+            </div>
+            <Dialog.Close asChild><button className="text-text-secondary hover:text-text-primary"><X className="w-5 h-5" /></button></Dialog.Close>
+          </div>
+          {isLoading ? <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div> : view.kind === "books" ? (
+            <div className="space-y-2">
+              {books.length === 0 ? <p className="py-8 text-center text-sm text-text-secondary">No books finished in this period.</p> : books.map((book) => (
+                <div key={book.id} className="rounded-lg border border-border p-3">
+                  <p className="font-medium text-text-primary">{book.title}</p>
+                  <p className="text-sm text-text-secondary">{book.author} · {formatFinishedAt(book.finished_at)}</p>
+                </div>
+              ))}
+            </div>
+          ) : view.kind === "hours" ? (
+            <div className="space-y-3">
+              {(detail?.listening_days ?? []).map((day) => (
+                <button key={day.date} onClick={() => onSelectDay(day.date)} className="w-full text-left rounded-lg border border-border p-3 hover:bg-surface-hover">
+                  <div className="flex justify-between gap-3"><span className="font-medium text-text-primary">{new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span><span className="text-sm text-accent">{day.minutes} min</span></div>
+                  <p className="mt-1 text-sm text-text-secondary truncate">{day.books.map((book) => book.title).join(", ")}</p>
+                </button>
+              ))}
+              {(detail?.listening_days.length ?? 0) === 0 && <p className="py-8 text-center text-sm text-text-secondary">No listening sessions recorded.</p>}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {year !== "all" && <ActivityHeatmap data={(detail?.listening_days ?? []).map((day) => ({ date: day.date, minutes: day.minutes }))} year={year} onDayClick={onSelectDay} />}
+              {selectedDay ? (
+                <div className="rounded-lg border border-border p-4"><div className="flex items-center justify-between mb-3"><h3 className="font-medium text-text-primary">{selectedDay.date}</h3><span className="text-sm text-accent">{selectedDay.minutes} min</span></div><div className="space-y-2">{selectedDay.books.map((book) => <div key={`${book.id}-${book.title}`} className="flex justify-between gap-3 text-sm"><span className="text-text-primary">{book.title}<span className="text-text-secondary"> · {book.author}</span></span><span className="text-text-secondary whitespace-nowrap">{book.minutes} min</span></div>)}</div></div>
+              ) : <p className="text-sm text-text-secondary">Select an active day to see the audiobook and listening-time breakdown.</p>}
+            </div>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
 
@@ -663,22 +793,36 @@ function EmptyState({ year }: { year: string }) {
 
 export default function StatisticsPage() {
   const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [detailView, setDetailView] = useState<DetailView>({ kind: "books" });
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const overall = useStatistics();
   const yearly = useYearlyStats(year);
   const recap = useRecap(year);
   const heatmap = useHeatmap(year);
+  const detail = useStatisticsDetail(year);
 
-  const statsLoading = overall.isLoading || yearly.isLoading;
+  const statsLoading = overall.isLoading || yearly.isLoading || (year !== "all" && recap.isLoading);
   const hasData = !yearly.isLoading && (yearly.data?.books_in_year ?? 0) > 0;
   const noData = !yearly.isLoading && !hasData;
 
   const booksInYear = yearly.data?.books_in_year ?? 0;
-  const totalHours = overall.data ? Math.round(overall.data.hours_listened) : 0;
+  const totalHours = year === "all"
+    ? (overall.data ? Math.round(overall.data.hours_listened) : 0)
+    : Math.round(recap.data?.hours_listened ?? 0);
   const avgPerMonth = overall.data
     ? overall.data.avg_books_per_month.toFixed(1)
     : "—";
   const longestStreak = overall.data?.streak.longest ?? 0;
+
+  function openDetail(view: DetailView) {
+    setDetailView(view);
+    setDetailOpen(true);
+  }
+
+  function selectActivityDay(date: string) {
+    setDetailView({ kind: "activity", date });
+  }
 
   return (
     <div className="space-y-8 p-6">
@@ -703,10 +847,11 @@ export default function StatisticsPage() {
               label={year === "all" ? "All Books Finished" : `Books in ${year}`}
               value={booksInYear}
               icon={BookOpen}
+              onClick={() => openDetail({ kind: "books" })}
             />
-            <StatCard label="Total Hours" value={totalHours} icon={Clock} />
+            <StatCard label={year === "all" ? "Total Hours" : `Hours in ${year}`} value={totalHours} icon={Clock} onClick={() => openDetail({ kind: "hours" })} />
             <StatCard label="Avg / Month" value={avgPerMonth} icon={TrendingUp} />
-            <StatCard label="Longest Streak" value={`${longestStreak}d`} icon={Flame} />
+            <StatCard label="Longest Streak" value={`${longestStreak}d`} icon={Flame} onClick={() => openDetail({ kind: "activity" })} />
           </>
         )}
       </div>
@@ -728,7 +873,7 @@ export default function StatisticsPage() {
                   {heatmap.isLoading ? (
                     <ChartSkeleton height={120} />
                   ) : (
-                    <ActivityHeatmap data={heatmap.data?.data ?? []} year={year} />
+                    <ActivityHeatmap data={heatmap.data?.data ?? []} year={year} onDayClick={(date) => openDetail({ kind: "activity", date })} />
                   )}
                 </CardContent>
               </Card>
@@ -745,7 +890,10 @@ export default function StatisticsPage() {
                 {yearly.isLoading ? (
                   <ChartSkeleton />
                 ) : (
-                  <MonthlyChart data={yearly.data?.monthly_chart ?? []} />
+                  <MonthlyChart
+                    data={yearly.data?.monthly_chart ?? []}
+                    onMonthClick={(month) => openDetail({ kind: "books", month })}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -849,9 +997,18 @@ export default function StatisticsPage() {
           </div>
 
           {/* Year in Recap — year-specific only */}
-          {year !== "all" && recap.data && <RecapSection data={recap.data} />}
+          {year !== "all" && recap.data && <RecapSection data={recap.data} onBooksClick={() => openDetail({ kind: "books" })} onHoursClick={() => openDetail({ kind: "hours" })} />}
         </>
       )}
+      <StatisticsDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        view={detailView}
+        detail={detail.data}
+        isLoading={detail.isLoading}
+        year={year}
+        onSelectDay={selectActivityDay}
+      />
     </div>
   );
 }

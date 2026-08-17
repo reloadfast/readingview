@@ -8,10 +8,14 @@ from ..schemas.statistics import (
     GenreCount,
     HeatmapData,
     HeatmapPoint,
+    ListeningBook,
+    ListeningDay,
     MonthlyPoint,
     OverallStats,
     ReadDuration,
     RecapStats,
+    StatisticBook,
+    StatisticsDetail,
     StreakInfo,
     YearlyPoint,
     YearlyStats,
@@ -289,3 +293,71 @@ def compute_heatmap(year: str, sessions: list[dict]) -> HeatmapData:
 
     data = [HeatmapPoint(date=d, minutes=m) for d, m in sorted(daily.items())]
     return HeatmapData(year=year, data=data)
+
+
+def compute_statistics_detail(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    sessions: list[dict[str, Any]],
+) -> StatisticsDetail:
+    """Return the title-level records that support the statistics dashboard."""
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    finished = _get_finished_books(progress_map, stats_items)
+    if year != "all":
+        finished = [
+            book
+            for book in finished
+            if book.get("finished_at")
+            and str(datetime.fromtimestamp(book["finished_at"] / 1000).year) == year
+        ]
+
+    books = [
+        StatisticBook(
+            id=book["id"],
+            title=book["title"],
+            author=book["author"],
+            finished_at=book.get("finished_at"),
+            duration=book.get("duration", 0),
+            time_listening=book.get("time_listening", 0),
+        )
+        for book in reversed(finished)
+    ]
+
+    daily: dict[str, dict[str, Any]] = {}
+    for session in sessions:
+        timestamp = session.get("updatedAt") or session.get("startedAt")
+        if not timestamp:
+            continue
+        try:
+            dt = datetime.fromtimestamp(timestamp / 1000)
+        except (ValueError, TypeError, OSError):
+            continue
+        if year != "all" and str(dt.year) != year:
+            continue
+
+        day = dt.strftime("%Y-%m-%d")
+        item_id = session.get("libraryItemId") or session.get("mediaItemId")
+        metadata = stats_items.get(item_id, {}).get("mediaMetadata", {})
+        authors = metadata.get("authors", [])
+        author = ", ".join(a.get("name", "") for a in authors) if authors else "Unknown Author"
+        title = metadata.get("title") or session.get("title") or "Unknown audiobook"
+        minutes = int((session.get("timeListening", 0) or 0) / 60)
+
+        entry = daily.setdefault(day, {"minutes": 0, "books": {}})
+        entry["minutes"] += minutes
+        book = entry["books"].setdefault(
+            item_id or title,
+            {"id": item_id, "title": title, "author": author, "minutes": 0},
+        )
+        book["minutes"] += minutes
+
+    listening_days = [
+        ListeningDay(
+            date=day,
+            minutes=entry["minutes"],
+            books=[ListeningBook(**book) for book in entry["books"].values()],
+        )
+        for day, entry in sorted(daily.items(), reverse=True)
+    ]
+    return StatisticsDetail(year=year, books=books, listening_days=listening_days)

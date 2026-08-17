@@ -5,7 +5,13 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..api.deps import abs_cache
-from ..schemas.statistics import HeatmapData, OverallStats, RecapStats, YearlyStats
+from ..schemas.statistics import (
+    HeatmapData,
+    OverallStats,
+    RecapStats,
+    StatisticsDetail,
+    YearlyStats,
+)
 from ..services import statistics as stats_svc
 from ..services.abs_cache import AbsDataCache
 
@@ -71,3 +77,20 @@ async def get_heatmap(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return stats_svc.compute_heatmap(year, sessions)
+
+
+@router.get("/statistics/detail", response_model=StatisticsDetail)
+async def get_statistics_detail(
+    year: str = Query(default=str(datetime.now().year)),
+    client: AbsDataCache = Depends(abs_cache),
+) -> StatisticsDetail:
+    try:
+        progress_map, listening_stats, sessions = await asyncio.gather(
+            client.get_media_progress_map(),
+            client.get_user_listening_stats(),
+            client.get_user_listening_sessions(),
+        )
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return stats_svc.compute_statistics_detail(year, progress_map, listening_stats, sessions)

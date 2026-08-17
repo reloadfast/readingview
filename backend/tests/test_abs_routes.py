@@ -104,6 +104,14 @@ async def test_statistics_recap_returns_data(client):
     assert r.json()["year"] == "2024"
 
 
+async def test_statistics_detail_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/detail?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
 async def test_narrators_list_returns_empty(client):
     mock = _mock_abs()
     with patch(_ABS_CACHE_GET, return_value=mock):

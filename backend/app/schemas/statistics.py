@@ -81,3 +81,31 @@ class HeatmapPoint(BaseModel):
 class HeatmapData(BaseModel):
     year: str
     data: list[HeatmapPoint]
+
+
+class StatisticBook(BaseModel):
+    id: str
+    title: str
+    author: str
+    finished_at: int | None = None
+    duration: float
+    time_listening: float
+
+
+class ListeningBook(BaseModel):
+    id: str | None = None
+    title: str
+    author: str
+    minutes: int
+
+
+class ListeningDay(BaseModel):
+    date: str
+    minutes: int
+    books: list[ListeningBook]
+
+
+class StatisticsDetail(BaseModel):
+    year: str
+    books: list[StatisticBook]
+    listening_days: list[ListeningDay]

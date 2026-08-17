@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getHeatmap, getRecap, getStatistics, getYearlyStats } from "../lib/api";
+import { getHeatmap, getRecap, getStatistics, getStatisticsDetail, getYearlyStats } from "../lib/api";
 
 export function useStatistics() {
   return useQuery({
@@ -28,6 +28,14 @@ export function useHeatmap(year: string) {
   return useQuery({
     queryKey: ["statistics", "heatmap", year],
     queryFn: () => getHeatmap(year),
+    enabled: Boolean(year),
+  });
+}
+
+export function useStatisticsDetail(year: string) {
+  return useQuery({
+    queryKey: ["statistics", "detail", year],
+    queryFn: () => getStatisticsDetail(year),
     enabled: Boolean(year),
   });
 }
