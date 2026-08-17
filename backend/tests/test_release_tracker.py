@@ -7,7 +7,8 @@ import httpx
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models.releases import Release, ReleaseTrackedAuthor
+from app.models.authors import TrackedAuthor
+from app.models.releases import Release
 from app.services.release_tracker import extract_releases, run_refresh
 
 pytestmark = pytest.mark.unit
@@ -139,7 +140,7 @@ async def test_run_refresh_no_authors(db):
 
 async def test_run_refresh_adds_new_release(db):
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Test Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Test Author", followed_at=int(time.time() * 1000))
         db.add(author)
 
     with patch(
@@ -156,7 +157,7 @@ async def test_run_refresh_adds_new_release(db):
 
 async def test_run_refresh_skips_existing_release(db):
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Known Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Known Author", followed_at=int(time.time() * 1000))
         db.add(author)
         await db.flush()
         db.add(
@@ -184,7 +185,7 @@ async def test_run_refresh_skips_existing_release(db):
 
 async def test_run_refresh_records_http_failure(db):
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Failing Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Failing Author", followed_at=int(time.time() * 1000))
         db.add(author)
 
     with patch(

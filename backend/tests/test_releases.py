@@ -6,10 +6,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.api import authors as authors_api
 from app.api import deps as api_deps
 from app.api.deps import abs_cache
 from app.main import app
-from app.models.releases import Release, ReleaseTrackedAuthor
+from app.models.authors import TrackedAuthor
+from app.models.releases import Release
 
 
 @pytest.fixture
@@ -35,7 +37,7 @@ async def test_track_author(client):
     assert data["name"] == "Brandon Sanderson"
     assert data["ol_key"] == "OL123A"
     assert "id" in data
-    assert "added_at" in data
+    assert "followed_at" in data
 
 
 async def test_track_author_without_ol_key(client):
@@ -61,6 +63,29 @@ async def test_list_tracked_authors_after_add(client):
     names = [a["name"] for a in r.json()]
     assert "Author One" in names
     assert "Author Two" in names
+
+
+async def test_following_an_author_tracks_them_for_releases(client):
+    with patch.object(authors_api._OL, "get_author_details", new=AsyncMock(return_value={})):
+        followed = await client.post(
+            "/api/authors", json={"name": "Shared Author", "ol_key": "OL999A"}
+        )
+    assert followed.status_code == 201
+
+    tracked = await client.get("/api/releases/tracked-authors")
+    assert tracked.status_code == 200
+    assert [author["id"] for author in tracked.json()] == [followed.json()["id"]]
+
+
+async def test_tracking_an_author_follows_them(client):
+    tracked = await client.post(
+        "/api/releases/tracked-authors", json={"name": "Release Author", "ol_key": "OL998A"}
+    )
+    assert tracked.status_code == 201
+
+    followed = await client.get("/api/authors")
+    assert followed.status_code == 200
+    assert [author["id"] for author in followed.json()] == [tracked.json()["id"]]
 
 
 async def test_untrack_author(client):
@@ -130,7 +155,7 @@ async def test_list_releases_loads_author(client, db):
 
 async def test_list_releases_only_returns_upcoming_or_missing_library_titles(client, db):
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Filter Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Filter Author", followed_at=int(time.time() * 1000))
         db.add(author)
         await db.flush()
         db.add_all(
@@ -158,7 +183,7 @@ async def test_list_releases_only_returns_upcoming_or_missing_library_titles(cli
 
 async def test_list_releases_matches_audiobook_edition_titles(client, db):
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Match Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Match Author", followed_at=int(time.time() * 1000))
         db.add(author)
         await db.flush()
         db.add_all(
@@ -206,7 +231,7 @@ async def test_refresh_no_tracked_authors(client):
 
 async def _seed_author_and_release(db, *, confirmed: bool = False) -> Release:
     async with db.begin():
-        author = ReleaseTrackedAuthor(name="Seed Author", added_at=int(time.time() * 1000))
+        author = TrackedAuthor(name="Seed Author", followed_at=int(time.time() * 1000))
         db.add(author)
         await db.flush()
         rel = Release(

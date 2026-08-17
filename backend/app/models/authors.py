@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import BigInteger, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
+
+if TYPE_CHECKING:
+    from .releases import Release
 
 
 class TrackedAuthor(Base):
@@ -15,3 +20,6 @@ class TrackedAuthor(Base):
     birth_date: Mapped[str | None] = mapped_column(String, nullable=True)
     death_date: Mapped[str | None] = mapped_column(String, nullable=True)
     followed_at: Mapped[int] = mapped_column(BigInteger, nullable=False)  # epoch ms
+    releases: Mapped[list["Release"]] = relationship(
+        back_populates="author", cascade="all, delete-orphan"
+    )

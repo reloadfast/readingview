@@ -4,7 +4,8 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.releases import Release, ReleaseTrackedAuthor
+from ..models.authors import TrackedAuthor
+from ..models.releases import Release
 from ..schemas.releases import RefreshError, RefreshResult
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def extract_releases(docs: list[dict], author_name: str) -> list[dict]:
 async def run_refresh(db: AsyncSession) -> RefreshResult:
     """Run a full release refresh and return counts. Suitable for both HTTP and scheduler use."""
     async with db.begin():
-        authors = (await db.execute(select(ReleaseTrackedAuthor))).scalars().all()
+        authors = (await db.execute(select(TrackedAuthor))).scalars().all()
 
     if not authors:
         return RefreshResult(added=0, skipped=0)

@@ -20,7 +20,6 @@ import type {
   OverallStats,
   PatchCollectionRequest,
   ReleaseOut,
-  ReleaseTrackedAuthorOut,
   SettingsPatch,
   SettingsRead,
   TestConnectionResponse,
@@ -73,7 +72,6 @@ export type {
   RefreshError,
   RefreshResult,
   ReleaseOut,
-  ReleaseTrackedAuthorOut,
   SeriesBook,
   SeriesDetail,
   SeriesEntry,
@@ -231,11 +229,11 @@ export function getReleases(author?: string, includeHidden = false): Promise<Rel
   return apiFetch(`/releases${q}`);
 }
 
-export function getTrackedAuthors(): Promise<ReleaseTrackedAuthorOut[]> {
+export function getTrackedAuthors(): Promise<TrackedAuthorOut[]> {
   return apiFetch("/releases/tracked-authors");
 }
 
-export function addTrackedAuthor(body: TrackAuthorRequest): Promise<ReleaseTrackedAuthorOut> {
+export function addTrackedAuthor(body: TrackAuthorRequest): Promise<TrackedAuthorOut> {
   return apiFetch("/releases/tracked-authors", {
     method: "POST",
     body: JSON.stringify(body),

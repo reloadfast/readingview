@@ -9,7 +9,7 @@ from uuid import uuid4
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -17,7 +17,9 @@ from sqlalchemy.orm import selectinload
 from ..api.deps import abs_cache
 from ..config import settings
 from ..db import get_db
-from ..models.releases import ManualRelease, Release, ReleaseTrackedAuthor
+from ..models.authors import TrackedAuthor
+from ..models.releases import ManualRelease, Release
+from ..schemas.authors import TrackedAuthorOut
 from ..schemas.releases import (
     ManualReleaseCreate,
     ManualReleaseOut,
@@ -25,7 +27,6 @@ from ..schemas.releases import (
     PatchReleaseRequest,
     RefreshResult,
     ReleaseOut,
-    ReleaseTrackedAuthorOut,
     TrackAuthorRequest,
 )
 from ..services import release_tracker as rt_svc
@@ -121,40 +122,40 @@ def _cover_dir() -> Path:
 # --- tracked authors ---
 
 
-@router.get("/releases/tracked-authors", response_model=list[ReleaseTrackedAuthorOut])
-async def list_tracked_authors(db: AsyncSession = Depends(get_db)) -> list[ReleaseTrackedAuthorOut]:
+@router.get("/releases/tracked-authors", response_model=list[TrackedAuthorOut])
+async def list_tracked_authors(db: AsyncSession = Depends(get_db)) -> list[TrackedAuthorOut]:
     async with db.begin():
-        result = await db.execute(select(ReleaseTrackedAuthor).order_by(ReleaseTrackedAuthor.name))
+        result = await db.execute(select(TrackedAuthor).order_by(TrackedAuthor.name))
         rows = result.scalars().all()
-        return [ReleaseTrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
+        return [TrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
 
 
-@router.post("/releases/tracked-authors", response_model=ReleaseTrackedAuthorOut, status_code=201)
+@router.post("/releases/tracked-authors", response_model=TrackedAuthorOut, status_code=201)
 async def track_author(
     body: TrackAuthorRequest,
     db: AsyncSession = Depends(get_db),
-) -> ReleaseTrackedAuthorOut:
+) -> TrackedAuthorOut:
     async with db.begin():
-        where = ReleaseTrackedAuthor.name == body.name
+        where = TrackedAuthor.name == body.name
         if body.ol_key:
-            from sqlalchemy import or_
-
-            where = or_(where, ReleaseTrackedAuthor.ol_key == body.ol_key)
-        existing = (
-            await db.execute(select(ReleaseTrackedAuthor).where(where))
-        ).scalar_one_or_none()
+            where = or_(where, TrackedAuthor.ol_key == body.ol_key)
+        existing = (await db.execute(select(TrackedAuthor).where(where))).scalar_one_or_none()
         if existing:
-            raise HTTPException(status_code=409, detail="Author already tracked")
+            raise HTTPException(status_code=409, detail="Author already followed")
 
-        author = ReleaseTrackedAuthor(
+        author = TrackedAuthor(
             name=body.name,
             ol_key=body.ol_key or None,
-            added_at=int(time.time() * 1000),
+            photo_url=None,
+            bio=None,
+            birth_date=None,
+            death_date=None,
+            followed_at=int(time.time() * 1000),
         )
         db.add(author)
 
     await db.refresh(author)
-    return ReleaseTrackedAuthorOut.model_validate(author)
+    return TrackedAuthorOut.model_validate(author)
 
 
 @router.delete("/releases/tracked-authors/{author_id}", status_code=204)
@@ -164,12 +165,10 @@ async def untrack_author(
 ) -> None:
     async with db.begin():
         row = (
-            await db.execute(
-                select(ReleaseTrackedAuthor).where(ReleaseTrackedAuthor.id == author_id)
-            )
+            await db.execute(select(TrackedAuthor).where(TrackedAuthor.id == author_id))
         ).scalar_one_or_none()
         if row is None:
-            raise HTTPException(status_code=404, detail="Tracked author not found")
+            raise HTTPException(status_code=404, detail="Followed author not found")
         await db.delete(row)
 
 
@@ -192,7 +191,7 @@ async def list_releases(
     if not include_hidden:
         q = q.where(Release.is_active.is_(True))
     if author:
-        q = q.where(ReleaseTrackedAuthor.name.ilike(f"%{author}%"))
+        q = q.where(TrackedAuthor.name.ilike(f"%{author}%"))
     rows = (await db.execute(q)).scalars().all()
 
     try:

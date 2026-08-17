@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class ReleaseTrackedAuthorOut(BaseModel):
+    """Legacy response shape retained for generated client compatibility."""
+
     id: int
     name: str
     ol_key: str | None

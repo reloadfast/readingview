@@ -38,7 +38,6 @@ export type RecapStats = components["schemas"]["RecapStats"];
 export type RefreshError = components["schemas"]["RefreshError"];
 export type RefreshResult = components["schemas"]["RefreshResult"];
 export type ReleaseOut = components["schemas"]["ReleaseOut"];
-export type ReleaseTrackedAuthorOut = components["schemas"]["ReleaseTrackedAuthorOut"];
 export type SeriesBook = components["schemas"]["SeriesBook"];
 export type SeriesDetail = components["schemas"]["SeriesDetail"];
 export type SeriesEntry = components["schemas"]["SeriesEntry"];

@@ -1,6 +1,6 @@
 from .authors import TrackedAuthor
 from .collections import Collection, CollectionItem
-from .releases import ManualRelease, Release, ReleaseTrackedAuthor
+from .releases import ManualRelease, Release
 from .settings import Settings
 
 __all__ = [
@@ -8,7 +8,6 @@ __all__ = [
     "CollectionItem",
     "ManualRelease",
     "Release",
-    "ReleaseTrackedAuthor",
     "Settings",
     "TrackedAuthor",
 ]

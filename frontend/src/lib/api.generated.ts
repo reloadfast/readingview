@@ -1385,17 +1385,6 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
-        /** ReleaseTrackedAuthorOut */
-        ReleaseTrackedAuthorOut: {
-            /** Id */
-            id: number;
-            /** Name */
-            name: string;
-            /** Ol Key */
-            ol_key: string | null;
-            /** Added At */
-            added_at: number;
-        };
         /** SeriesBook */
         SeriesBook: {
             /** Id */
@@ -2297,7 +2286,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReleaseTrackedAuthorOut"][];
+                    "application/json": components["schemas"]["TrackedAuthorOut"][];
                 };
             };
         };
@@ -2321,7 +2310,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReleaseTrackedAuthorOut"];
+                    "application/json": components["schemas"]["TrackedAuthorOut"];
                 };
             };
             /** @description Validation Error */

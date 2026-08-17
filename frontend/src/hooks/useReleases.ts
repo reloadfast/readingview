@@ -35,6 +35,7 @@ export function useAddTrackedAuthor() {
     mutationFn: (body: TrackAuthorRequest) => addTrackedAuthor(body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["releases"] });
+      void qc.invalidateQueries({ queryKey: ["authors"] });
     },
   });
 }
@@ -45,6 +46,7 @@ export function useRemoveTrackedAuthor() {
     mutationFn: (id: number) => removeTrackedAuthor(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["releases"] });
+      void qc.invalidateQueries({ queryKey: ["authors"] });
     },
   });
 }

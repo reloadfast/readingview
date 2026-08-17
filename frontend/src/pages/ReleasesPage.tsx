@@ -21,7 +21,7 @@ import type {
   ManualReleaseInput,
   ManualReleaseMedium,
   ReleaseOut,
-  ReleaseTrackedAuthorOut,
+  TrackedAuthorOut,
 } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
@@ -377,7 +377,7 @@ function AddAuthorSearch({ trackedNames }: { trackedNames: Set<string> }) {
 // Tracked Authors tab — Author row
 // ---------------------------------------------------------------------------
 
-function TrackedAuthorRow({ author }: { author: ReleaseTrackedAuthorOut }) {
+function TrackedAuthorRow({ author }: { author: TrackedAuthorOut }) {
   const [confirming, setConfirming] = useState(false);
   const remove = useRemoveTrackedAuthor();
 

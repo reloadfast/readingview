@@ -45,6 +45,7 @@ export function useFollowAuthor() {
     mutationFn: (body: FollowRequest) => followAuthor(body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["authors"] });
+      void qc.invalidateQueries({ queryKey: ["releases"] });
     },
   });
 }
@@ -55,6 +56,7 @@ export function useUnfollowAuthor() {
     mutationFn: (olKey: string) => unfollowAuthor(olKey),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["authors"] });
+      void qc.invalidateQueries({ queryKey: ["releases"] });
     },
   });
 }
