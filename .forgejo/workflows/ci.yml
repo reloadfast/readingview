@@ -186,11 +186,27 @@ jobs:
       - name: Push image
         run: |
           SHA=$(git rev-parse --short HEAD)
-          curl -sL https://github.com/google/go-containerregistry/releases/download/v0.20.3/go-containerregistry_Linux_x86_64.tar.gz \
-            | sudo tar -xz -C /usr/local/bin crane
-          docker save ${{ env.IMAGE }}:latest -o /tmp/image.tar
-          crane push /tmp/image.tar ${{ env.IMAGE }}:latest
-          crane tag ${{ env.IMAGE }}:latest sha-${SHA}
+          SHA_IMAGE="${{ env.IMAGE }}:sha-${SHA}"
+          LATEST_IMAGE="${{ env.IMAGE }}:latest"
+
+          # Forgejo rate-limits blob upload sessions. Push the image layers once
+          # under the immutable SHA tag, retrying 429s with bounded backoff.
+          # `latest` is then a manifest-only alias and opens no blob upload path.
+          for ATTEMPT in 1 2 3 4 5; do
+            if docker push "$SHA_IMAGE"; then
+              break
+            fi
+            if [ "$ATTEMPT" -eq 5 ]; then
+              echo "Image push failed after ${ATTEMPT} attempts"
+              exit 1
+            fi
+            DELAY=$((15 * (2 ** (ATTEMPT - 1))))
+            echo "Registry push failed; retrying in ${DELAY}s (attempt $((ATTEMPT + 1))/5)"
+            sleep "$DELAY"
+          done
+
+          docker manifest create "$LATEST_IMAGE" "$SHA_IMAGE"
+          docker manifest push "$LATEST_IMAGE"
 
       - name: Prune images
         if: success()
