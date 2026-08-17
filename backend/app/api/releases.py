@@ -71,8 +71,8 @@ def _single_title_is_in_library(normalised: str, library_titles: set[str]) -> bo
         return True
 
     # Open Library sometimes omits the first installment number while ABS includes it.
-    # Permit only an added trailing number, so separate installments never match each other.
-    if any(re.fullmatch(rf"{re.escape(normalised)} \d+", title) for title in library_titles):
+    # Only permit an added "1": any other number identifies a different installment.
+    if any(re.fullmatch(rf"{re.escape(normalised)} 1", title) for title in library_titles):
         return True
 
     # ABS titles frequently retain a subtitle that Open Library omits.  A numeric
