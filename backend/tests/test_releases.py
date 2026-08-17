@@ -216,6 +216,39 @@ async def test_list_releases_matches_audiobook_edition_titles(client, db):
     assert [release["title"] for release in r.json()] == ["Primal Hunter - Tome 2"]
 
 
+async def test_list_releases_matches_subtitles_and_owned_omnibus_components(client, db):
+    async with db.begin():
+        author = TrackedAuthor(name="Variant Author", followed_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        db.add_all(
+            [
+                Release(author_id=author.id, title="Orconomics", release_date="2014-01-01"),
+                Release(
+                    author_id=author.id,
+                    title="Legends & Lattes/Bookshops & Bonedust",
+                    release_date="2024-01-01",
+                ),
+                Release(author_id=author.id, title="The Primal Hunter", release_date="2024-01-01"),
+            ]
+        )
+
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = [
+        {"media": {"metadata": {"title": "Orconomics: A Satire"}}},
+        {"media": {"metadata": {"title": "Legends and Lattes"}}},
+        {"media": {"metadata": {"title": "Bookshops & Bonedust"}}},
+        {"media": {"metadata": {"title": "The Primal Hunter 14"}}},
+    ]
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        r = await client.get("/api/releases")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
+
+    assert [release["title"] for release in r.json()] == ["The Primal Hunter"]
+
+
 async def test_refresh_no_tracked_authors(client):
     r = await client.post("/api/releases/refresh")
     assert r.status_code == 200

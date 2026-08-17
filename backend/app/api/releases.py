@@ -60,19 +60,40 @@ def _normalise_title(title: str) -> str:
     """Normalise common audiobook naming differences without dropping installment numbers."""
     title = title.casefold()
     title = re.sub(r"[\[\(](?:unabridged|audiobook|light novel)[^\]\)]*[\]\)]", " ", title)
+    title = re.sub(r"\s*&\s*", " and ", title)
     title = re.sub(r"\b(?:book|tome|vol(?:ume)?)\.?\s*(\d+)\b", r" \1", title)
     title = re.sub(r"[^\w]+", " ", title, flags=re.UNICODE)
     return " ".join(title.split())
 
 
-def _title_is_in_library(release_title: str, library_titles: set[str]) -> bool:
-    normalised = _normalise_title(release_title)
+def _single_title_is_in_library(normalised: str, library_titles: set[str]) -> bool:
     if normalised in library_titles:
         return True
 
     # Open Library sometimes omits the first installment number while ABS includes it.
     # Permit only an added trailing number, so separate installments never match each other.
-    return any(re.fullmatch(rf"{re.escape(normalised)} \d+", title) for title in library_titles)
+    if any(re.fullmatch(rf"{re.escape(normalised)} \d+", title) for title in library_titles):
+        return True
+
+    # ABS titles frequently retain a subtitle that Open Library omits.  A numeric
+    # suffix is deliberately excluded here because it identifies an installment.
+    return any(
+        title.startswith(f"{normalised} ")
+        and not title[len(normalised) + 1 :].startswith(tuple("0123456789"))
+        for title in library_titles
+    )
+
+
+def _title_is_in_library(release_title: str, library_titles: set[str]) -> bool:
+    """Match title variants while requiring every work in an omnibus to be owned."""
+    components = [
+        _normalise_title(component)
+        for component in re.split(r"\s*/\s*", release_title)
+        if component.strip()
+    ]
+    return bool(components) and all(
+        _single_title_is_in_library(component, library_titles) for component in components
+    )
 
 
 def _manual_dedupe_key(
