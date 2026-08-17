@@ -4,6 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
   BookOpen,
+  ArrowDownUp,
   ChevronLeft,
   ChevronRight,
   NotebookPen,
@@ -367,6 +368,7 @@ export default function LibraryPage() {
   const tab = searchParams.get("tab") ?? "all";
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const sort = (searchParams.get("sort") ?? settings?.library_sort_default ?? "title") as NonNullable<LibraryParams["sort"]>;
+  const reverse = searchParams.get("reverse") === "true";
   const urlSearch = searchParams.get("search") ?? "";
 
   const [searchInput, setSearchInput] = useState(urlSearch);
@@ -391,7 +393,9 @@ export default function LibraryPage() {
   const allBooks = useLibrary({
     ...(urlSearch ? { search: urlSearch } : {}),
     sort,
-    page,
+    reverse,
+    // The API uses zero-based pages, while the UI intentionally displays page 1 first.
+    page: page - 1,
     limit: PAGE_LIMIT,
   });
   const inProgress = useInProgress();
@@ -441,6 +445,19 @@ export default function LibraryPage() {
     );
   }
 
+  function toggleReverse() {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (reverse) next.delete("reverse");
+        else next.set("reverse", "true");
+        next.set("page", "1");
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   function setDefaultSort() {
     updateSettings.mutate({ library_sort_default: sort });
   }
@@ -484,6 +501,20 @@ export default function LibraryPage() {
                   value={sort}
                   onValueChange={setSort}
                 />
+                <button
+                  type="button"
+                  onClick={toggleReverse}
+                  title={reverse ? "Use the default sort direction" : "Reverse sort direction"}
+                  aria-label={reverse ? "Use the default sort direction" : "Reverse sort direction"}
+                  aria-pressed={reverse}
+                  className={`p-2 rounded-md border border-border transition-colors ${
+                    reverse
+                      ? "text-accent bg-accent/10"
+                      : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                  }`}
+                >
+                  <ArrowDownUp className="w-4 h-4" />
+                </button>
                 <button
                   type="button"
                   onClick={setDefaultSort}

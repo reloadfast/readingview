@@ -26,6 +26,12 @@ Production is one Docker image: Node 22 builds the SPA; Python 3.12 runs FastAPI
 
 The supported persistent database is async SQLite (`DATABASE_URL`, normally under `/data`). Add an Alembic revision for every persistent-model/schema change; do not rely on `Base.metadata.create_all`.
 
+## Production access and diagnostics
+
+- The production ReadingView instance is available at `http://192.168.1.110:8004` for in-scope verification and diagnostics.
+- Container logs can be inspected through the Dozzle MCP endpoint at `https://dozzle.moseisley.es/api/mcp`.
+- Treat production as user data: use these endpoints only as needed for the task, avoid printing sensitive data from responses or logs, and do not make production changes unless the user has explicitly requested them.
+
 ## Architecture conventions
 
 - Add an API feature across `backend/app/schemas/` (Pydantic contract), `models/` if persisted, `services/` (business/external-client logic), `api/` (thin router), and `main.py` router registration where applicable. Add focused tests in `backend/tests/`.

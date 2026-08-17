@@ -135,6 +135,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 export interface LibraryParams {
   search?: string;
   sort?: "title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished";
+  reverse?: boolean;
   page?: number;
   limit?: number;
 }
@@ -143,6 +144,7 @@ export function getLibrary(params?: LibraryParams): Promise<LibraryBook[]> {
   const q = new URLSearchParams();
   if (params?.search) q.set("search", params.search);
   if (params?.sort) q.set("sort", params.sort);
+  if (params?.reverse) q.set("reverse", "true");
   if (params?.page != null) q.set("page", String(params.page));
   if (params?.limit != null) q.set("limit", String(params.limit));
   const qs = q.toString();

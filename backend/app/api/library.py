@@ -72,36 +72,41 @@ def _item_to_book(item: dict, progress_map: dict, cover_url_fn) -> LibraryBook:
 def _sort_books(
     books: list[LibraryBook],
     sort: str,
+    reverse: bool = False,
 ) -> list[LibraryBook]:
+    sorted_books: list[LibraryBook]
     if sort == "title":
-        return sorted(books, key=lambda b: b.title.lower())
-    if sort == "progress_asc":
-        return sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0)
-    if sort == "progress_desc":
-        return sorted(
+        sorted_books = sorted(books, key=lambda b: b.title.lower())
+    elif sort == "progress_asc":
+        sorted_books = sorted(books, key=lambda b: b.progress.progress_pct if b.progress else 0.0)
+    elif sort == "progress_desc":
+        sorted_books = sorted(
             books, key=lambda b: b.progress.progress_pct if b.progress else 0.0, reverse=True
         )
-    if sort == "updated":
-        return sorted(
+    elif sort == "updated":
+        sorted_books = sorted(
             books,
             key=lambda b: b.progress.last_update if b.progress and b.progress.last_update else 0,
             reverse=True,
         )
-    if sort == "recently_added":
-        return sorted(books, key=lambda b: b.added_at or 0, reverse=True)
-    if sort == "finished":
-        return sorted(
+    elif sort == "recently_added":
+        sorted_books = sorted(books, key=lambda b: b.added_at or 0, reverse=True)
+    elif sort == "finished":
+        sorted_books = sorted(
             books,
             key=lambda b: b.progress.finished_at if b.progress and b.progress.finished_at else 0,
             reverse=True,
         )
-    return books
+    else:
+        sorted_books = books
+    return list(reversed(sorted_books)) if reverse else sorted_books
 
 
 @router.get("/library", response_model=list[LibraryBook])
 async def get_library(
     search: str | None = Query(default=None),
     sort: LibrarySort | None = Query(default=None),
+    reverse: bool = Query(default=False),
     page: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=200),
     client: AbsDataCache = Depends(abs_cache),
@@ -116,7 +121,7 @@ async def get_library(
 
     settings = await db.get(Settings, 1)
     effective_sort = sort or (settings.library_sort_default if settings else "title")
-    books = _sort_books(books, effective_sort)
+    books = _sort_books(books, effective_sort, reverse)
     return books[page * limit : (page + 1) * limit]
 
 

@@ -188,6 +188,12 @@ def test_sort_by_recently_added():
     assert [book.title for book in sorted_books] == ["B", "C", "A"]
 
 
+def test_sort_can_be_reversed():
+    books = [_make_book("A", added_at=100), _make_book("B", added_at=300)]
+    sorted_books = _sort_books(books, "recently_added", reverse=True)
+    assert [book.title for book in sorted_books] == ["A", "B"]
+
+
 def test_sort_unknown_key_returns_unchanged():
     books = [_make_book("Z"), _make_book("A")]
     result = _sort_books(books, "unknown")

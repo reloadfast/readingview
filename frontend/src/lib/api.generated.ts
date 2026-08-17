@@ -1933,6 +1933,7 @@ export interface operations {
             query?: {
                 search?: string | null;
                 sort?: ("title" | "recently_added" | "progress_asc" | "progress_desc" | "updated" | "finished") | null;
+                reverse?: boolean;
                 page?: number;
                 limit?: number;
             };
