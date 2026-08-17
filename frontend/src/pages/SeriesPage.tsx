@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { Badge, Select, Skeleton } from "@/components/ui";
+import { AbsBookLink, Badge, Select, Skeleton } from "@/components/ui";
 import { useSeries, useSeriesDetail } from "@/hooks/useSeries";
 import type { SeriesSummary } from "@/lib/api";
 
@@ -78,10 +78,10 @@ function SeriesDetailPanel({ name }: { name: string }) {
       {data.books.map((book) => (
         <div key={book.id} className="py-2 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-text-primary truncate">
+            <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">
               {book.sequence ? `${book.sequence}. ` : ""}
               {book.title}
-            </p>
+            </AbsBookLink>
             <p className="text-xs text-text-secondary">{book.duration_formatted}</p>
           </div>
           <BookStatusBadge finished={book.is_finished} progress={book.progress} />

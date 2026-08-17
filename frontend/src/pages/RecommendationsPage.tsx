@@ -12,7 +12,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Input, Skeleton } from "@/components/ui";
+import { AbsBookLink, Input, Skeleton } from "@/components/ui";
 import { useLibrary } from "@/hooks/useLibrary";
 import {
   useRecommendations,
@@ -184,7 +184,7 @@ function BookCheckbox({
         onChange={onToggle}
         className="accent-accent"
       />
-      <span className="text-sm text-text-primary line-clamp-1 flex-1">{book.title}</span>
+      <AbsBookLink itemId={book.id} className="text-sm text-text-primary line-clamp-1 flex-1 hover:text-accent hover:underline">{book.title}</AbsBookLink>
       <span className="text-xs text-text-secondary shrink-0 line-clamp-1">{book.authors}</span>
     </label>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, BookOpen, FolderOpen, Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import { Button, CoverImage, Input, Skeleton } from "@/components/ui";
+import { AbsBookLink, Button, CoverImage, Input, Skeleton } from "@/components/ui";
 import {
   useAddToCollection,
   useCollectionDetail,
@@ -266,7 +266,7 @@ function AddBookPanel({
               iconClassName="w-4 h-4 text-text-secondary opacity-40"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-text-primary truncate">{book.title}</p>
+              <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
               <p className="text-xs text-text-secondary truncate">{book.authors}</p>
             </div>
           </label>
@@ -305,7 +305,7 @@ function BookRow({
     <div className="flex items-center gap-3 py-2.5 px-1">
       <CoverImage book={book} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-text-primary truncate">{book.title}</p>
+        <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
         <p className="text-xs text-text-secondary truncate">{book.authors}</p>
       </div>
       <div className="flex-shrink-0">

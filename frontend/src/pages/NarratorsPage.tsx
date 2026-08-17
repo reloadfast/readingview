@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronUp, Mic, Search } from "lucide-react";
-import { Badge, Input, Skeleton } from "@/components/ui";
+import { AbsBookLink, Badge, Input, Skeleton } from "@/components/ui";
 import { useNarratorDetail, useNarrators } from "@/hooks/useNarrators";
 import type { NarratorSummary } from "@/lib/api";
 
@@ -46,7 +46,7 @@ function NarratorDetailPanel({ name }: { name: string }) {
       {data.books.map((book) => (
         <div key={book.id} className="py-2 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-text-primary truncate">{book.title}</p>
+            <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
             <Link
           to={`/authors/${encodeURIComponent(book.author)}`}
           className="text-xs text-text-secondary hover:text-accent hover:underline"

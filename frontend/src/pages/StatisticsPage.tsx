@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
@@ -14,7 +15,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
-import { Card, CardContent, Skeleton, Select } from "@/components/ui";
+import { AbsBookLink, Card, CardContent, Skeleton, Select } from "@/components/ui";
 import { useStatistics, useYearlyStats, useRecap, useHeatmap, useStatisticsDetail } from "@/hooks/useStatistics";
 import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
@@ -257,7 +258,7 @@ function TopList({
 interface RecapCardProps {
   label: string;
   value: string | number;
-  sub?: string;
+  sub?: ReactNode;
 }
 
 function RecapCard({ label, value, sub, onClick }: RecapCardProps & { onClick?: () => void }) {
@@ -300,28 +301,28 @@ function RecapSection({
           <RecapCard
             label="Longest book"
             value={formatDuration(data.longest_book.duration)}
-            sub={data.longest_book.title}
+            sub={<AbsBookLink itemId={data.longest_book.id} className="hover:text-accent hover:underline">{data.longest_book.title}</AbsBookLink>}
           />
         )}
         {data.shortest_book && (
           <RecapCard
             label="Shortest book"
             value={formatDuration(data.shortest_book.duration)}
-            sub={data.shortest_book.title}
+            sub={<AbsBookLink itemId={data.shortest_book.id} className="hover:text-accent hover:underline">{data.shortest_book.title}</AbsBookLink>}
           />
         )}
         {data.fastest_read && (
           <RecapCard
             label="Fastest read"
             value={`${data.fastest_read.days}d`}
-            sub={data.fastest_read.title}
+            sub={<AbsBookLink itemId={data.fastest_read.id} className="hover:text-accent hover:underline">{data.fastest_read.title}</AbsBookLink>}
           />
         )}
         {data.slowest_read && (
           <RecapCard
             label="Slowest read"
             value={`${data.slowest_read.days}d`}
-            sub={data.slowest_read.title}
+            sub={<AbsBookLink itemId={data.slowest_read.id} className="hover:text-accent hover:underline">{data.slowest_read.title}</AbsBookLink>}
           />
         )}
         {data.top_series[0] && (
@@ -738,7 +739,7 @@ function StatisticsDetailDialog({
             <div className="space-y-2">
               {books.length === 0 ? <p className="py-8 text-center text-sm text-text-secondary">No books finished in this period.</p> : books.map((book) => (
                 <div key={book.id} className="rounded-lg border border-border p-3">
-                  <p className="font-medium text-text-primary">{book.title}</p>
+                  <AbsBookLink itemId={book.id} className="block font-medium text-text-primary hover:text-accent hover:underline">{book.title}</AbsBookLink>
                   <p className="text-sm text-text-secondary">{book.author} · {formatFinishedAt(book.finished_at)}</p>
                 </div>
               ))}
@@ -746,10 +747,12 @@ function StatisticsDetailDialog({
           ) : view.kind === "hours" ? (
             <div className="space-y-3">
               {(detail?.listening_days ?? []).map((day) => (
-                <button key={day.date} onClick={() => onSelectDay(day.date)} className="w-full text-left rounded-lg border border-border p-3 hover:bg-surface-hover">
-                  <div className="flex justify-between gap-3"><span className="font-medium text-text-primary">{new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span><span className="text-sm text-accent">{day.minutes} min</span></div>
-                  <p className="mt-1 text-sm text-text-secondary truncate">{day.books.map((book) => book.title).join(", ")}</p>
-                </button>
+                <div key={day.date} className="rounded-lg border border-border p-3 hover:bg-surface-hover">
+                  <button onClick={() => onSelectDay(day.date)} className="w-full text-left">
+                    <div className="flex justify-between gap-3"><span className="font-medium text-text-primary">{new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span><span className="text-sm text-accent">{day.minutes} min</span></div>
+                  </button>
+                  <p className="mt-1 text-sm text-text-secondary truncate">{day.books.map((book, index) => <span key={`${book.id}-${book.title}`}>{index > 0 && ", "}{book.id ? <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">{book.title}</AbsBookLink> : book.title}</span>)}</p>
+                </div>
               ))}
               {(detail?.listening_days.length ?? 0) === 0 && <p className="py-8 text-center text-sm text-text-secondary">No listening sessions recorded.</p>}
             </div>
@@ -757,7 +760,7 @@ function StatisticsDetailDialog({
             <div className="space-y-5">
               {year !== "all" && <ActivityHeatmap data={(detail?.listening_days ?? []).map((day) => ({ date: day.date, minutes: day.minutes }))} year={year} onDayClick={onSelectDay} />}
               {selectedDay ? (
-                <div className="rounded-lg border border-border p-4"><div className="flex items-center justify-between mb-3"><h3 className="font-medium text-text-primary">{selectedDay.date}</h3><span className="text-sm text-accent">{selectedDay.minutes} min</span></div><div className="space-y-2">{selectedDay.books.map((book) => <div key={`${book.id}-${book.title}`} className="flex justify-between gap-3 text-sm"><span className="text-text-primary">{book.title}<span className="text-text-secondary"> · {book.author}</span></span><span className="text-text-secondary whitespace-nowrap">{book.minutes} min</span></div>)}</div></div>
+                <div className="rounded-lg border border-border p-4"><div className="flex items-center justify-between mb-3"><h3 className="font-medium text-text-primary">{selectedDay.date}</h3><span className="text-sm text-accent">{selectedDay.minutes} min</span></div><div className="space-y-2">{selectedDay.books.map((book) => <div key={`${book.id}-${book.title}`} className="flex justify-between gap-3 text-sm"><span className="text-text-primary">{book.id ? <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">{book.title}</AbsBookLink> : book.title}<span className="text-text-secondary"> · {book.author}</span></span><span className="text-text-secondary whitespace-nowrap">{book.minutes} min</span></div>)}</div></div>
               ) : <p className="text-sm text-text-secondary">Select an active day to see the audiobook and listening-time breakdown.</p>}
             </div>
           )}

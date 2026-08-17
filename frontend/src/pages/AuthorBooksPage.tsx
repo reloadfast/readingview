@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, BookOpen, Mic } from "lucide-react";
-import { Badge, Card, CardContent, Skeleton } from "@/components/ui";
+import { AbsBookLink, Badge, Card, CardContent, Skeleton } from "@/components/ui";
 import { useAuthorDetail } from "@/hooks/useAuthors";
 
 function BookRowSkeleton() {
@@ -58,7 +58,7 @@ export default function AuthorBooksPage() {
               {data.books.map((book) => (
                 <div key={book.id} className="py-3 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-primary truncate">{book.title}</p>
+                    <AbsBookLink itemId={book.id} className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
                     {book.narrator && (
                       <p className="text-xs text-text-secondary flex items-center gap-1 mt-0.5">
                         <Mic className="w-3 h-3 flex-shrink-0" />

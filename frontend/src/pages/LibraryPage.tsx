@@ -14,7 +14,7 @@ import {
   ThumbsUp,
   X,
 } from "lucide-react";
-import { Badge, CoverImage, Input, Select, Skeleton } from "@/components/ui";
+import { AbsBookLink, Badge, CoverImage, Input, Select, Skeleton } from "@/components/ui";
 import { useInProgress, useLibrary } from "@/hooks/useLibrary";
 import { useDeleteNote, useNote, useSaveNote } from "@/hooks/useNotes";
 import { useRecommendations, useSubmitFeedback } from "@/hooks/useRecommendations";
@@ -120,7 +120,7 @@ function SimilarSlideOver({ book }: { book: LibraryBook }) {
               <Dialog.Title className="text-sm font-semibold text-text-primary">
                 Similar to
               </Dialog.Title>
-              <p className="text-xs text-text-secondary line-clamp-1 mt-0.5">{book.title}</p>
+              <AbsBookLink itemId={book.id} className="block text-xs text-text-secondary line-clamp-1 mt-0.5 hover:text-accent hover:underline">{book.title}</AbsBookLink>
             </div>
             <Dialog.Close asChild>
               <button className="text-text-secondary hover:text-text-primary ml-4 shrink-0">
@@ -204,7 +204,7 @@ function NotesDialog({ book }: { book: LibraryBook }) {
         >
           <div className="flex items-start justify-between mb-3">
             <Dialog.Title className="text-sm font-semibold text-text-primary line-clamp-2 pr-4">
-              {book.title}
+              <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">{book.title}</AbsBookLink>
             </Dialog.Title>
             <Dialog.Close asChild>
               <button className="text-text-secondary hover:text-text-primary shrink-0">
@@ -254,7 +254,7 @@ function BookCard({ book }: { book: LibraryBook }) {
         book={book}
         className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center"
       />
-      <p className="text-sm font-medium text-text-primary line-clamp-2">{book.title}</p>
+      <AbsBookLink itemId={book.id} className="text-sm font-medium text-text-primary line-clamp-2 hover:text-accent hover:underline">{book.title}</AbsBookLink>
       <p className="text-xs text-text-secondary line-clamp-1">
         {book.authors.split(",").map((a, i, arr) => {
           const name = a.trim();

@@ -1,5 +1,6 @@
 export { Badge } from "./Badge";
 export { CoverImage } from "./CoverImage";
+export { AbsBookLink } from "./AbsBookLink";
 export { Button, buttonVariants } from "./Button";
 export { Card, CardHeader, CardContent } from "./Card";
 export { Input } from "./Input";

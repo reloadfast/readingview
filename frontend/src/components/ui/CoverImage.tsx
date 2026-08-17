@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BookOpen } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { LibraryBook } from "@/lib/api";
+import { AbsBookLink } from "./AbsBookLink";
 
 export function CoverImage({
   book,
@@ -16,7 +17,7 @@ export function CoverImage({
 }) {
   const [errored, setErrored] = useState(false);
   const src = !errored && book.cover_url ? book.cover_url : null;
-  return (
+  const image = (
     <div className={className}>
       {src ? (
         <img
@@ -30,4 +31,6 @@ export function CoverImage({
       )}
     </div>
   );
+
+  return <AbsBookLink itemId={book.id} className="block">{image}</AbsBookLink>;
 }
