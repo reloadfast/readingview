@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -12,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ..api.deps import abs_cache
 from ..config import settings
 from ..db import get_db
 from ..models.releases import ManualRelease, Release, ReleaseTrackedAuthor
@@ -26,6 +28,7 @@ from ..schemas.releases import (
     TrackAuthorRequest,
 )
 from ..services import release_tracker as rt_svc
+from ..services.abs_cache import AbsDataCache
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,10 @@ def _release_to_out(r: Release) -> ReleaseOut:
         notes=r.notes,
         source=r.source,
     )
+
+
+def _normalise_title(title: str) -> str:
+    return " ".join(title.casefold().split())
 
 
 def _manual_dedupe_key(
@@ -155,6 +162,7 @@ async def untrack_author(
 @router.get("/releases", response_model=list[ReleaseOut])
 async def list_releases(
     author: str | None = Query(default=None),
+    client: AbsDataCache = Depends(abs_cache),
     db: AsyncSession = Depends(get_db),
 ) -> list[ReleaseOut]:
     async with db.begin():
@@ -169,7 +177,25 @@ async def list_releases(
             q = q.where(ReleaseTrackedAuthor.name.ilike(f"%{author}%"))
         rows = (await db.execute(q)).scalars().all()
 
-    return [_release_to_out(r) for r in rows]
+    try:
+        library_items = await client.get_all_library_items()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    library_titles = {
+        _normalise_title(item.get("media", {}).get("metadata", {}).get("title", ""))
+        for item in library_items
+        if item.get("media", {}).get("metadata", {}).get("title")
+    }
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+    actionable = [
+        release
+        for release in rows
+        if release.release_date
+        and (release.release_date >= today or _normalise_title(release.title) not in library_titles)
+    ]
+
+    return [_release_to_out(r) for r in actionable]
 
 
 @router.patch("/releases/{release_id}", response_model=ReleaseOut)

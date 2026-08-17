@@ -1,10 +1,13 @@
 """Tests for /api/releases — tracked-author CRUD and release listing."""
 
 import time
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.api.deps import abs_cache
+from app.main import app
 from app.models.releases import Release, ReleaseTrackedAuthor
 
 
@@ -74,7 +77,13 @@ async def test_untrack_nonexistent_author(client):
 
 
 async def test_list_releases_empty(client):
-    r = await client.get("/api/releases")
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = []
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        r = await client.get("/api/releases")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
     assert r.status_code == 200
     assert r.json() == []
 
@@ -82,7 +91,13 @@ async def test_list_releases_empty(client):
 async def test_list_releases_loads_author(client, db):
     rel = await _seed_author_and_release(db)
 
-    r = await client.get("/api/releases")
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = []
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        r = await client.get("/api/releases")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
 
     assert r.status_code == 200
     assert r.json() == [
@@ -99,6 +114,34 @@ async def test_list_releases_loads_author(client, db):
             "source": "test",
         }
     ]
+
+
+async def test_list_releases_only_returns_upcoming_or_missing_library_titles(client, db):
+    async with db.begin():
+        author = ReleaseTrackedAuthor(name="Filter Author", added_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        db.add_all(
+            [
+                Release(author_id=author.id, title="Future Book", release_date="2099-01-01"),
+                Release(author_id=author.id, title="Missing Past Book", release_date="2000-01-01"),
+                Release(author_id=author.id, title="Library Past Book", release_date="2000-01-01"),
+                Release(author_id=author.id, title="Undated Book", release_date=None),
+            ]
+        )
+
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = [
+        {"media": {"metadata": {"title": "  library   past book  "}}}
+    ]
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        r = await client.get("/api/releases")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
+
+    assert r.status_code == 200
+    assert {release["title"] for release in r.json()} == {"Future Book", "Missing Past Book"}
 
 
 async def test_refresh_no_tracked_authors(client):
