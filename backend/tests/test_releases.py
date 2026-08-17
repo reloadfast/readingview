@@ -79,6 +79,28 @@ async def test_list_releases_empty(client):
     assert r.json() == []
 
 
+async def test_list_releases_loads_author(client, db):
+    rel = await _seed_author_and_release(db)
+
+    r = await client.get("/api/releases")
+
+    assert r.status_code == 200
+    assert r.json() == [
+        {
+            "id": rel.id,
+            "title": "Test Book",
+            "author_name": "Seed Author",
+            "release_date": "2025",
+            "release_date_confirmed": False,
+            "book_number": None,
+            "ol_key": None,
+            "link_url": None,
+            "notes": None,
+            "source": "test",
+        }
+    ]
+
+
 async def test_refresh_no_tracked_authors(client):
     r = await client.post("/api/releases/refresh")
     assert r.status_code == 200

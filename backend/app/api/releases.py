@@ -161,6 +161,7 @@ async def list_releases(
         q = (
             select(Release)
             .join(Release.author)
+            .options(selectinload(Release.author))
             .where(Release.is_active.is_(True))
             .order_by(Release.release_date.asc().nullslast())
         )
