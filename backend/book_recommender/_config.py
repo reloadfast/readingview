@@ -24,6 +24,8 @@ class RecommenderConfig:
         llm_model: str = "",
         enable_explanations: bool = False,
         ollama_url: str = "",
+        llm_type: str = "ollama",
+        api_key: str | None = None,
         top_k: int = 10,
         min_similarity: float = 0.2,
     ):
@@ -34,6 +36,8 @@ class RecommenderConfig:
         self.llm_model = llm_model
         self.enable_explanations = enable_explanations
         self.ollama_url = ollama_url
+        self.llm_type = llm_type
+        self.api_key = api_key
         self.top_k = top_k
         self.min_similarity = min_similarity
 
@@ -50,6 +54,10 @@ class RecommenderConfig:
             return False, "llm_model is required"
         if not self.ollama_url:
             return False, "llm_endpoint (Ollama URL) is required"
+        if self.llm_type not in ("ollama", "ollama_bearer", "openai"):
+            return False, "llm_type must be 'ollama', 'ollama_bearer', or 'openai'"
+        if self.llm_type in ("ollama_bearer", "openai") and not self.api_key:
+            return False, "llm_api_key is required for the selected LLM type"
         return True, None
 
     def validate_or_raise(self) -> None:

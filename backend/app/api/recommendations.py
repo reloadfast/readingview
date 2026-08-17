@@ -37,7 +37,17 @@ async def recommendations(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     ids = [b.strip() for b in book_ids.split(",") if b.strip()] if book_ids else None
-    return await get_recommendations(db, book_ids=ids, prompt=prompt)
+    from book_recommender._exceptions import (
+        BookRecommenderConfigError,
+        BookRecommenderProviderError,
+    )
+
+    try:
+        return await get_recommendations(db, book_ids=ids, prompt=prompt)
+    except BookRecommenderConfigError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except BookRecommenderProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/recommendations/ingest", response_model=IngestResponse)

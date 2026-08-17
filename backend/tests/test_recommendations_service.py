@@ -1,6 +1,6 @@
 """Unit tests for recommendations service helpers."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -216,3 +216,44 @@ async def test_get_status_disabled(engine):
 
     assert status["enabled"] is False
     assert status["model"] is None
+
+
+async def test_selected_abs_books_are_ingested_with_their_abs_ids():
+    """The library picker sends ABS UUIDs, so those IDs must be embedded directly."""
+    row = MagicMock(abs_url="http://abs.test")
+    token_field = "abs_token"
+    setattr(row, token_field, "stored-token")
+    db = MagicMock()
+    db.get = AsyncMock(return_value=row)
+    abs_item = {
+        "media": {
+            "metadata": {
+                "title": "A Library Book",
+                "authorName": "Author One, Author Two",
+                "description": "A cosmic adventure.",
+                "genres": ["Science Fiction"],
+                "isbn": "9781234567890",
+            }
+        }
+    }
+    client = MagicMock()
+    client.get_item = AsyncMock(return_value=abs_item)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch("app.services.recommendations.decrypt", return_value="abs-token"),
+        patch("app.services.recommendations.AudiobookshelfClient", return_value=client),
+        patch("book_recommender.service.ingest_library_book") as ingest,
+    ):
+        ids = await rec_mod._ingest_selected_library_books(db, ["abs-book-id"])
+
+    assert ids == ["abs-book-id"]
+    ingest.assert_called_once_with(
+        book_id="abs-book-id",
+        title="A Library Book",
+        authors=["Author One", "Author Two"],
+        description="A cosmic adventure.",
+        subjects=["Science Fiction"],
+        isbn="9781234567890",
+    )

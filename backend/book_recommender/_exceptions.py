@@ -15,3 +15,7 @@ class BookRecommenderConfigError(Exception):
 
     def __init__(self, message: str):
         super().__init__(f"Book recommender configuration error: {message}")
+
+
+class BookRecommenderProviderError(Exception):
+    """Raised when the configured embedding or generation provider fails."""

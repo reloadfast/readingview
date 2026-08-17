@@ -7,7 +7,9 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings as app_settings
+from ..crypto import decrypt
 from ..models.settings import Settings as DBSettings
+from .audiobookshelf import AudiobookshelfClient
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,8 @@ def _settings_hash(row: DBSettings | None) -> str:
         row.recommender_vector_backend,
         row.recommender_embed_model,
         row.llm_model,
+        row.llm_type,
+        row.llm_api_key,
         row.recommender_explanations_enabled,
         row.llm_endpoint,
         row.recommender_top_k,
@@ -64,6 +68,11 @@ async def _configure_recommender(db: AsyncSession) -> None:
         configure(RecommenderConfig(enabled=False, db_path=""))
     else:
         db_path = _db_path_from_url(app_settings.DATABASE_URL)
+        try:
+            api_key = decrypt(row.llm_api_key) if row.llm_api_key else None
+        except Exception:
+            logger.warning("Failed to decrypt recommender API key")
+            api_key = None
         cfg = RecommenderConfig(
             enabled=True,
             db_path=db_path,
@@ -72,6 +81,8 @@ async def _configure_recommender(db: AsyncSession) -> None:
             llm_model=row.llm_model or "",
             enable_explanations=row.recommender_explanations_enabled,
             ollama_url=row.llm_endpoint or "",
+            llm_type=row.llm_type,
+            api_key=api_key,
             top_k=row.recommender_top_k,
             min_similarity=row.recommender_min_similarity,
         )
@@ -88,9 +99,52 @@ async def get_recommendations(
     prompt: str | None = None,
 ) -> list[dict]:
     await _configure_recommender(db)
+    if book_ids:
+        book_ids = await _ingest_selected_library_books(db, book_ids)
     from book_recommender.service import recommend
 
     return recommend(liked_book_ids=book_ids, free_text_prompt=prompt)
+
+
+async def _ingest_selected_library_books(db: AsyncSession, book_ids: list[str]) -> list[str]:
+    """Ensure ABS selections have embeddings before they are used as sources."""
+    row = await db.get(DBSettings, 1)
+    if row is None or not row.abs_url or not row.abs_token:
+        return book_ids
+
+    from book_recommender.service import ingest_library_book
+
+    try:
+        token = decrypt(row.abs_token)
+        async with AudiobookshelfClient(row.abs_url, token) as client:
+            resolved: list[str] = []
+            for book_id in book_ids:
+                item = await client.get_item(book_id)
+                if item is None:
+                    resolved.append(book_id)
+                    continue
+                metadata = item.get("media", {}).get("metadata", {})
+                raw_authors = metadata.get("authors", [])
+                authors = [a.get("name", "") for a in raw_authors if isinstance(a, dict)]
+                if not authors and metadata.get("authorName"):
+                    authors = [a.strip() for a in metadata["authorName"].split(",") if a.strip()]
+                ingest_library_book(
+                    book_id=book_id,
+                    title=metadata.get("title", "Unknown Title"),
+                    authors=authors or ["Unknown Author"],
+                    description=metadata.get("description"),
+                    subjects=metadata.get("genres", []) or [],
+                    isbn=metadata.get("isbn"),
+                )
+                resolved.append(book_id)
+            return resolved
+    except Exception as exc:
+        from book_recommender._exceptions import BookRecommenderProviderError
+
+        if isinstance(exc, BookRecommenderProviderError):
+            raise
+        logger.warning("Failed to ingest selected Audiobookshelf books", exc_info=True)
+        return book_ids
 
 
 async def run_ingest(

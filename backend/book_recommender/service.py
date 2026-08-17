@@ -40,7 +40,13 @@ def _ensure_initialized():
     from ._vector import create_backend
 
     _db = RecommenderDB(cfg.db_path)
-    _ollama = OllamaClient(cfg.ollama_url, cfg.embed_model, cfg.llm_model)
+    _ollama = OllamaClient(
+        cfg.ollama_url,
+        cfg.embed_model,
+        cfg.llm_model,
+        provider_type=cfg.llm_type,
+        api_key=cfg.api_key,
+    )
     _backend = create_backend(cfg.vector_backend)
     _ingester = MetadataIngester(_db)
     _initialized = True
@@ -236,6 +242,32 @@ def ingest(
         book_id = _ingester.ingest_by_title(title, author)
     if book_id is not None:
         _embed_stale_books()
+    return book_id
+
+
+def ingest_library_book(
+    book_id: str,
+    title: str,
+    authors: list[str],
+    description: str | None,
+    subjects: list[str],
+    isbn: str | None,
+) -> str:
+    """Add an Audiobookshelf item to the local recommendation catalog.
+
+    ABS IDs are deliberately retained: these are the IDs used by the library
+    picker, unlike manually ingested Open Library work IDs.
+    """
+    _ensure_initialized()
+    _db.upsert_book(
+        book_id=book_id,
+        title=title,
+        authors=authors,
+        description=description,
+        subjects=subjects,
+        isbns=[isbn] if isbn else [],
+    )
+    _embed_stale_books()
     return book_id
 
 

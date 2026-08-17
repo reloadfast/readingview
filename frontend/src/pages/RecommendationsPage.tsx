@@ -153,7 +153,7 @@ function ResultsGrid({ params }: { params: RecommendationParams | null }) {
     return (
       <div className="mt-6 text-center py-12 text-text-secondary">
         <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p className="text-sm">No recommendations found. Try adjusting your prompt or adding more books.</p>
+        <p className="text-sm">No recommendations found. Use Ingest book to add candidate titles, or select fewer source books.</p>
       </div>
     );
   }

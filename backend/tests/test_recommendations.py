@@ -1,6 +1,8 @@
 """Verify recommendations returns [] and makes no Ollama calls when disabled."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+
+from book_recommender._exceptions import BookRecommenderProviderError
 
 
 async def test_recommendations_disabled_returns_empty_list(client):
@@ -62,3 +64,14 @@ async def test_no_ollama_calls_when_disabled(client):
             if "11434" in str(call) or "ollama" in str(call).lower()
         ]
         assert ollama_calls == []
+
+
+async def test_recommendation_provider_failure_returns_502(client):
+    with patch(
+        "app.api.recommendations.get_recommendations",
+        new=AsyncMock(side_effect=BookRecommenderProviderError("Embedding request failed")),
+    ):
+        response = await client.get("/api/recommendations?prompt=space+opera")
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Embedding request failed"
