@@ -1289,6 +1289,8 @@ export interface components {
             release_date?: string | null;
             /** Notes */
             notes?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
         };
         /** ReadDuration */
         ReadDuration: {
@@ -1380,6 +1382,8 @@ export interface components {
             notes: string | null;
             /** Source */
             source: string | null;
+            /** Is Active */
+            is_active: boolean;
         };
         /** ReleaseTrackedAuthorOut */
         ReleaseTrackedAuthorOut: {
@@ -2364,6 +2368,7 @@ export interface operations {
         parameters: {
             query?: {
                 author?: string | null;
+                include_hidden?: boolean;
             };
             header?: never;
             path?: never;

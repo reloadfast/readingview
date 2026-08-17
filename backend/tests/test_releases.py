@@ -123,6 +123,7 @@ async def test_list_releases_loads_author(client, db):
             "link_url": None,
             "notes": None,
             "source": "test",
+            "is_active": True,
         }
     ]
 
@@ -153,6 +154,41 @@ async def test_list_releases_only_returns_upcoming_or_missing_library_titles(cli
 
     assert r.status_code == 200
     assert {release["title"] for release in r.json()} == {"Future Book", "Missing Past Book"}
+
+
+async def test_list_releases_matches_audiobook_edition_titles(client, db):
+    async with db.begin():
+        author = ReleaseTrackedAuthor(name="Match Author", added_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        db.add_all(
+            [
+                Release(author_id=author.id, title="Beware of Chicken", release_date="2000-01-01"),
+                Release(
+                    author_id=author.id,
+                    title="Primal Hunter - Tome 1",
+                    release_date="2000-01-01",
+                ),
+                Release(
+                    author_id=author.id,
+                    title="Primal Hunter - Tome 2",
+                    release_date="2000-01-01",
+                ),
+            ]
+        )
+
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = [
+        {"media": {"metadata": {"title": "Beware of Chicken, Book 1"}}},
+        {"media": {"metadata": {"title": "Primal Hunter (Light Novel) Vol. 1"}}},
+    ]
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        r = await client.get("/api/releases")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
+
+    assert [release["title"] for release in r.json()] == ["Primal Hunter - Tome 2"]
 
 
 async def test_refresh_no_tracked_authors(client):
@@ -218,6 +254,25 @@ async def test_patch_release_partial_leaves_other_fields(client, db):
     data = r.json()
     assert data["notes"] == "note only"
     assert data["release_date"] == rel.release_date
+
+
+async def test_patch_release_hides_and_restores_release(client, db):
+    rel = await _seed_author_and_release(db)
+    hidden = await client.patch(f"/api/releases/{rel.id}", json={"is_active": False})
+    assert hidden.status_code == 200
+    assert hidden.json()["is_active"] is False
+
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = []
+    app.dependency_overrides[abs_cache] = lambda: mock_abs_cache
+    try:
+        assert (await client.get("/api/releases")).json() == []
+        visible = await client.get("/api/releases?include_hidden=true")
+    finally:
+        app.dependency_overrides.pop(abs_cache, None)
+
+    assert visible.status_code == 200
+    assert visible.json()[0]["is_active"] is False
 
 
 # --- manual releases ---

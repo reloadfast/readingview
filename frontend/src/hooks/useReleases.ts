@@ -15,10 +15,10 @@ import {
   type TrackAuthorRequest,
 } from "../lib/api";
 
-export function useReleases(author?: string) {
+export function useReleases(author?: string, includeHidden = false) {
   return useQuery({
-    queryKey: ["releases", author ?? null],
-    queryFn: () => getReleases(author),
+    queryKey: ["releases", author ?? null, includeHidden],
+    queryFn: () => getReleases(author, includeHidden),
   });
 }
 

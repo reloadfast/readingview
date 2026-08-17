@@ -223,8 +223,11 @@ export function getSeriesDetail(name: string): Promise<SeriesDetail> {
 // Releases
 // ---------------------------------------------------------------------------
 
-export function getReleases(author?: string): Promise<ReleaseOut[]> {
-  const q = author ? `?author=${encodeURIComponent(author)}` : "";
+export function getReleases(author?: string, includeHidden = false): Promise<ReleaseOut[]> {
+  const params = new URLSearchParams();
+  if (author) params.set("author", author);
+  if (includeHidden) params.set("include_hidden", "true");
+  const q = params.size ? `?${params}` : "";
   return apiFetch(`/releases${q}`);
 }
 

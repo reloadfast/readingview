@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from uuid import uuid4
@@ -50,11 +51,27 @@ def _release_to_out(r: Release) -> ReleaseOut:
         link_url=r.link_url,
         notes=r.notes,
         source=r.source,
+        is_active=r.is_active,
     )
 
 
 def _normalise_title(title: str) -> str:
-    return " ".join(title.casefold().split())
+    """Normalise common audiobook naming differences without dropping installment numbers."""
+    title = title.casefold()
+    title = re.sub(r"[\[\(](?:unabridged|audiobook|light novel)[^\]\)]*[\]\)]", " ", title)
+    title = re.sub(r"\b(?:book|tome|vol(?:ume)?)\.?\s*(\d+)\b", r" \1", title)
+    title = re.sub(r"[^\w]+", " ", title, flags=re.UNICODE)
+    return " ".join(title.split())
+
+
+def _title_is_in_library(release_title: str, library_titles: set[str]) -> bool:
+    normalised = _normalise_title(release_title)
+    if normalised in library_titles:
+        return True
+
+    # Open Library sometimes omits the first installment number while ABS includes it.
+    # Permit only an added trailing number, so separate installments never match each other.
+    return any(re.fullmatch(rf"{re.escape(normalised)} \d+", title) for title in library_titles)
 
 
 def _manual_dedupe_key(
@@ -162,6 +179,7 @@ async def untrack_author(
 @router.get("/releases", response_model=list[ReleaseOut])
 async def list_releases(
     author: str | None = Query(default=None),
+    include_hidden: bool = Query(default=False),
     client: AbsDataCache = Depends(abs_cache),
     db: AsyncSession = Depends(get_db),
 ) -> list[ReleaseOut]:
@@ -169,9 +187,10 @@ async def list_releases(
         select(Release)
         .join(Release.author)
         .options(selectinload(Release.author))
-        .where(Release.is_active.is_(True))
         .order_by(Release.release_date.asc().nullslast())
     )
+    if not include_hidden:
+        q = q.where(Release.is_active.is_(True))
     if author:
         q = q.where(ReleaseTrackedAuthor.name.ilike(f"%{author}%"))
     rows = (await db.execute(q)).scalars().all()
@@ -191,7 +210,9 @@ async def list_releases(
         release
         for release in rows
         if release.release_date
-        and (release.release_date >= today or _normalise_title(release.title) not in library_titles)
+        and (
+            release.release_date >= today or not _title_is_in_library(release.title, library_titles)
+        )
     ]
 
     return [_release_to_out(r) for r in actionable]

@@ -29,6 +29,7 @@ class ReleaseOut(BaseModel):
     link_url: str | None
     notes: str | None
     source: str | None
+    is_active: bool
 
     class Config:
         from_attributes = True
@@ -38,6 +39,7 @@ class PatchReleaseRequest(BaseModel):
     release_date_confirmed: bool | None = None
     release_date: str | None = None
     notes: str | None = None
+    is_active: bool | None = None
 
 
 class RefreshError(BaseModel):

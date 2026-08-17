@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Archive, BookMarked, Check, HelpCircle, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Archive, BookMarked, Check, EyeOff, HelpCircle, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Badge, Button, Input, Select, Skeleton } from "@/components/ui";
 import {
@@ -73,6 +73,10 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
     setConfirmedVal(release.release_date_confirmed);
   }
 
+  function handleVisibility() {
+    patch.mutate({ id: release.id, is_active: !release.is_active });
+  }
+
   return (
     <>
       <tr className="border-b border-border hover:bg-surface-hover transition-colors">
@@ -111,13 +115,23 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
           {release.source && <Badge variant="neutral">{release.source}</Badge>}
         </td>
         <td className="py-3 px-4">
-          <button
-            onClick={() => setEditing((e) => !e)}
-            className="text-text-secondary hover:text-text-primary"
-            title="Edit release"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={patch.isPending}
+              onClick={handleVisibility}
+              className="text-text-secondary hover:text-text-primary disabled:opacity-40"
+              title={release.is_active ? "Not interested — hide release" : "Restore release"}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setEditing((e) => !e)}
+              className="text-text-secondary hover:text-text-primary"
+              title="Edit release"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </td>
       </tr>
       {editing && (
@@ -179,10 +193,11 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
 function ReleasesTab() {
   const [authorFilter, setAuthorFilter] = useState(AUTHOR_ALL);
   const [includeManual, setIncludeManual] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [lastFailedCount, setLastFailedCount] = useState(0);
 
-  const releases = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined);
+  const releases = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined, showHidden);
   const tracked  = useTrackedAuthors();
   const refresh  = useRefreshReleases();
   const manual = useManualReleases();
@@ -209,6 +224,15 @@ function ReleasesTab() {
               className="accent-[var(--color-accent)]"
             />
             Include manual tracking
+          </label>
+          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showHidden}
+              onChange={(event) => setShowHidden(event.target.checked)}
+              className="accent-[var(--color-accent)]"
+            />
+            Show hidden
           </label>
           {lastRefreshed && (
             <span className="text-xs text-text-secondary">
