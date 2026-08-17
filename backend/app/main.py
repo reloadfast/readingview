@@ -43,6 +43,7 @@ from .models.settings import Settings
 from .services import abs_cache as abs_cache_svc
 from .services import abs_socket as abs_socket_svc
 from .services import scheduler as scheduler_svc
+from .services.cover_cache import CoverCache
 
 
 class _JsonFormatter(logging.Formatter):
@@ -114,6 +115,8 @@ async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
     await abs_socket_svc.start(ws_manager, abs_url, abs_token_enc)
     if abs_url and abs_token_enc:
         await abs_cache_svc.start(abs_url, abs_token_enc)
+    if _cache_instance:
+        await _cache_instance.start()
     yield
     await abs_socket_svc.stop()
     await abs_cache_svc.stop()
@@ -122,6 +125,7 @@ async def _lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(title="ReadingView", lifespan=_lifespan)
 
+_cache_instance: CoverCache | None = None
 if settings.COVER_CACHE_ENABLED:
     from .services.cover_cache import initialize as _init_cache
 

@@ -1,9 +1,11 @@
 import asyncio
+import hashlib
 import logging
 import time
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,12 +21,24 @@ from ..schemas.authors import (
 )
 from ..services import authors as author_svc
 from ..services.abs_cache import AbsDataCache
+from ..services.cover_cache import get as get_cover_cache
 from ..services.openlibrary import OpenLibraryClient
 
 router = APIRouter()
 
 _OL = OpenLibraryClient()
 logger = logging.getLogger(__name__)
+_PHOTO_CACHE_MAX_AGE = 604800  # one week
+
+
+def _author_to_out(author: TrackedAuthor) -> TrackedAuthorOut:
+    """Expose cached local portrait URLs instead of Open Library URLs."""
+    photo_url = f"/api/authors/{author.id}/photo" if author.photo_url else None
+    return TrackedAuthorOut.model_validate(author).model_copy(update={"photo_url": photo_url})
+
+
+def _compute_etag(data: bytes) -> str:
+    return f'"{hashlib.sha256(data, usedforsecurity=False).hexdigest()[:16]}"'
 
 
 def _extract_abs_authors(items: list[dict]) -> list[LibraryAuthor]:
@@ -116,7 +130,7 @@ async def list_followed_authors(db: AsyncSession = Depends(get_db)) -> list[Trac
     async with db.begin():
         result = await db.execute(select(TrackedAuthor).order_by(TrackedAuthor.name))
         rows = result.scalars().all()
-        return [TrackedAuthorOut.model_validate(r, from_attributes=True) for r in rows]
+        return [_author_to_out(row) for row in rows]
 
 
 @router.post("/authors", response_model=TrackedAuthorOut, status_code=201)
@@ -124,18 +138,28 @@ async def follow_author(
     body: FollowRequest,
     db: AsyncSession = Depends(get_db),
 ) -> TrackedAuthorOut:
-    try:
-        if body.ol_key:
-            ol_key = OpenLibraryClient.normalise_key(body.ol_key)
-            search_data: dict = {"key": f"/authors/{ol_key}"}
-        else:
+    if body.ol_key:
+        ol_key = OpenLibraryClient.normalise_key(body.ol_key)
+        search_data: dict = {"key": f"/authors/{ol_key}"}
+    else:
+        docs: list[dict] | None
+        try:
             docs = await _OL.search_authors(body.name, limit=1)
-            if not docs:
-                raise HTTPException(status_code=404, detail="Author not found on Open Library")
+        except httpx.HTTPError as exc:
+            # Following a local library author must not depend on Open Library
+            # being available.  Release tracking can use the author name alone.
+            logger.warning(
+                "Could not look up followed author %r: %s", body.name, type(exc).__name__
+            )
+            docs = None
+        if docs is None:
+            ol_key = ""
+            search_data = {}
+        elif docs:
             ol_key = OpenLibraryClient.normalise_key(docs[0].get("key", ""))
             search_data = docs[0]
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        else:
+            raise HTTPException(status_code=404, detail="Author not found on Open Library")
 
     details: dict | None = None
     if ol_key:
@@ -168,7 +192,48 @@ async def follow_author(
         db.add(author)
 
     await db.refresh(author)
-    return TrackedAuthorOut.model_validate(author)
+    return _author_to_out(author)
+
+
+@router.get("/authors/{author_id}/photo", include_in_schema=False)
+async def get_author_photo(author_id: int, db: AsyncSession = Depends(get_db)) -> Response:
+    async with db.begin():
+        author = await db.get(TrackedAuthor, author_id)
+        source_url = author.photo_url if author else None
+    if source_url is None:
+        raise HTTPException(status_code=404, detail="Author photo not found")
+
+    cache_key = f"author-photo:{source_url}"
+    if cache := get_cover_cache():
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return Response(
+                content=cached,
+                media_type="image/jpeg",
+                headers={
+                    "Cache-Control": f"public, max-age={_PHOTO_CACHE_MAX_AGE}",
+                    "ETag": _compute_etag(cached),
+                },
+            )
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            remote = await client.get(source_url)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail="Could not fetch author photo") from exc
+    if not remote.is_success:
+        raise HTTPException(status_code=502, detail="Could not fetch author photo")
+
+    if cache := get_cover_cache():
+        await cache.put(cache_key, remote.content)
+    return Response(
+        content=remote.content,
+        media_type=remote.headers.get("content-type", "image/jpeg"),
+        headers={
+            "Cache-Control": f"public, max-age={_PHOTO_CACHE_MAX_AGE}",
+            "ETag": _compute_etag(remote.content),
+        },
+    )
 
 
 @router.delete("/authors/{author_key}", status_code=204)
