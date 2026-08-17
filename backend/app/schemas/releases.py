@@ -60,6 +60,7 @@ class ManualReleaseCreate(BaseModel):
     author: str | None = None
     title: str | None = None
     series: str | None = None
+    series_number: float | None = None
     release_date: str | None = None
     media: list[ManualReleaseMedium] = Field(default_factory=list)
     cover_url: str | None = None
@@ -78,6 +79,7 @@ class ManualReleaseOut(BaseModel):
     author: str | None
     title: str | None
     series: str | None
+    series_number: float | None
     release_date: str | None
     media: list[ManualReleaseMedium]
     cover_url: str | None

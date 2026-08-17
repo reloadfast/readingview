@@ -443,6 +443,7 @@ function manualInput(entry?: ManualRelease): ManualReleaseInput {
     author: entry.author,
     title: entry.title,
     series: entry.series,
+    series_number: entry.series_number,
     release_date: entry.release_date,
     media: entry.media,
     cover_url: entry.cover_url,
@@ -472,6 +473,13 @@ function ManualReleaseEditor({
     setValues((current) => ({ ...current, [field]: value || null }));
   }
 
+  function setSeriesNumber(value: string) {
+    setValues((current) => ({
+      ...current,
+      series_number: value === "" ? null : Number(value),
+    }));
+  }
+
   function toggleMedium(medium: ManualReleaseMedium) {
     setValues((current) => {
       const media = current.media ?? [];
@@ -484,9 +492,11 @@ function ManualReleaseEditor({
 
   async function save() {
     try {
+      const { last_checked_at, ...releaseValues } = values;
+      const payload = entry && last_checked_at === entry.last_checked_at ? releaseValues : values;
       const saved = entry
-        ? await update.mutateAsync({ id: entry.id, ...values })
-        : await create.mutateAsync(values);
+        ? await update.mutateAsync({ id: entry.id, ...payload })
+        : await create.mutateAsync(payload);
       if (coverFile) await upload.mutateAsync({ id: saved.id, file: coverFile });
       onDone();
     } catch {
@@ -500,6 +510,7 @@ function ManualReleaseEditor({
         <Input value={values.author ?? ""} onChange={(e) => setText("author", e.target.value)} placeholder="Author" />
         <Input value={values.title ?? ""} onChange={(e) => setText("title", e.target.value)} placeholder="Book title" />
         <Input value={values.series ?? ""} onChange={(e) => setText("series", e.target.value)} placeholder="Series" />
+        <Input type="number" step="any" value={values.series_number ?? ""} onChange={(e) => setSeriesNumber(e.target.value)} placeholder="Series number" />
         <Input value={values.release_date ?? ""} onChange={(e) => setText("release_date", e.target.value)} placeholder="Release date (YYYY-MM-DD)" />
         <Input value={values.cover_url ?? ""} onChange={(e) => setText("cover_url", e.target.value)} placeholder="Cover image URL" />
         <Input value={values.link_url ?? ""} onChange={(e) => setText("link_url", e.target.value)} placeholder="Relevant link" />
@@ -568,7 +579,7 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
             <Badge variant="neutral">{entry.status}</Badge>
             {entry.media.map((medium) => <Badge key={medium} variant="neutral">{medium}</Badge>)}
           </div>
-          <p className="text-sm text-text-secondary">{entry.author || "Unknown author"}{entry.series ? ` · ${entry.series}` : ""}</p>
+          <p className="text-sm text-text-secondary">{entry.author || "Unknown author"}{entry.series ? ` · ${entry.series}${entry.series_number != null ? ` #${entry.series_number}` : ""}` : ""}</p>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-text-secondary">
             <ReleaseDateBadge dateStr={entry.release_date} />
             {entry.last_checked_at && <span>Checked {new Date(entry.last_checked_at).toLocaleDateString()}</span>}

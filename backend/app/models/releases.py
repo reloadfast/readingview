@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
@@ -46,6 +46,7 @@ class ManualRelease(Base):
     author: Mapped[str | None] = mapped_column(String, nullable=True)
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     series: Mapped[str | None] = mapped_column(String, nullable=True)
+    series_number: Mapped[float | None] = mapped_column(Float, nullable=True)
     release_date: Mapped[str | None] = mapped_column(String, nullable=True)
     media: Mapped[str | None] = mapped_column(String, nullable=True)  # JSON array
     cover_url: Mapped[str | None] = mapped_column(String, nullable=True)

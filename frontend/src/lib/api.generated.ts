@@ -1089,6 +1089,8 @@ export interface components {
             title?: string | null;
             /** Series */
             series?: string | null;
+            /** Series Number */
+            series_number?: number | null;
             /** Release Date */
             release_date?: string | null;
             /** Media */
@@ -1118,6 +1120,8 @@ export interface components {
             title: string | null;
             /** Series */
             series: string | null;
+            /** Series Number */
+            series_number: number | null;
             /** Release Date */
             release_date: string | null;
             /** Media */
@@ -1150,6 +1154,8 @@ export interface components {
             title?: string | null;
             /** Series */
             series?: string | null;
+            /** Series Number */
+            series_number?: number | null;
             /** Release Date */
             release_date?: string | null;
             /** Media */

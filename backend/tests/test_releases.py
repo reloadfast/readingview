@@ -154,6 +154,7 @@ async def test_create_and_list_manual_release(client):
             "author": "N. K. Jemisin",
             "title": "The Stone Sky",
             "series": "The Broken Earth",
+            "series_number": 3,
             "release_date": "2027-04-01",
             "media": ["audiobook", "ebook"],
             "comments": "Check publisher catalogue",
@@ -163,12 +164,35 @@ async def test_create_and_list_manual_release(client):
     assert create.status_code == 201
     data = create.json()
     assert data["media"] == ["audiobook", "ebook"]
+    assert data["series_number"] == 3
     assert data["status"] == "watching"
     assert data["uploaded_cover_url"] is None
+
+    assert data["last_checked_at"] == 1_700_000_000_000
 
     listed = await client.get("/api/releases/manual")
     assert listed.status_code == 200
     assert [row["id"] for row in listed.json()] == [data["id"]]
+
+
+async def test_manual_release_patch_sets_last_checked_to_updated_when_omitted(client):
+    created = await client.post("/api/releases/manual", json={"title": "Check me"})
+    assert created.json()["last_checked_at"] == created.json()["updated_at"]
+    updated = await client.patch(
+        f"/api/releases/manual/{created.json()['id']}", json={"comments": "Updated"}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["last_checked_at"] == updated.json()["updated_at"]
+
+
+async def test_manual_release_patch_preserves_explicit_last_checked(client):
+    created = await client.post("/api/releases/manual", json={"title": "Check me"})
+    updated = await client.patch(
+        f"/api/releases/manual/{created.json()['id']}",
+        json={"last_checked_at": 1_700_000_000_000},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["last_checked_at"] == 1_700_000_000_000
 
 
 async def test_manual_release_duplicate_is_rejected_despite_case_or_spacing(client):

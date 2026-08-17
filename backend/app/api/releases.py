@@ -69,6 +69,7 @@ def _manual_to_out(row: ManualRelease) -> ManualReleaseOut:
         author=row.author,
         title=row.title,
         series=row.series,
+        series_number=row.series_number,
         release_date=row.release_date,
         media=json.loads(row.media) if row.media else [],
         cover_url=row.cover_url,
@@ -212,11 +213,16 @@ async def create_manual_release(
     body: ManualReleaseCreate,
     db: AsyncSession = Depends(get_db),
 ) -> ManualReleaseOut:
-    values = body.model_dump()
-    media = sorted(values.pop("media"))
+    values = body.model_dump(exclude_unset=True)
+    media = sorted(values.pop("media", []))
     for field in ("author", "title", "series", "release_date", "cover_url", "link_url", "comments"):
+        if field not in values:
+            values[field] = None
         values[field] = _clean_optional(values[field])
     now = int(time.time() * 1000)
+    values.setdefault("series_number", None)
+    values.setdefault("status", "watching")
+    values.setdefault("last_checked_at", now)
     row = ManualRelease(
         **values,
         media=json.dumps(media),
@@ -263,7 +269,10 @@ async def patch_manual_release(
                     value = _clean_optional(value)
                 setattr(row, field, value)
             row.media = json.dumps(media)
-            row.updated_at = int(time.time() * 1000)
+            now = int(time.time() * 1000)
+            row.updated_at = now
+            if "last_checked_at" not in updates:
+                row.last_checked_at = now
             row.dedupe_key = _manual_dedupe_key(row.author, row.title, row.release_date, media)
         await db.refresh(row)
     except IntegrityError as exc:

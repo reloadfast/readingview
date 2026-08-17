@@ -264,6 +264,7 @@ export interface ManualRelease {
   author: string | null;
   title: string | null;
   series: string | null;
+  series_number: number | null;
   release_date: string | null;
   media: ManualReleaseMedium[];
   cover_url: string | null;
@@ -280,6 +281,7 @@ export interface ManualReleaseInput {
   author?: string | null;
   title?: string | null;
   series?: string | null;
+  series_number?: number | null;
   release_date?: string | null;
   media?: ManualReleaseMedium[];
   cover_url?: string | null;
