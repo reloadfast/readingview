@@ -34,7 +34,7 @@ function OLCover({ coverId, title }: { coverId: number | null; title: string }) 
         <img
           src={src}
           alt={title}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onError={() => setErrored(true)}
         />
       ) : (

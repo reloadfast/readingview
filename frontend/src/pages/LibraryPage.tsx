@@ -46,7 +46,7 @@ function SimilarRecCard({ rec }: { rec: Recommendation }) {
           <img
             src={`https://covers.openlibrary.org/b/id/${rec.cover_id}-M.jpg`}
             alt={rec.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <BookOpen className="w-4 h-4 text-text-secondary opacity-40" />
@@ -246,8 +246,11 @@ function BookCard({ book }: { book: LibraryBook }) {
   const isFinished = book.progress?.is_finished ?? false;
 
   return (
-    <div className="flex flex-col gap-2">
-      <CoverImage book={book} />
+    <div className="group flex flex-col gap-2 rounded-xl p-2 transition-shadow hover:bg-surface hover:shadow-sm">
+      <CoverImage
+        book={book}
+        className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center"
+      />
       <p className="text-sm font-medium text-text-primary line-clamp-2">{book.title}</p>
       <p className="text-xs text-text-secondary line-clamp-1">
         {book.authors.split(",").map((a, i, arr) => {
@@ -316,7 +319,7 @@ function BookCard({ book }: { book: LibraryBook }) {
 
 function BookCardSkeleton() {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 p-2">
       <Skeleton className="aspect-[2/3] w-full rounded-lg" />
       <Skeleton className="h-4 w-3/4" />
       <Skeleton className="h-3 w-1/2" />
@@ -329,7 +332,7 @@ function BookCardSkeleton() {
 function BookGrid({ books, isLoading }: { books: LibraryBook[] | undefined; isLoading: boolean }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <BookCardSkeleton key={i} />
         ))}
@@ -345,7 +348,7 @@ function BookGrid({ books, isLoading }: { books: LibraryBook[] | undefined; isLo
     );
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3">
       {books.map((book) => (
         <BookCard key={book.id} book={book} />
       ))}

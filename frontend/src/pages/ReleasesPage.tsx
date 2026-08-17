@@ -596,7 +596,7 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="flex gap-3 p-3">
-        {cover ? <img src={cover} alt="" className="h-16 w-12 rounded object-cover bg-background" /> : <div className="h-16 w-12 rounded bg-background" />}
+        {cover ? <img src={cover} alt="" className="h-16 w-12 rounded object-contain bg-background" /> : <div className="h-16 w-12 rounded bg-background" />}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-text-primary">{entry.title || "Untitled release"}</p>
