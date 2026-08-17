@@ -142,3 +142,80 @@ async def test_patch_release_partial_leaves_other_fields(client, db):
     data = r.json()
     assert data["notes"] == "note only"
     assert data["release_date"] == rel.release_date
+
+
+# --- manual releases ---
+
+
+async def test_create_and_list_manual_release(client):
+    create = await client.post(
+        "/api/releases/manual",
+        json={
+            "author": "N. K. Jemisin",
+            "title": "The Stone Sky",
+            "series": "The Broken Earth",
+            "release_date": "2027-04-01",
+            "media": ["audiobook", "ebook"],
+            "comments": "Check publisher catalogue",
+            "last_checked_at": 1_700_000_000_000,
+        },
+    )
+    assert create.status_code == 201
+    data = create.json()
+    assert data["media"] == ["audiobook", "ebook"]
+    assert data["status"] == "watching"
+    assert data["uploaded_cover_url"] is None
+
+    listed = await client.get("/api/releases/manual")
+    assert listed.status_code == 200
+    assert [row["id"] for row in listed.json()] == [data["id"]]
+
+
+async def test_manual_release_duplicate_is_rejected_despite_case_or_spacing(client):
+    payload = {
+        "author": " Ursula Le Guin ",
+        "title": "  New Book",
+        "release_date": "2027",
+        "media": ["audiobook"],
+    }
+    assert (await client.post("/api/releases/manual", json=payload)).status_code == 201
+    duplicate = await client.post(
+        "/api/releases/manual",
+        json={
+            "author": "ursula le guin",
+            "title": "new book",
+            "release_date": "2027",
+            "media": ["audiobook"],
+        },
+    )
+    assert duplicate.status_code == 409
+
+
+async def test_manual_release_archive_hides_it_by_default_and_can_be_listed(client):
+    created = await client.post("/api/releases/manual", json={"title": "Archive me"})
+    assert created.status_code == 201
+    release_id = created.json()["id"]
+    archived = await client.patch(f"/api/releases/manual/{release_id}", json={"archived": True})
+    assert archived.status_code == 200
+    assert archived.json()["archived"] is True
+    assert (await client.get("/api/releases/manual")).json() == []
+    all_entries = await client.get("/api/releases/manual?include_archived=true")
+    assert [entry["id"] for entry in all_entries.json()] == [release_id]
+
+
+async def test_manual_release_patch_prevents_duplicate(client):
+    first = await client.post(
+        "/api/releases/manual",
+        json={"author": "Author", "title": "Book", "release_date": "2027-01-01"},
+    )
+    second = await client.post(
+        "/api/releases/manual",
+        json={"author": "Other", "title": "Other book", "release_date": "2027-01-01"},
+    )
+    result = await client.patch(
+        f"/api/releases/manual/{second.json()['id']}",
+        json={"author": "Author", "title": "Book"},
+    )
+    assert first.status_code == 201
+    assert second.status_code == 201
+    assert result.status_code == 409

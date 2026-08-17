@@ -253,6 +253,76 @@ export function patchRelease(id: number, body: PatchReleaseRequest): Promise<Rel
 }
 
 // ---------------------------------------------------------------------------
+// Manual releases
+// ---------------------------------------------------------------------------
+
+export type ManualReleaseStatus = "watching" | "released" | "owned";
+export type ManualReleaseMedium = "audiobook" | "ebook" | "hardcover" | "paperback";
+
+export interface ManualRelease {
+  id: number;
+  author: string | null;
+  title: string | null;
+  series: string | null;
+  release_date: string | null;
+  media: ManualReleaseMedium[];
+  cover_url: string | null;
+  uploaded_cover_url: string | null;
+  link_url: string | null;
+  comments: string | null;
+  last_checked_at: number | null;
+  updated_at: number;
+  status: ManualReleaseStatus;
+  archived: boolean;
+}
+
+export interface ManualReleaseInput {
+  author?: string | null;
+  title?: string | null;
+  series?: string | null;
+  release_date?: string | null;
+  media?: ManualReleaseMedium[];
+  cover_url?: string | null;
+  link_url?: string | null;
+  comments?: string | null;
+  last_checked_at?: number | null;
+  status?: ManualReleaseStatus;
+  archived?: boolean;
+}
+
+export function getManualReleases(includeArchived = false): Promise<ManualRelease[]> {
+  return apiFetch(`/releases/manual${includeArchived ? "?include_archived=true" : ""}`);
+}
+
+export function createManualRelease(body: ManualReleaseInput): Promise<ManualRelease> {
+  return apiFetch("/releases/manual", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function updateManualRelease(
+  id: number,
+  body: ManualReleaseInput,
+): Promise<ManualRelease> {
+  return apiFetch(`/releases/manual/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+}
+
+export async function uploadManualReleaseCover(id: number, file: File): Promise<ManualRelease> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`/api/releases/manual/${id}/cover`, { method: "POST", body: form });
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      if (body?.detail) message = String(body.detail);
+    } catch {
+      // ignore parse error
+    }
+    throw new ApiError(res.status, message);
+  }
+  return res.json() as Promise<ManualRelease>;
+}
+
+// ---------------------------------------------------------------------------
 // Narrators
 // ---------------------------------------------------------------------------
 

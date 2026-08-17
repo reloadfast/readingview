@@ -1,11 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addTrackedAuthor,
+  createManualRelease,
+  getManualReleases,
   getReleases,
   getTrackedAuthors,
   patchRelease,
   refreshReleases,
   removeTrackedAuthor,
+  updateManualRelease,
+  uploadManualReleaseCover,
+  type ManualReleaseInput,
   type PatchReleaseRequest,
   type TrackAuthorRequest,
 } from "../lib/api";
@@ -62,5 +67,41 @@ export function useRefreshReleases() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["releases"] });
     },
+  });
+}
+
+export function useManualReleases(includeArchived = false) {
+  return useQuery({
+    queryKey: ["manual-releases", includeArchived],
+    queryFn: () => getManualReleases(includeArchived),
+  });
+}
+
+function useManualReleaseInvalidation() {
+  const qc = useQueryClient();
+  return () => {
+    void qc.invalidateQueries({ queryKey: ["manual-releases"] });
+  };
+}
+
+export function useCreateManualRelease() {
+  const invalidate = useManualReleaseInvalidation();
+  return useMutation({ mutationFn: createManualRelease, onSuccess: invalidate });
+}
+
+export function useUpdateManualRelease() {
+  const invalidate = useManualReleaseInvalidation();
+  return useMutation({
+    mutationFn: ({ id, ...body }: ManualReleaseInput & { id: number }) =>
+      updateManualRelease(id, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUploadManualReleaseCover() {
+  const invalidate = useManualReleaseInvalidation();
+  return useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => uploadManualReleaseCover(id, file),
+    onSuccess: invalidate,
   });
 }

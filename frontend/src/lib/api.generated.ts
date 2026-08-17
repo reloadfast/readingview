@@ -449,6 +449,59 @@ export interface paths {
         patch: operations["patch_release_api_releases__release_id__patch"];
         trace?: never;
     };
+    "/api/releases/manual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Manual Releases */
+        get: operations["list_manual_releases_api_releases_manual_get"];
+        put?: never;
+        /** Create Manual Release */
+        post: operations["create_manual_release_api_releases_manual_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/releases/manual/{manual_release_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Manual Release */
+        patch: operations["patch_manual_release_api_releases_manual__manual_release_id__patch"];
+        trace?: never;
+    };
+    "/api/releases/manual/{manual_release_id}/cover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Manual Release Cover */
+        get: operations["get_manual_release_cover_api_releases_manual__manual_release_id__cover_get"];
+        put?: never;
+        /** Upload Manual Release Cover */
+        post: operations["upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/refresh": {
         parameters: {
             query?: never;
@@ -833,6 +886,11 @@ export interface components {
             /** File */
             file: string;
         };
+        /** Body_upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post */
+        Body_upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post: {
+            /** File */
+            file: string;
+        };
         /** BookProgress */
         BookProgress: {
             /** Is Finished */
@@ -1022,6 +1080,96 @@ export interface components {
             /** Asin */
             asin?: string | null;
             progress?: components["schemas"]["BookProgress"] | null;
+        };
+        /** ManualReleaseCreate */
+        ManualReleaseCreate: {
+            /** Author */
+            author?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Media */
+            media?: ("audiobook" | "ebook" | "hardcover" | "paperback")[];
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Link Url */
+            link_url?: string | null;
+            /** Comments */
+            comments?: string | null;
+            /** Last Checked At */
+            last_checked_at?: number | null;
+            /**
+             * Status
+             * @default watching
+             * @enum {string}
+             */
+            status: "watching" | "released" | "owned";
+        };
+        /** ManualReleaseOut */
+        ManualReleaseOut: {
+            /** Id */
+            id: number;
+            /** Author */
+            author: string | null;
+            /** Title */
+            title: string | null;
+            /** Series */
+            series: string | null;
+            /** Release Date */
+            release_date: string | null;
+            /** Media */
+            media: ("audiobook" | "ebook" | "hardcover" | "paperback")[];
+            /** Cover Url */
+            cover_url: string | null;
+            /** Uploaded Cover Url */
+            uploaded_cover_url: string | null;
+            /** Link Url */
+            link_url: string | null;
+            /** Comments */
+            comments: string | null;
+            /** Last Checked At */
+            last_checked_at: number | null;
+            /** Updated At */
+            updated_at: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "watching" | "released" | "owned";
+            /** Archived */
+            archived: boolean;
+        };
+        /** ManualReleasePatch */
+        ManualReleasePatch: {
+            /** Author */
+            author?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Series */
+            series?: string | null;
+            /** Release Date */
+            release_date?: string | null;
+            /** Media */
+            media?: ("audiobook" | "ebook" | "hardcover" | "paperback")[];
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Link Url */
+            link_url?: string | null;
+            /** Comments */
+            comments?: string | null;
+            /** Last Checked At */
+            last_checked_at?: number | null;
+            /**
+             * Status
+             * @default watching
+             * @enum {string}
+             */
+            status: "watching" | "released" | "owned";
+            /** Archived */
+            archived?: boolean | null;
         };
         /** MonthlyPoint */
         MonthlyPoint: {
@@ -2259,6 +2407,171 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_manual_releases_api_releases_manual_get: {
+        parameters: {
+            query?: {
+                include_archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReleaseOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_manual_release_api_releases_manual_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualReleaseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_manual_release_api_releases_manual__manual_release_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                manual_release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualReleasePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_manual_release_cover_api_releases_manual__manual_release_id__cover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                manual_release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                manual_release_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualReleaseOut"];
                 };
             };
             /** @description Validation Error */
