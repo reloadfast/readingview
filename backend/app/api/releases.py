@@ -165,17 +165,16 @@ async def list_releases(
     client: AbsDataCache = Depends(abs_cache),
     db: AsyncSession = Depends(get_db),
 ) -> list[ReleaseOut]:
-    async with db.begin():
-        q = (
-            select(Release)
-            .join(Release.author)
-            .options(selectinload(Release.author))
-            .where(Release.is_active.is_(True))
-            .order_by(Release.release_date.asc().nullslast())
-        )
-        if author:
-            q = q.where(ReleaseTrackedAuthor.name.ilike(f"%{author}%"))
-        rows = (await db.execute(q)).scalars().all()
+    q = (
+        select(Release)
+        .join(Release.author)
+        .options(selectinload(Release.author))
+        .where(Release.is_active.is_(True))
+        .order_by(Release.release_date.asc().nullslast())
+    )
+    if author:
+        q = q.where(ReleaseTrackedAuthor.name.ilike(f"%{author}%"))
+    rows = (await db.execute(q)).scalars().all()
 
     try:
         library_items = await client.get_all_library_items()

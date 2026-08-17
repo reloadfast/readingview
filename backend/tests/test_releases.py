@@ -1,11 +1,12 @@
 """Tests for /api/releases — tracked-author CRUD and release listing."""
 
 import time
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.api import deps as api_deps
 from app.api.deps import abs_cache
 from app.main import app
 from app.models.releases import Release, ReleaseTrackedAuthor
@@ -86,6 +87,16 @@ async def test_list_releases_empty(client):
         app.dependency_overrides.pop(abs_cache, None)
     assert r.status_code == 200
     assert r.json() == []
+
+
+async def test_list_releases_uses_existing_settings_transaction(client):
+    mock_abs_cache = AsyncMock()
+    mock_abs_cache.get_all_library_items.return_value = []
+
+    with patch.object(api_deps.abs_cache_svc, "get", return_value=mock_abs_cache):
+        r = await client.get("/api/releases")
+
+    assert r.status_code == 200
 
 
 async def test_list_releases_loads_author(client, db):
