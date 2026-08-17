@@ -35,3 +35,26 @@ class Release(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     author: Mapped["ReleaseTrackedAuthor"] = relationship(back_populates="releases")
+
+
+class ManualRelease(Base):
+    """A locally-maintained release record, independent of Open Library refreshes."""
+
+    __tablename__ = "manual_releases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    author: Mapped[str | None] = mapped_column(String, nullable=True)
+    title: Mapped[str | None] = mapped_column(String, nullable=True)
+    series: Mapped[str | None] = mapped_column(String, nullable=True)
+    release_date: Mapped[str | None] = mapped_column(String, nullable=True)
+    media: Mapped[str | None] = mapped_column(String, nullable=True)  # JSON array
+    cover_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    cover_filename: Mapped[str | None] = mapped_column(String, nullable=True)
+    link_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    comments: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_checked_at: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    updated_at: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="watching")
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # SHA-256 of normalized author/title/date/media. This is the duplicate boundary.
+    dedupe_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)

@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     COVER_CACHE_ENABLED: bool = os.getenv("COVER_CACHE_ENABLED", "true").lower() == "true"
     COVER_CACHE_DIR: str = "/data/covers"
     COVER_CACHE_MAX_SIZE: int = 524288000  # 500 MB in bytes
+    MANUAL_RELEASE_COVER_DIR: str = "/data/manual-release-covers"
+    MANUAL_RELEASE_COVER_MAX_BYTES: int = 8 * 1024 * 1024
     BACKUP_TOKEN: str | None = None
     BACKUP_MAX_RESTORE_BYTES: int = 1024 * 1024 * 1024  # 1 GiB
     LOG_LEVEL: str = "INFO"
