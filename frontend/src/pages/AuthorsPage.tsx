@@ -53,13 +53,7 @@ function AuthorCardSkeleton() {
   );
 }
 
-function AuthorCard({
-  author,
-  bookCount,
-}: {
-  author: TrackedAuthorOut;
-  bookCount: number;
-}) {
+function AuthorCard({ author, bookCount }: { author: TrackedAuthorOut; bookCount: number }) {
   const [confirming, setConfirming] = useState(false);
   const unfollow = useUnfollowAuthor();
   const canUnfollow = Boolean(author.ol_key);
@@ -168,6 +162,9 @@ function FollowSearch({ followedKeys }: { followedKeys: Set<string> }) {
           })}
         </div>
       )}
+      {follow.isError && (
+        <p className="text-sm text-red-500">Could not follow this author. Please try again.</p>
+      )}
     </div>
   );
 }
@@ -232,10 +229,12 @@ function LibraryAuthorsTab({
   sortByBooks?: boolean;
 }) {
   const follow = useFollowAuthor();
+  const [q, setQ] = useState("");
 
-  const sorted = sortByBooks
-    ? [...authors].sort((a, b) => b.book_count - a.book_count)
-    : authors;
+  const sorted = sortByBooks ? [...authors].sort((a, b) => b.book_count - a.book_count) : authors;
+  const visible = sorted.filter((author) =>
+    author.name.toLocaleLowerCase().includes(q.toLocaleLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -257,29 +256,49 @@ function LibraryAuthorsTab({
   }
 
   return (
-    <div className="space-y-1">
-      {sorted.map((a) => {
-        const already = followedNames.has(a.name);
-        return (
-          <div
-            key={a.name}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-surface-hover"
-          >
-            <span className="text-sm text-text-primary flex-1">{a.name}</span>
-            <Badge variant="neutral" className="flex-shrink-0">
-              {a.book_count} book{a.book_count !== 1 ? "s" : ""}
-            </Badge>
-            <button
-              disabled={already || follow.isPending}
-              onClick={() => follow.mutate({ name: a.name })}
-              className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              {already ? "Following" : "Follow"}
-            </button>
-          </div>
-        );
-      })}
+    <div className="space-y-3">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
+        <Input
+          className="pl-8 w-72"
+          placeholder="Search authors in your library…"
+          value={q}
+          onChange={(event) => setQ(event.target.value)}
+        />
+      </div>
+      {visible.length === 0 ? (
+        <p className="py-8 text-center text-sm text-text-secondary">
+          No matching authors in your library
+        </p>
+      ) : (
+        <div className="space-y-1">
+          {visible.map((a) => {
+            const already = followedNames.has(a.name);
+            return (
+              <div
+                key={a.name}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-surface-hover"
+              >
+                <span className="text-sm text-text-primary flex-1">{a.name}</span>
+                <Badge variant="neutral" className="flex-shrink-0">
+                  {a.book_count} book{a.book_count !== 1 ? "s" : ""}
+                </Badge>
+                <button
+                  disabled={already || follow.isPending}
+                  onClick={() => follow.mutate({ name: a.name })}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {already ? "Following" : "Follow"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {follow.isError && (
+        <p className="text-sm text-red-500">Could not follow this author. Please try again.</p>
+      )}
     </div>
   );
 }
@@ -297,13 +316,9 @@ export default function AuthorsPage() {
   const followed = useAuthors();
   const library = useLibraryAuthors();
 
-  const bookCountMap = new Map(
-    (library.data ?? []).map((a) => [a.name, a.book_count])
-  );
+  const bookCountMap = new Map((library.data ?? []).map((a) => [a.name, a.book_count]));
   const followedKeys = new Set(
-    (followed.data ?? [])
-      .map((a) => a.ol_key)
-      .filter((k): k is string => k !== null)
+    (followed.data ?? []).map((a) => a.ol_key).filter((k): k is string => k !== null)
   );
   const followedNames = new Set((followed.data ?? []).map((a) => a.name));
 

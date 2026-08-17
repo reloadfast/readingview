@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 
 import httpx
@@ -23,6 +24,7 @@ from ..services.openlibrary import OpenLibraryClient
 router = APIRouter()
 
 _OL = OpenLibraryClient()
+logger = logging.getLogger(__name__)
 
 
 def _extract_abs_authors(items: list[dict]) -> list[LibraryAuthor]:
@@ -124,18 +126,26 @@ async def follow_author(
 ) -> TrackedAuthorOut:
     try:
         if body.ol_key:
-            details = await _OL.get_author_details(body.ol_key)
-            ol_key = body.ol_key
+            ol_key = OpenLibraryClient.normalise_key(body.ol_key)
+            search_data: dict = {"key": f"/authors/{ol_key}"}
         else:
             docs = await _OL.search_authors(body.name, limit=1)
             if not docs:
                 raise HTTPException(status_code=404, detail="Author not found on Open Library")
             ol_key = OpenLibraryClient.normalise_key(docs[0].get("key", ""))
-            details = await _OL.get_author_details(ol_key) if ol_key else None
+            search_data = docs[0]
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    bio_raw = details.get("bio") if details else None
+    details: dict | None = None
+    if ol_key:
+        try:
+            details = await _OL.get_author_details(ol_key)
+        except httpx.HTTPError as exc:
+            logger.warning("Could not enrich followed author %r: %s", body.name, type(exc).__name__)
+
+    author_data = details or search_data
+    bio_raw = author_data.get("bio")
     bio = bio_raw if isinstance(bio_raw, str) else (bio_raw.get("value", "") if bio_raw else None)
 
     async with db.begin():
@@ -149,10 +159,10 @@ async def follow_author(
         author = TrackedAuthor(
             name=body.name,
             ol_key=ol_key or None,
-            photo_url=OpenLibraryClient.photo_url(details) if details else None,
+            photo_url=OpenLibraryClient.photo_url(author_data),
             bio=bio,
-            birth_date=details.get("birth_date") if details else None,
-            death_date=details.get("death_date") if details else None,
+            birth_date=author_data.get("birth_date"),
+            death_date=author_data.get("death_date"),
             followed_at=int(time.time() * 1000),
         )
         db.add(author)
