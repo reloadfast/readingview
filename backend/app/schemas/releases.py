@@ -1,6 +1,22 @@
+from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _validate_release_date(value: str | None) -> str | None:
+    """Accept only a calendar year or an ISO calendar date."""
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    if len(value) == 4 and value.isdigit():
+        return value
+    try:
+        return date.fromisoformat(value).isoformat()
+    except ValueError as exc:
+        raise ValueError("release_date must use YYYY or YYYY-MM-DD") from exc
 
 
 class ReleaseTrackedAuthorOut(BaseModel):
@@ -43,6 +59,8 @@ class PatchReleaseRequest(BaseModel):
     notes: str | None = None
     is_active: bool | None = None
 
+    _validate_date = field_validator("release_date")(_validate_release_date)
+
 
 class RefreshError(BaseModel):
     author: str
@@ -72,6 +90,8 @@ class ManualReleaseCreate(BaseModel):
     comments: str | None = None
     last_checked_at: int | None = None
     status: ManualReleaseStatus = "watching"
+
+    _validate_date = field_validator("release_date")(_validate_release_date)
 
 
 class ManualReleasePatch(ManualReleaseCreate):

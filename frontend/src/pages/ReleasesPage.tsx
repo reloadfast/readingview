@@ -597,7 +597,13 @@ function ManualReleaseEditor({
         <Input value={values.title ?? ""} onChange={(e) => setText("title", e.target.value)} placeholder="Book title" />
         <Input value={values.series ?? ""} onChange={(e) => setText("series", e.target.value)} placeholder="Series" />
         <Input type="number" step="any" value={values.series_number ?? ""} onChange={(e) => setSeriesNumber(e.target.value)} placeholder="Series number" />
-        <Input value={values.release_date ?? ""} onChange={(e) => setText("release_date", e.target.value)} placeholder="Release date (YYYY-MM-DD)" />
+        <Input
+          value={values.release_date ?? ""}
+          onChange={(e) => setText("release_date", e.target.value)}
+          placeholder="Release date (YYYY or YYYY-MM-DD)"
+          pattern="\\d{4}(-\\d{2}-\\d{2})?"
+          title="Use YYYY or YYYY-MM-DD"
+        />
         <Input value={values.cover_url ?? ""} onChange={(e) => setText("cover_url", e.target.value)} placeholder="Cover image URL" />
         <Input value={values.link_url ?? ""} onChange={(e) => setText("link_url", e.target.value)} placeholder="Relevant link" />
       </div>

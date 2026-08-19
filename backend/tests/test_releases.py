@@ -397,6 +397,12 @@ async def test_patch_release_update_date(client, db):
     assert r.json()["release_date"] == "2026-03-15"
 
 
+async def test_patch_release_rejects_non_iso_date(client, db):
+    rel = await _seed_author_and_release(db)
+    response = await client.patch(f"/api/releases/{rel.id}", json={"release_date": "2026/03/15"})
+    assert response.status_code == 422
+
+
 async def test_patch_release_update_notes(client, db):
     rel = await _seed_author_and_release(db)
     r = await client.patch(f"/api/releases/{rel.id}", json={"notes": "Publisher confirmed"})
@@ -466,6 +472,25 @@ async def test_create_and_list_manual_release(client):
     listed = await client.get("/api/releases/manual")
     assert listed.status_code == 200
     assert [row["id"] for row in listed.json()] == [data["id"]]
+
+
+async def test_manual_release_rejects_non_iso_date(client):
+    response = await client.post(
+        "/api/releases/manual",
+        json={"title": "Invalid date", "release_date": "2026/10/01"},
+    )
+    assert response.status_code == 422
+
+
+async def test_manual_release_patch_rejects_non_iso_date(client):
+    created = await client.post(
+        "/api/releases/manual",
+        json={"title": "Valid date", "release_date": "2026-10-01"},
+    )
+    response = await client.patch(
+        f"/api/releases/manual/{created.json()['id']}", json={"release_date": "2026/10/02"}
+    )
+    assert response.status_code == 422
 
 
 async def test_manual_release_patch_sets_last_checked_to_updated_when_omitted(client):
