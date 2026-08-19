@@ -3,6 +3,12 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App";
 
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/service-worker.js");
+  });
+}
+
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <App />

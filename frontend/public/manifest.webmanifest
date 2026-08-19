@@ -1,0 +1,17 @@
+{
+  "name": "ReadingView",
+  "short_name": "ReadingView",
+  "description": "A self-hosted audiobook dashboard for Audiobookshelf.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "/icons/readingview.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -3,12 +3,13 @@ import json
 import logging
 import re
 import time
+from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -140,6 +141,51 @@ def _cover_dir() -> Path:
     return path
 
 
+def _ical_escape(value: str) -> str:
+    """Escape an iCalendar text field without allowing line injection."""
+    return value.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
+
+
+def _is_upcoming_calendar_date(release_date: str | None, today: str) -> bool:
+    if not release_date:
+        return False
+    if len(release_date) == 4 and release_date.isdigit():
+        return release_date >= today[:4]
+    try:
+        return date.fromisoformat(release_date).isoformat() >= today
+    except ValueError:
+        return False
+
+
+def _calendar_event(
+    *,
+    uid: str,
+    timestamp: str,
+    title: str,
+    release_date: str,
+    description: str | None = None,
+    url: str | None = None,
+) -> list[str]:
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{timestamp}",
+        f"SUMMARY:{_ical_escape(title)}",
+    ]
+    if len(release_date) == 4 and release_date.isdigit():
+        lines.extend(
+            [f"DTSTART;VALUE=DATE:{release_date}0101", "X-READINGVIEW-DATE-PRECISION:YEAR"]
+        )
+    else:
+        lines.append(f"DTSTART;VALUE=DATE:{release_date.replace('-', '')}")
+    if description:
+        lines.append(f"DESCRIPTION:{_ical_escape(description)}")
+    if url:
+        lines.append(f"URL:{_ical_escape(url)}")
+    lines.append("END:VEVENT")
+    return lines
+
+
 # --- tracked authors ---
 
 
@@ -236,6 +282,86 @@ async def list_releases(
     ]
 
     return [_release_to_out(r) for r in actionable]
+
+
+@router.get("/releases/calendar.ics", response_class=Response)
+async def download_release_calendar(db: AsyncSession = Depends(get_db)) -> Response:
+    """Export active, upcoming releases as a local iCalendar feed."""
+    tracked_query = (
+        select(Release)
+        .join(Release.author)
+        .options(selectinload(Release.author))
+        .where(Release.is_active.is_(True))
+        .order_by(Release.release_date.asc().nullslast())
+    )
+    manual_query = (
+        select(ManualRelease)
+        .where(ManualRelease.archived.is_(False), ManualRelease.status == "watching")
+        .order_by(ManualRelease.release_date.asc().nullslast())
+    )
+    tracked = (await db.execute(tracked_query)).scalars().all()
+    manual = (await db.execute(manual_query)).scalars().all()
+    today = datetime.now(UTC).date().isoformat()
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    events: list[str] = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//ReadingView//Release Calendar//EN",
+        "CALSCALE:GREGORIAN",
+        "X-WR-CALNAME:ReadingView Releases",
+    ]
+
+    for release in tracked:
+        release_date = release.release_date
+        if not _is_upcoming_calendar_date(release_date, today) or release_date is None:
+            continue
+        description = "\n".join(
+            part for part in (f"Author: {release.author.name}", release.notes) if part
+        )
+        events.extend(
+            _calendar_event(
+                uid=f"release-{release.id}@readingview.local",
+                timestamp=timestamp,
+                title=f"{release.author.name} — {release.title}",
+                release_date=release_date,
+                description=description,
+                url=release.link_url,
+            )
+        )
+
+    for manual_release in manual:
+        release_date = manual_release.release_date
+        if not _is_upcoming_calendar_date(release_date, today) or release_date is None:
+            continue
+        series = manual_release.series
+        if series and manual_release.series_number is not None:
+            series = f"{series} #{manual_release.series_number:g}"
+        description = "\n".join(
+            part
+            for part in (
+                f"Author: {manual_release.author}" if manual_release.author else None,
+                series,
+                manual_release.comments,
+            )
+            if part
+        )
+        events.extend(
+            _calendar_event(
+                uid=f"manual-release-{manual_release.id}@readingview.local",
+                timestamp=timestamp,
+                title=manual_release.title or "Untitled release",
+                release_date=release_date,
+                description=description or None,
+                url=manual_release.link_url,
+            )
+        )
+
+    events.append("END:VCALENDAR")
+    return Response(
+        content="\r\n".join(events) + "\r\n",
+        media_type="text/calendar; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.patch("/releases/{release_id}", response_model=ReleaseOut)

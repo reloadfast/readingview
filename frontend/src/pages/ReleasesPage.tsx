@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Archive, BookMarked, Check, EyeOff, HelpCircle, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Archive, BookMarked, Check, Copy, Download, EyeOff, HelpCircle, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Badge, Button, Input, Select, Skeleton } from "@/components/ui";
 import {
@@ -196,6 +196,7 @@ function ReleasesTab() {
   const [showHidden, setShowHidden] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [lastFailedCount, setLastFailedCount] = useState(0);
+  const [calendarCopied, setCalendarCopied] = useState(false);
 
   const releases = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined, showHidden);
   const tracked  = useTrackedAuthors();
@@ -207,6 +208,24 @@ function ReleasesTab() {
     ...(tracked.data ?? []).map((a) => ({ value: a.name, label: a.name })),
   ];
 
+  const copyCalendarUrl = async () => {
+    const url = new URL("/api/releases/calendar.ics", window.location.origin).toString();
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const input = document.createElement("textarea");
+      input.value = url;
+      input.style.position = "fixed";
+      input.style.opacity = "0";
+      document.body.append(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    setCalendarCopied(true);
+    window.setTimeout(() => setCalendarCopied(false), 2_000);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -216,6 +235,23 @@ function ReleasesTab() {
           onValueChange={setAuthorFilter}
         />
         <div className="flex items-center gap-3">
+          <a
+            href="/api/releases/calendar.ics"
+            download="readingview-releases.ics"
+            className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
+            title="Download calendar"
+          >
+            <Download className="w-4 h-4" />
+            Calendar
+          </a>
+          <button
+            onClick={() => void copyCalendarUrl()}
+            className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
+            title="Copy calendar feed URL"
+          >
+            <Copy className="w-4 h-4" />
+            {calendarCopied ? "Copied" : "Copy feed"}
+          </button>
           <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
             <input
               type="checkbox"

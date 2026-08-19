@@ -449,6 +449,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/releases/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Release Calendar
+         * @description Export active, upcoming releases as a local iCalendar feed.
+         */
+        get: operations["download_release_calendar_api_releases_calendar_ics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/{release_id}": {
         parameters: {
             query?: never;
@@ -2484,6 +2504,24 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    download_release_calendar_api_releases_calendar_ics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

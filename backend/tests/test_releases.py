@@ -11,7 +11,7 @@ from app.api import deps as api_deps
 from app.api.deps import abs_cache
 from app.main import app
 from app.models.authors import TrackedAuthor
-from app.models.releases import Release
+from app.models.releases import ManualRelease, Release
 
 
 @pytest.fixture
@@ -247,6 +247,72 @@ async def test_list_releases_matches_subtitles_and_owned_omnibus_components(clie
         app.dependency_overrides.pop(abs_cache, None)
 
     assert [release["title"] for release in r.json()] == ["The Primal Hunter"]
+
+
+async def test_release_calendar_contains_only_upcoming_visible_releases(client, db):
+    async with db.begin():
+        author = TrackedAuthor(name="Calendar Author", followed_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        db.add_all(
+            [
+                Release(
+                    author_id=author.id,
+                    title="Future, Book; One",
+                    release_date="2099-05-01",
+                    notes="Publisher confirmed\nPre-order opens soon",
+                    link_url="https://example.test/future",
+                ),
+                Release(author_id=author.id, title="Past Book", release_date="2000-01-01"),
+                Release(
+                    author_id=author.id,
+                    title="Hidden Book",
+                    release_date="2099-06-01",
+                    is_active=False,
+                ),
+                ManualRelease(
+                    author="Manual Author",
+                    title="Manual Future",
+                    series="Manual Series",
+                    series_number=2,
+                    release_date="2099",
+                    media="[]",
+                    comments="Local reminder",
+                    updated_at=1,
+                    status="watching",
+                    archived=False,
+                    dedupe_key="a" * 64,
+                ),
+                ManualRelease(
+                    title="Owned Manual",
+                    release_date="2099-07-01",
+                    media="[]",
+                    updated_at=1,
+                    status="owned",
+                    archived=False,
+                    dedupe_key="b" * 64,
+                ),
+            ]
+        )
+
+    response = await client.get("/api/releases/calendar.ics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/calendar")
+    assert response.headers["cache-control"] == "no-store"
+    assert "BEGIN:VCALENDAR\r\n" in response.text
+    assert "SUMMARY:Calendar Author — Future\\, Book\\; One" in response.text
+    assert "DTSTART;VALUE=DATE:20990501" in response.text
+    assert (
+        "DESCRIPTION:Author: Calendar Author\\nPublisher confirmed\\nPre-order opens soon"
+        in response.text
+    )
+    assert "URL:https://example.test/future" in response.text
+    assert "SUMMARY:Manual Future" in response.text
+    assert "X-READINGVIEW-DATE-PRECISION:YEAR" in response.text
+    assert "Past Book" not in response.text
+    assert "Hidden Book" not in response.text
+    assert "Owned Manual" not in response.text
 
 
 async def test_refresh_no_tracked_authors(client):
