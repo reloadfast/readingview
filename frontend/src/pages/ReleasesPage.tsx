@@ -357,6 +357,17 @@ function ReleasesTab() {
                 </div>
                 <ReleaseDateBadge dateStr={entry.release_date} />
                 <Badge variant="neutral">{entry.status}</Badge>
+                {hasCalendarDate(entry.release_date) && (
+                  <a
+                    href={`/api/releases/manual/${entry.id}/calendar.ics`}
+                    download={`readingview-manual-release-${entry.id}.ics`}
+                    className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+                    title="Download calendar entry"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Calendar
+                  </a>
+                )}
               </div>
             ))}
           </div>
