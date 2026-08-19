@@ -157,6 +157,18 @@ def _is_upcoming_calendar_date(release_date: str | None, today: str) -> bool:
         return False
 
 
+def _has_valid_calendar_date(release_date: str | None) -> bool:
+    if not release_date:
+        return False
+    if len(release_date) == 4 and release_date.isdigit():
+        return True
+    try:
+        date.fromisoformat(release_date)
+    except ValueError:
+        return False
+    return True
+
+
 def _calendar_event(
     *,
     uid: str,
@@ -184,6 +196,66 @@ def _calendar_event(
         lines.append(f"URL:{_ical_escape(url)}")
     lines.append("END:VEVENT")
     return lines
+
+
+def _calendar_response(events: list[str], calendar_name: str) -> Response:
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//ReadingView//Release Calendar//EN",
+        "CALSCALE:GREGORIAN",
+        f"X-WR-CALNAME:{_ical_escape(calendar_name)}",
+        *events,
+        "END:VCALENDAR",
+    ]
+    return Response(
+        content="\r\n".join(lines) + "\r\n",
+        media_type="text/calendar; charset=utf-8",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def _tracked_calendar_event(release: Release, timestamp: str) -> list[str] | None:
+    release_date = release.release_date
+    if release_date is None or not _has_valid_calendar_date(release_date):
+        return None
+    description = "\n".join(
+        part for part in (f"Author: {release.author.name}", release.notes) if part
+    )
+    return _calendar_event(
+        uid=f"release-{release.id}@readingview.local",
+        timestamp=timestamp,
+        title=f"{release.author.name} — {release.title}",
+        release_date=release_date,
+        description=description,
+        url=release.link_url,
+    )
+
+
+def _manual_calendar_event(release: ManualRelease, timestamp: str) -> list[str] | None:
+    release_date = release.release_date
+    if release_date is None or not _has_valid_calendar_date(release_date):
+        return None
+    series = release.series
+    if series and release.series_number is not None:
+        series = f"{series} #{release.series_number:g}"
+    description = "\n".join(
+        part
+        for part in (
+            f"Author: {release.author}" if release.author else None,
+            series,
+            release.comments,
+        )
+        if part
+    )
+    return _calendar_event(
+        uid=f"manual-release-{release.id}@readingview.local",
+        timestamp=timestamp,
+        title=release.title or "Untitled release",
+        release_date=release_date,
+        description=description or None,
+        url=release.link_url,
+    )
 
 
 # --- tracked authors ---
@@ -303,65 +375,40 @@ async def download_release_calendar(db: AsyncSession = Depends(get_db)) -> Respo
     manual = (await db.execute(manual_query)).scalars().all()
     today = datetime.now(UTC).date().isoformat()
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    events: list[str] = [
-        "BEGIN:VCALENDAR",
-        "VERSION:2.0",
-        "PRODID:-//ReadingView//Release Calendar//EN",
-        "CALSCALE:GREGORIAN",
-        "X-WR-CALNAME:ReadingView Releases",
-    ]
+    events: list[str] = []
 
     for release in tracked:
-        release_date = release.release_date
-        if not _is_upcoming_calendar_date(release_date, today) or release_date is None:
+        if not _is_upcoming_calendar_date(release.release_date, today):
             continue
-        description = "\n".join(
-            part for part in (f"Author: {release.author.name}", release.notes) if part
-        )
-        events.extend(
-            _calendar_event(
-                uid=f"release-{release.id}@readingview.local",
-                timestamp=timestamp,
-                title=f"{release.author.name} — {release.title}",
-                release_date=release_date,
-                description=description,
-                url=release.link_url,
-            )
-        )
+        event = _tracked_calendar_event(release, timestamp)
+        if event:
+            events.extend(event)
 
     for manual_release in manual:
-        release_date = manual_release.release_date
-        if not _is_upcoming_calendar_date(release_date, today) or release_date is None:
+        if not _is_upcoming_calendar_date(manual_release.release_date, today):
             continue
-        series = manual_release.series
-        if series and manual_release.series_number is not None:
-            series = f"{series} #{manual_release.series_number:g}"
-        description = "\n".join(
-            part
-            for part in (
-                f"Author: {manual_release.author}" if manual_release.author else None,
-                series,
-                manual_release.comments,
-            )
-            if part
-        )
-        events.extend(
-            _calendar_event(
-                uid=f"manual-release-{manual_release.id}@readingview.local",
-                timestamp=timestamp,
-                title=manual_release.title or "Untitled release",
-                release_date=release_date,
-                description=description or None,
-                url=manual_release.link_url,
-            )
-        )
+        event = _manual_calendar_event(manual_release, timestamp)
+        if event:
+            events.extend(event)
 
-    events.append("END:VCALENDAR")
-    return Response(
-        content="\r\n".join(events) + "\r\n",
-        media_type="text/calendar; charset=utf-8",
-        headers={"Cache-Control": "no-store"},
+    return _calendar_response(events, "ReadingView Releases")
+
+
+@router.get("/releases/{release_id}/calendar.ics", response_class=Response)
+async def download_release_calendar_entry(
+    release_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    result = await db.execute(
+        select(Release).options(selectinload(Release.author)).where(Release.id == release_id)
     )
+    release = result.scalar_one_or_none()
+    if release is None:
+        raise HTTPException(status_code=404, detail="Release not found")
+    event = _tracked_calendar_event(release, datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"))
+    if event is None:
+        raise HTTPException(status_code=422, detail="Release needs a valid date before export")
+    return _calendar_response(event, release.title)
 
 
 @router.patch("/releases/{release_id}", response_model=ReleaseOut)
@@ -399,6 +446,20 @@ async def list_manual_releases(
             query = query.where(ManualRelease.archived.is_(False))
         rows = (await db.execute(query)).scalars().all()
     return [_manual_to_out(row) for row in rows]
+
+
+@router.get("/releases/manual/{manual_release_id}/calendar.ics", response_class=Response)
+async def download_manual_release_calendar_entry(
+    manual_release_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    release = await db.get(ManualRelease, manual_release_id)
+    if release is None:
+        raise HTTPException(status_code=404, detail="Manual release not found")
+    event = _manual_calendar_event(release, datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"))
+    if event is None:
+        raise HTTPException(status_code=422, detail="Release needs a valid date before export")
+    return _calendar_response(event, release.title or "Untitled release")
 
 
 @router.post("/releases/manual", response_model=ManualReleaseOut, status_code=201)

@@ -47,6 +47,10 @@ function ReleaseDateBadge({ dateStr }: { dateStr: string | null }) {
 
 const AUTHOR_ALL = "__all__";
 
+function hasCalendarDate(date: string | null) {
+  return Boolean(date && (/^\d{4}$/.test(date) || /^\d{4}-\d{2}-\d{2}$/.test(date)));
+}
+
 function ReleaseRow({ release }: { release: ReleaseOut }) {
   const [editing, setEditing] = useState(false);
   const [dateVal, setDateVal] = useState(release.release_date ?? "");
@@ -131,6 +135,17 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
+            {hasCalendarDate(release.release_date) && (
+              <a
+                href={`/api/releases/${release.id}/calendar.ics`}
+                download={`readingview-release-${release.id}.ics`}
+                className="text-text-secondary hover:text-text-primary"
+                title="Download calendar entry"
+                aria-label={`Download calendar entry for ${release.title}`}
+              >
+                <Download className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         </td>
       </tr>
@@ -647,6 +662,17 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
           </div>
         </div>
         <div className="flex items-start gap-2">
+          {hasCalendarDate(entry.release_date) && (
+            <a
+              href={`/api/releases/manual/${entry.id}/calendar.ics`}
+              download={`readingview-manual-release-${entry.id}.ics`}
+              className="inline-flex h-8 items-center justify-center rounded-md px-2 text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+              title="Download calendar entry"
+              aria-label={`Download calendar entry for ${entry.title || "Untitled release"}`}
+            >
+              <Download className="h-3.5 w-3.5" />
+            </a>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setEditing((current) => !current)}><Pencil className="h-3.5 w-3.5" /></Button>
           <Button
             variant="ghost"

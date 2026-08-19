@@ -315,6 +315,44 @@ async def test_release_calendar_contains_only_upcoming_visible_releases(client, 
     assert "Owned Manual" not in response.text
 
 
+async def test_single_release_calendar_exports_one_selected_entry(client, db):
+    release = await _seed_author_and_release(db)
+
+    response = await client.get(f"/api/releases/{release.id}/calendar.ics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/calendar")
+    assert "SUMMARY:Seed Author — Test Book" in response.text
+    assert "UID:release-" in response.text
+
+
+async def test_single_manual_release_calendar_exports_one_selected_entry(client):
+    created = await client.post(
+        "/api/releases/manual",
+        json={"author": "Manual Author", "title": "Manual Book", "release_date": "2027-04-01"},
+    )
+
+    response = await client.get(f"/api/releases/manual/{created.json()['id']}/calendar.ics")
+
+    assert response.status_code == 200
+    assert "SUMMARY:Manual Book" in response.text
+    assert "UID:manual-release-" in response.text
+
+
+async def test_single_release_calendar_requires_a_valid_date(client, db):
+    async with db.begin():
+        author = TrackedAuthor(name="No Date Author", followed_at=int(time.time() * 1000))
+        db.add(author)
+        await db.flush()
+        release = Release(author_id=author.id, title="No Date", release_date=None)
+        db.add(release)
+        await db.flush()
+
+    response = await client.get(f"/api/releases/{release.id}/calendar.ics")
+
+    assert response.status_code == 422
+
+
 async def test_refresh_no_tracked_authors(client):
     r = await client.post("/api/releases/refresh")
     assert r.status_code == 200
