@@ -164,7 +164,7 @@ export default function DashboardPage() {
             <StatCard label="In Progress" value={books.length} icon={BookOpen} />
             <StatCard label="Completed This Year" value={thisYear} icon={CheckCircle2} />
             <StatCard label="Total Hours" value={totalHours} icon={Clock} />
-            <StatCard label="Day Streak" value={streak} icon={Flame} />
+            <StatCard label="Current Day Streak" value={streak} icon={Flame} />
           </>
         )}
       </div>

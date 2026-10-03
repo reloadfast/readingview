@@ -57,6 +57,22 @@ const TOOLTIP_STYLE = {
 
 const CURSOR_STYLE = { fill: "var(--color-surface-hover)" };
 
+function longestConsecutiveDays(points: HeatmapPoint[]): number {
+  const dates = [...new Set(points.map((point) => point.date))].sort();
+  let longest = 0;
+  let run = 0;
+  let previous: Date | undefined;
+
+  for (const date of dates) {
+    const current = new Date(`${date}T00:00:00Z`);
+    run = previous && current.getTime() - previous.getTime() === 86_400_000 ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    previous = current;
+  }
+
+  return longest;
+}
+
 // ---------------------------------------------------------------------------
 // Skeletons
 // ---------------------------------------------------------------------------
@@ -805,7 +821,7 @@ export default function StatisticsPage() {
   const heatmap = useHeatmap(year);
   const detail = useStatisticsDetail(year);
 
-  const statsLoading = overall.isLoading || yearly.isLoading || (year !== "all" && recap.isLoading);
+  const statsLoading = overall.isLoading || yearly.isLoading || (year !== "all" && (recap.isLoading || heatmap.isLoading));
   const hasData = !yearly.isLoading && (yearly.data?.books_in_year ?? 0) > 0;
   const noData = !yearly.isLoading && !hasData;
 
@@ -813,10 +829,13 @@ export default function StatisticsPage() {
   const totalHours = year === "all"
     ? (overall.data ? Math.round(overall.data.hours_listened) : 0)
     : Math.round(recap.data?.hours_listened ?? 0);
-  const avgPerMonth = overall.data
-    ? overall.data.avg_books_per_month.toFixed(1)
-    : "—";
-  const longestStreak = overall.data?.streak.longest ?? 0;
+  const activeMonths = yearly.data?.monthly_chart.filter((month) => month.books > 0).length ?? 0;
+  const avgPerMonth = year === "all"
+    ? (overall.data ? overall.data.avg_books_per_month.toFixed(1) : "—")
+    : activeMonths > 0 ? (booksInYear / activeMonths).toFixed(1) : "—";
+  const longestStreak = year === "all"
+    ? overall.data?.streak.longest ?? 0
+    : longestConsecutiveDays(heatmap.data?.data ?? []);
 
   function openDetail(view: DetailView) {
     setDetailView(view);
@@ -853,8 +872,8 @@ export default function StatisticsPage() {
               onClick={() => openDetail({ kind: "books" })}
             />
             <StatCard label={year === "all" ? "Total Hours" : `Hours in ${year}`} value={totalHours} icon={Clock} onClick={() => openDetail({ kind: "hours" })} />
-            <StatCard label="Avg / Month" value={avgPerMonth} icon={TrendingUp} />
-            <StatCard label="Longest Streak" value={`${longestStreak}d`} icon={Flame} onClick={() => openDetail({ kind: "activity" })} />
+            <StatCard label={year === "all" ? "Avg / Active Month" : `Avg / Active Month in ${year}`} value={avgPerMonth} icon={TrendingUp} />
+            <StatCard label={year === "all" ? "Longest Streak" : `Longest Streak in ${year}`} value={`${longestStreak}d`} icon={Flame} onClick={() => openDetail({ kind: "activity" })} />
           </>
         )}
       </div>
