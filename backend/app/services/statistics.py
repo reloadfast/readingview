@@ -72,14 +72,25 @@ def _get_finished_books(
             continue
         stats_item = stats_items.get(lib_item_id, {})
         metadata = stats_item.get("mediaMetadata", {})
-        authors = metadata.get("authors", [])
-        author_str = ", ".join(a.get("name", "") for a in authors) if authors else "Unknown Author"
+        authors = [
+            author["name"]
+            for author in metadata.get("authors", [])
+            if isinstance(author, dict) and isinstance(author.get("name"), str) and author["name"]
+        ]
+        narrators = [
+            narrator
+            for narrator in metadata.get("narrators", [])
+            if isinstance(narrator, str) and narrator
+        ]
+        author_str = ", ".join(authors) if authors else "Unknown Author"
         finished.append(
             {
                 "id": lib_item_id,
                 "title": metadata.get("title", "Unknown Title"),
                 "author": author_str,
-                "narrator": ", ".join(metadata.get("narrators", [])),
+                "authors": authors,
+                "narrator": ", ".join(narrators),
+                "narrators": narrators,
                 "series": metadata.get("series", []),
                 "genres": metadata.get("genres", []),
                 "finished_at": progress.get("finishedAt"),
@@ -315,24 +326,26 @@ def compute_recap(
     )
 
 
-def compute_heatmap(year: str, sessions: list[dict]) -> HeatmapData:
+def compute_heatmap(
+    year: str,
+    sessions: list[dict[str, Any]],
+    timezone: str = "UTC",
+) -> HeatmapData:
+    """Aggregate sessions by their configured local calendar date."""
+    local_timezone = _local_timezone(timezone)
     daily: dict[str, int] = defaultdict(int)
-    for s in sessions:
-        ts = s.get("updatedAt") or s.get("startedAt")
-        if not ts:
-            continue
-        try:
-            dt = datetime.fromtimestamp(ts / 1000)
-        except (ValueError, TypeError, OSError):
+    for session in sessions:
+        dt = _session_datetime(session, local_timezone)
+        if dt is None:
             continue
         if str(dt.year) != year:
             continue
         day = dt.strftime("%Y-%m-%d")
-        seconds = s.get("timeListening", 0) or 0
+        seconds = session.get("timeListening", 0) or 0
         daily[day] += int(seconds / 60)
 
     data = [HeatmapPoint(date=d, minutes=m) for d, m in sorted(daily.items())]
-    return HeatmapData(year=year, data=data)
+    return HeatmapData(year=year, timezone=local_timezone.key, data=data)
 
 
 def compute_listening_habits(
@@ -1136,8 +1149,10 @@ def compute_statistics_detail(
     progress_map: dict[str, Any],
     listening_stats: dict[str, Any],
     sessions: list[dict[str, Any]],
+    timezone: str = "UTC",
 ) -> StatisticsDetail:
     """Return the title-level records that support the statistics dashboard."""
+    local_timezone = _local_timezone(timezone)
     stats_items = listening_stats.get("items", {}) if listening_stats else {}
     finished = _get_finished_books(progress_map, stats_items)
     if year != "all":
@@ -1145,7 +1160,8 @@ def compute_statistics_detail(
             book
             for book in finished
             if book.get("finished_at")
-            and str(datetime.fromtimestamp(book["finished_at"] / 1000).year) == year
+            and str(datetime.fromtimestamp(book["finished_at"] / 1000, tz=local_timezone).year)
+            == year
         ]
 
     books = [
@@ -1153,6 +1169,10 @@ def compute_statistics_detail(
             id=book["id"],
             title=book["title"],
             author=book["author"],
+            authors=book["authors"],
+            narrator=book["narrator"],
+            narrators=book["narrators"],
+            genres=book["genres"],
             finished_at=book.get("finished_at"),
             duration=book.get("duration", 0),
             time_listening=book.get("time_listening", 0),
@@ -1162,12 +1182,8 @@ def compute_statistics_detail(
 
     daily: dict[str, dict[str, Any]] = {}
     for session in sessions:
-        timestamp = session.get("updatedAt") or session.get("startedAt")
-        if not timestamp:
-            continue
-        try:
-            dt = datetime.fromtimestamp(timestamp / 1000)
-        except (ValueError, TypeError, OSError):
+        dt = _session_datetime(session, local_timezone)
+        if dt is None:
             continue
         if year != "all" and str(dt.year) != year:
             continue
@@ -1196,4 +1212,9 @@ def compute_statistics_detail(
         )
         for day, entry in sorted(daily.items(), reverse=True)
     ]
-    return StatisticsDetail(year=year, books=books, listening_days=listening_days)
+    return StatisticsDetail(
+        year=year,
+        timezone=local_timezone.key,
+        books=books,
+        listening_days=listening_days,
+    )

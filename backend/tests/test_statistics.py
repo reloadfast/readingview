@@ -790,6 +790,15 @@ def test_compute_heatmap_filters_other_years():
     assert result.data[0].minutes == 30
 
 
+def test_compute_heatmap_uses_configured_timezone_before_filtering_year():
+    # Midnight UTC is still Dec 31 in Los Angeles.
+    sessions = [{"updatedAt": _ts(2024, 1, 1), "timeListening": 1800}]
+
+    result = compute_heatmap("2023", sessions, "America/Los_Angeles")
+
+    assert [(point.date, point.minutes) for point in result.data] == [("2023-12-31", 30)]
+
+
 def test_compute_heatmap_empty():
     result = compute_heatmap("2024", [])
     assert result.year == "2024"
@@ -804,9 +813,38 @@ def test_compute_statistics_detail_groups_listening_by_day_and_book():
     ]
     detail = compute_statistics_detail("2024", _PROGRESS_MAP, _LISTENING_STATS, sessions)
     assert [book.id for book in detail.books] == ["book-2", "book-1"]
+    assert detail.books[0].authors == ["Author B"]
+    assert detail.books[0].narrator == "Narrator Y"
+    assert detail.books[0].narrators == ["Narrator Y"]
+    assert detail.books[0].genres == ["Sci-Fi", "Adventure"]
     assert len(detail.listening_days) == 1
     assert detail.listening_days[0].minutes == 90
     assert detail.listening_days[0].books[0].title == "Book Two"
+
+
+def test_compute_statistics_detail_uses_configured_timezone_for_books_and_sessions():
+    progress = {
+        "boundary-book": {
+            "isFinished": True,
+            "finishedAt": _ts(2024, 1, 1),
+            "duration": 3600,
+        }
+    }
+    stats = {
+        "items": {"boundary-book": {"mediaMetadata": {"title": "Boundary Book", "authors": []}}}
+    }
+    sessions = [
+        {
+            "updatedAt": _ts(2024, 1, 1),
+            "timeListening": 1800,
+            "libraryItemId": "boundary-book",
+        }
+    ]
+
+    detail = compute_statistics_detail("2023", progress, stats, sessions, "America/Los_Angeles")
+
+    assert [book.id for book in detail.books] == ["boundary-book"]
+    assert [(day.date, day.minutes) for day in detail.listening_days] == [("2023-12-31", 30)]
 
 
 def test_compute_heatmap_skips_missing_ts():

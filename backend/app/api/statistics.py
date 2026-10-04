@@ -85,13 +85,15 @@ async def get_recap(
 async def get_heatmap(
     year: str = Query(default=str(datetime.now().year)),
     client: AbsDataCache = Depends(abs_cache),
+    settings: Settings | None = Depends(current_settings),
 ) -> HeatmapData:
     try:
         sessions = await client.get_user_listening_sessions()
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return stats_svc.compute_heatmap(year, sessions)
+    timezone = settings.timezone if settings else "UTC"
+    return stats_svc.compute_heatmap(year, sessions, timezone)
 
 
 @router.get("/statistics/habits", response_model=ListeningHabits)
@@ -294,6 +296,7 @@ async def get_extra_listening(
 async def get_statistics_detail(
     year: str = Query(default=str(datetime.now().year)),
     client: AbsDataCache = Depends(abs_cache),
+    settings: Settings | None = Depends(current_settings),
 ) -> StatisticsDetail:
     try:
         progress_map, listening_stats, sessions = await asyncio.gather(
@@ -304,4 +307,7 @@ async def get_statistics_detail(
     except httpx.HTTPError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    return stats_svc.compute_statistics_detail(year, progress_map, listening_stats, sessions)
+    timezone = settings.timezone if settings else "UTC"
+    return stats_svc.compute_statistics_detail(
+        year, progress_map, listening_stats, sessions, timezone
+    )

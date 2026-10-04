@@ -1442,6 +1442,8 @@ export interface components {
         HeatmapData: {
             /** Year */
             year: string;
+            /** Timezone */
+            timezone: string;
             /** Data */
             data: components["schemas"]["HeatmapPoint"][];
         };
@@ -2090,6 +2092,14 @@ export interface components {
             title: string;
             /** Author */
             author: string;
+            /** Authors */
+            authors: string[];
+            /** Narrator */
+            narrator: string;
+            /** Narrators */
+            narrators: string[];
+            /** Genres */
+            genres: string[];
             /** Finished At */
             finished_at?: number | null;
             /** Duration */
@@ -2101,6 +2111,8 @@ export interface components {
         StatisticsDetail: {
             /** Year */
             year: string;
+            /** Timezone */
+            timezone: string;
             /** Books */
             books: components["schemas"]["StatisticBook"][];
             /** Listening Days */

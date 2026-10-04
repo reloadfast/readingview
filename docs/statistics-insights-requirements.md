@@ -17,16 +17,16 @@ requirements below.
 | Requirement | Status | Delivered work |
 | --- | --- | --- |
 | R-001 | Implemented | All insight calculations use local ABS and ReadingView-goal data only. |
-| R-002 | Partial | New session-based insights use the configured local timezone and selected-year filtering; legacy activity/detail calculations still need the same timezone treatment. |
+| R-002 | Implemented | Session-based insights and legacy activity/detail calculations use the configured local timezone and selected-year filtering. |
 | R-003 | Implemented | Insight sections provide loading, inline-error, and explicit empty/eligibility states; subset-based metrics disclose their sample or rule. |
-| R-004 | Partial | New interactive charts and cards have keyboard-accessible controls and textual summaries. Completion, duration, and extra-listening data drill into Statistics detail; series drill into the existing Series page. Remaining author/narrator/genre drill-down filtering is not implemented. |
+| R-004 | Implemented | New interactive charts and cards have keyboard-accessible controls and textual summaries. Completion, duration, extra-listening, author, narrator, and genre data drill into filtered Statistics detail; series drill into the existing Series page. |
 | R-101–R-103 | Implemented | Local weekday/hour heatmap, session summary/distribution, and active-day cadence. |
 | R-201–R-203 | Implemented | Completion-velocity trend, books-versus-session-hours comparison, and book-length preference/pace views. |
 | R-301–R-303 | Implemented | Eligible goal forecast, backlog health, and closest-to-finish series progress. |
 | R-401–R-404 | Implemented | Affinity rankings, genre association, duration/pace Pearson view, and extra-listening reporting. |
 | R-501 | Implemented | Each insight has typed FastAPI schemas/routes and regenerated frontend OpenAPI types. |
 | R-502 | Implemented | Routes reuse cached ABS paths and each nonessential insight has an isolated inline failure state. |
-| R-503 | Partial | Backend unit tests cover the implemented calculations and boundaries; Vitest covers representative insight states and goal-forecast eligibility. Broader per-insight frontend state coverage remains to be added. |
+| R-503 | Implemented | Backend unit tests cover the implemented calculations and boundaries; Vitest covers loading, error, empty, and populated states across every insight section, including goal-forecast eligibility. |
 
 ## Scope and data rules
 

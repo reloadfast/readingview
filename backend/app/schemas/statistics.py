@@ -80,6 +80,7 @@ class HeatmapPoint(BaseModel):
 
 class HeatmapData(BaseModel):
     year: str
+    timezone: str
     data: list[HeatmapPoint]
 
 
@@ -251,6 +252,10 @@ class StatisticBook(BaseModel):
     id: str
     title: str
     author: str
+    authors: list[str]
+    narrator: str
+    narrators: list[str]
+    genres: list[str]
     finished_at: int | None = None
     duration: float
     time_listening: float
@@ -271,5 +276,6 @@ class ListeningDay(BaseModel):
 
 class StatisticsDetail(BaseModel):
     year: str
+    timezone: str
     books: list[StatisticBook]
     listening_days: list[ListeningDay]
