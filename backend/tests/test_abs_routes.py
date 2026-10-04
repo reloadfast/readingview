@@ -104,6 +104,86 @@ async def test_statistics_recap_returns_data(client):
     assert r.json()["year"] == "2024"
 
 
+async def test_statistics_completion_velocity_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/completion-velocity?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
+async def test_statistics_monthly_comparison_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/monthly-comparison?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
+async def test_statistics_book_length_preferences_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/book-length-preferences?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
+async def test_statistics_goal_forecast_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/goal-forecast?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == 2024
+
+
+async def test_statistics_backlog_health_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/backlog-health")
+    assert r.status_code == 200
+    assert "unstarted_books" in r.json()
+
+
+async def test_statistics_series_progress_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/series-progress")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+async def test_statistics_affinity_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/affinity")
+    assert r.status_code == 200
+    assert r.json() == {"authors": [], "narrators": []}
+
+
+async def test_statistics_genre_completion_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/genre-completion")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+async def test_statistics_duration_completion_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/duration-completion?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
+async def test_statistics_extra_listening_returns_data(client):
+    mock = _mock_abs()
+    with patch(_ABS_CACHE_GET, return_value=mock):
+        r = await client.get("/api/statistics/extra-listening?year=2024")
+    assert r.status_code == 200
+    assert r.json()["year"] == "2024"
+
+
 async def test_statistics_detail_returns_data(client):
     mock = _mock_abs()
     with patch(_ABS_CACHE_GET, return_value=mock):

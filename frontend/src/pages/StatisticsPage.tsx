@@ -7,6 +7,8 @@ import {
   Bar,
   PieChart,
   Pie,
+  Scatter,
+  ScatterChart,
   Cell,
   ResponsiveContainer,
   XAxis,
@@ -16,10 +18,10 @@ import {
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
 import { AbsBookLink, Card, CardContent, Skeleton, Select } from "@/components/ui";
-import { useStatistics, useYearlyStats, useRecap, useHeatmap, useListeningHabits, useStatisticsDetail } from "@/hooks/useStatistics";
+import { useStatistics, useYearlyStats, useRecap, useHeatmap, useListeningHabits, useCompletionVelocity, useMonthlyComparison, useBookLengthPreferences, useGoalForecast, useBacklogHealth, useSeriesProgress, useAuthorNarratorAffinity, useGenreCompletionCorrelation, useDurationCompletionCorrelation, useExtraListening, useStatisticsDetail } from "@/hooks/useStatistics";
 import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
-import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint, ListeningHabitCell, ListeningHabits, StatisticsDetail } from "@/lib/api";
+import type { AffinityPerson, AuthorNarratorAffinity, BacklogHealth, BookLengthPreferences, CompletionVelocity, DurationCompletionCorrelation, ExtraListening, GenreCompletionCorrelation, GoalForecast, MonthlyComparison, RecapStats, AuthorCount, GenreCount, HeatmapPoint, ListeningHabitCell, ListeningHabits, SeriesProgress, StatisticsDetail } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -169,6 +171,49 @@ function ListeningHabitsSection({ data, isLoading, isError }: { data: ListeningH
 }
 
 // ---------------------------------------------------------------------------
+// Completion velocity
+// ---------------------------------------------------------------------------
+
+function CompletionVelocitySection({ data, isLoading, isError, onMonthClick }: { data: CompletionVelocity | undefined; isLoading: boolean; isError: boolean; onMonthClick: (month: string) => void }) {
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Completion Pace</h2><ChartSkeleton height={260} /></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Completion Pace</h2><Card><CardContent><p className="text-sm text-destructive">Completion pace could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  if (!data || data.qualifying_books === 0) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Completion Pace</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books with valid start and finish dates are available for this period.</p></CardContent></Card></section>;
+  }
+
+  const trend = data.monthly_trend.filter((month) => month.median_days !== null);
+  const excludedMonths = data.monthly_trend.filter((month) => month.median_days === null);
+  return (
+    <section className="space-y-4">
+      <div><h2 className="text-lg font-semibold text-text-primary">Completion Pace</h2><p className="text-xs text-text-secondary mt-1">Based on {data.qualifying_books} completed book{data.qualifying_books === 1 ? "" : "s"} with valid start and finish dates.</p></div>
+      <div className="grid grid-cols-1 lg:grid-cols-[15rem_1fr] gap-6">
+        <Card><CardContent><p className="text-3xl font-bold text-text-primary">{data.median_days}d</p><p className="text-sm text-text-secondary mt-1">Median days to finish</p><p className="text-xs text-text-secondary mt-4">This is a representative middle value; fastest and slowest reads are shown separately as outliers.</p></CardContent></Card>
+        <Card><CardContent>
+          <h3 className="font-medium text-text-primary mb-3">Monthly median days to finish</h3>
+          {trend.length ? <>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={trend} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} axisLine={false} tickLine={false} unit="d" />
+                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={CURSOR_STYLE} formatter={(value: number) => [`${value} days`, "Median"]} labelFormatter={(label) => String(label)} />
+                <Bar dataKey="median_days" fill="var(--color-chart-2)" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(point) => { const month = (point as { month?: string }).month; if (month) onMonthClick(month); }} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="sr-only">Monthly completion pace is shown for {trend.length} month{trend.length === 1 ? "" : "s"} with at least three qualifying completed books. Select a bar to view its completed books.</p>
+          </> : <p className="text-sm text-text-secondary py-16 text-center">Monthly pace needs at least three qualifying completed books in a month.</p>}
+          {excludedMonths.length > 0 && <p className="text-xs text-text-secondary mt-3">{excludedMonths.length} month{excludedMonths.length === 1 ? " has" : "s have"} fewer than three qualifying completed books and {excludedMonths.length === 1 ? "is" : "are"} omitted from the trend.</p>}
+        </CardContent></Card>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Stat card
 // ---------------------------------------------------------------------------
 
@@ -203,57 +248,172 @@ function StatCard({
   ) : content;
 }
 
-// ---------------------------------------------------------------------------
-// Monthly bar chart
-// ---------------------------------------------------------------------------
+function MonthlyComparisonSection({ data, isLoading, isError, onMonthClick }: { data: MonthlyComparison | undefined; isLoading: boolean; isError: boolean; onMonthClick: (month: string, metric: "books" | "hours") => void }) {
+  const [metric, setMetric] = useState<"books" | "hours">("books");
 
-function MonthlyChart({
-  data,
-  onMonthClick,
-}: {
-  data: { month: string; books: number }[];
-  onMonthClick?: (month: string) => void;
-}) {
-  if (!data.length) return null;
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2><ChartSkeleton /></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2><Card><CardContent><p className="text-sm text-destructive">Monthly comparison could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  const monthly = data?.monthly ?? [];
+  if (!monthly.some((point) => point.books_completed > 0 || point.listening_hours > 0)) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books or positive-duration listening sessions are available for this period.</p></CardContent></Card></section>;
+  }
+
+  const key = metric === "books" ? "books_completed" : "listening_hours";
+  const label = metric === "books" ? "Books completed" : "Listening hours";
+  const contrary: { point: (typeof monthly)[number]; previous: (typeof monthly)[number] }[] = [];
+  for (let index = 1; index < monthly.length; index += 1) {
+    const point = monthly[index];
+    const previous = monthly[index - 1];
+    if (point && previous && (point.books_completed - previous.books_completed) * (point.listening_hours - previous.listening_hours) < 0) {
+      contrary.push({ point, previous });
+    }
+  }
+  const latestContrary = contrary.at(-1);
+  const comparisonSummary = latestContrary
+    ? `In ${new Date(`${latestContrary.point.month}-01T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}, completed books ${latestContrary.point.books_completed > latestContrary.previous.books_completed ? "increased" : "decreased"} while session listening hours ${latestContrary.point.listening_hours > latestContrary.previous.listening_hours ? "increased" : "decreased"}.`
+    : "No month-to-month change in completions moved opposite to listening hours in this period.";
+
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-        <CartesianGrid
-          strokeDasharray="3 3"
-          stroke="var(--color-border)"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="month"
-          tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          allowDecimals={false}
-          tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <Tooltip
-          contentStyle={TOOLTIP_STYLE}
-          cursor={CURSOR_STYLE}
-          formatter={(v: number) => [v, "Books"]}
-        />
-        <Bar
-          dataKey="books"
-          fill="var(--color-chart-1)"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={40}
-          cursor={onMonthClick ? "pointer" : undefined}
-          onClick={(point) => {
-            const month = (point as { month?: string }).month;
-            if (month) onMonthClick?.(month);
-          }}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-text-primary">Monthly Breakdown</h2><p className="text-xs text-text-secondary mt-1">Listening hours are summed from positive-duration sessions at their timestamp in {data?.timezone}.</p></div><div className="inline-flex rounded-lg border border-border p-1" role="group" aria-label="Monthly metric"><button type="button" aria-pressed={metric === "books"} onClick={() => setMetric("books")} className={`rounded-md px-3 py-1.5 text-sm ${metric === "books" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-hover"}`}>Books</button><button type="button" aria-pressed={metric === "hours"} onClick={() => setMetric("hours")} className={`rounded-md px-3 py-1.5 text-sm ${metric === "hours" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-hover"}`}>Listening hours</button></div></div>
+      <Card><CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={monthly} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={metric === "hours"} tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={TOOLTIP_STYLE} cursor={CURSOR_STYLE} formatter={(value: number) => [metric === "hours" ? `${value} hrs` : value, label]} />
+            <Bar dataKey={key} fill="var(--color-chart-1)" radius={[4, 4, 0, 0]} maxBarSize={40} cursor="pointer" onClick={(point) => { const month = (point as { month?: string }).month; if (month) onMonthClick(month, metric); }} />
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="text-xs text-text-secondary mt-3">{comparisonSummary}</p>
+        <p className="sr-only">The chart shows {label.toLowerCase()} for each month. Select a bar to inspect the underlying {metric === "books" ? "completed books" : "listening sessions"}.</p>
+      </CardContent></Card>
+    </section>
   );
+}
+
+function BookLengthPreferencesSection({ data, isLoading, isError, onBucketClick }: { data: BookLengthPreferences | undefined; isLoading: boolean; isError: boolean; onBucketClick: (bucket: string) => void }) {
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Book Length Preferences</h2><ChartSkeleton height={220} /></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Book Length Preferences</h2><Card><CardContent><p className="text-sm text-destructive">Book-length preferences could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  if (!data || data.qualifying_books === 0) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Book Length Preferences</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books with a valid media duration are available for this period.</p></CardContent></Card></section>;
+  }
+
+  return (
+    <section className="space-y-4">
+      <div><h2 className="text-lg font-semibold text-text-primary">Book Length Preferences</h2><p className="text-xs text-text-secondary mt-1">Median completed-book length: {data.median_duration_hours} hours, based on {data.qualifying_books} completed book{data.qualifying_books === 1 ? "" : "s"}.</p></div>
+      <Card><CardContent>
+        <h3 className="font-medium text-text-primary mb-3">Completed-book duration distribution</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {data.distribution.map((bucket) => <button key={bucket.label} type="button" onClick={() => onBucketClick(bucket.label)} className="rounded-lg bg-surface-hover p-3 text-left transition-colors hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"><p className="text-xl font-bold text-text-primary">{bucket.completed_books}</p><p className="text-xs text-text-secondary">{bucket.label}</p></button>)}
+        </div>
+        <p className="sr-only">Select a duration bucket to inspect its completed books.</p>
+      </CardContent></Card>
+      <Card><CardContent>
+        <h3 className="font-medium text-text-primary mb-3">Length and completion pace</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {data.distribution.map((bucket) => <button key={bucket.label} type="button" onClick={() => onBucketClick(bucket.label)} className="rounded-lg border border-border p-3 text-left transition-colors hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"><p className="text-xl font-bold text-text-primary">{bucket.median_days_to_finish == null ? "—" : `${bucket.median_days_to_finish}d`}</p><p className="text-xs text-text-secondary">Median days · {bucket.label}</p><p className="text-xs text-text-secondary mt-2">{bucket.pace_qualifying_books} with valid start/finish dates</p></button>)}
+        </div>
+        <p className="text-xs text-text-secondary mt-3">Completion pace excludes books without valid start and finish timestamps.</p>
+      </CardContent></Card>
+    </section>
+  );
+}
+
+function BacklogHealthSection({ data, isLoading, isError }: { data: BacklogHealth | undefined; isLoading: boolean; isError: boolean }) {
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Backlog Health</h2><div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{Array.from({ length: 4 }).map((_, index) => <StatCardSkeleton key={index} />)}</div></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Backlog Health</h2><Card><CardContent><p className="text-sm text-destructive">Backlog health could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  if (!data || data.unstarted_books + data.in_progress_books + data.completed_books === 0) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Backlog Health</h2><Card><CardContent><p className="text-sm text-text-secondary">No library books with qualifying progress data are available.</p></CardContent></Card></section>;
+  }
+  return (
+    <section className="space-y-4">
+      <div><h2 className="text-lg font-semibold text-text-primary">Backlog Health</h2><p className="text-xs text-text-secondary mt-1">Current library state; remaining time uses valid media duration and ABS progress only.</p></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card><CardContent><p className="text-3xl font-bold text-text-primary">{data.unstarted_books}</p><p className="text-sm text-text-secondary">Unstarted books</p></CardContent></Card>
+        <Link to="/library" className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"><Card className="h-full transition-colors hover:bg-surface-hover"><CardContent><p className="text-3xl font-bold text-accent">{data.partially_started_books}</p><p className="text-sm text-text-secondary">Partially started books</p><p className="text-xs text-accent mt-1">Open library →</p></CardContent></Card></Link>
+        <Card><CardContent><p className="text-3xl font-bold text-text-primary">{data.completed_books}</p><p className="text-sm text-text-secondary">Completed books</p></CardContent></Card>
+        <Card><CardContent><p className="text-3xl font-bold text-text-primary">{data.total_remaining_hours}</p><p className="text-sm text-text-secondary">Hours remaining</p></CardContent></Card>
+      </div>
+      <Card><CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm"><div><p className="font-medium text-text-primary">Unstarted: {data.unstarted_remaining_hours} hours</p><p className="text-xs text-text-secondary mt-1">From {data.unstarted_duration_books} unstarted book{data.unstarted_duration_books === 1 ? "" : "s"} with valid duration.</p></div><div><p className="font-medium text-text-primary">In progress: {data.in_progress_remaining_hours} hours</p><p className="text-xs text-text-secondary mt-1">From {data.in_progress_duration_books} partially started book{data.in_progress_duration_books === 1 ? "" : "s"} with valid duration and progress.</p></div></CardContent></Card>
+    </section>
+  );
+}
+
+function SeriesProgressSection({ data, isLoading, isError }: { data: SeriesProgress[] | undefined; isLoading: boolean; isError: boolean }) {
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Series Progress</h2><ChartSkeleton height={180} /></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Series Progress</h2><Card><CardContent><p className="text-sm text-destructive">Series progress could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  if (!data?.length) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Series Progress</h2><Card><CardContent><p className="text-sm text-text-secondary">No series with determinable incomplete books are available.</p></CardContent></Card></section>;
+  }
+  return (
+    <section className="space-y-4">
+      <div><h2 className="text-lg font-semibold text-text-primary">Series Progress</h2><p className="text-xs text-text-secondary mt-1">Closest to finish first: fewest remaining books, then fewest remaining hours.</p></div>
+      <Card><CardContent className="divide-y divide-border">
+        {data.map((series) => <Link key={series.name} to={`/series/${encodeURIComponent(series.name)}`} className="block py-3 first:pt-0 last:pb-0 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent hover:bg-surface-hover"><div className="flex items-start justify-between gap-4"><div><p className="font-medium text-text-primary">{series.name}</p><p className="text-xs text-text-secondary mt-1">{series.completed_books} completed · {series.remaining_books} remaining</p></div><div className="text-right"><p className="text-sm font-medium text-text-primary">{series.remaining_duration_books ? `${series.remaining_hours} hrs` : "—"}</p><p className="text-xs text-text-secondary">{series.remaining_duration_books}/{series.remaining_books} with duration</p></div></div></Link>)}
+      </CardContent></Card>
+    </section>
+  );
+}
+
+type AffinitySort = "completion_rate" | "completed_books" | "listened_hours";
+
+function AffinityRanking({ title, people }: { title: string; people: AffinityPerson[] }) {
+  if (!people.length) return <p className="py-8 text-center text-sm text-text-secondary">No one with at least three library books qualifies yet.</p>;
+  return <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="text-left text-xs text-text-secondary"><tr><th className="pb-2 font-medium">Name</th><th className="pb-2 font-medium text-right">Finished / available</th><th className="pb-2 font-medium text-right">Rate</th><th className="pb-2 font-medium text-right">Listened</th></tr></thead><tbody className="divide-y divide-border">{people.map((person) => <tr key={person.name}><td className="py-2.5 font-medium text-text-primary">{person.name}</td><td className="py-2.5 text-right text-text-secondary">{person.completed_books} / {person.available_books}</td><td className="py-2.5 text-right text-text-secondary">{person.completion_rate}%</td><td className="py-2.5 text-right text-text-secondary">{person.listened_hours}h</td></tr>)}</tbody></table><p className="sr-only">{title} ranking includes completed books, available library books, completion rate, and listening hours.</p></div>;
+}
+
+function AuthorNarratorAffinitySection({ data, isLoading, isError }: { data: AuthorNarratorAffinity | undefined; isLoading: boolean; isError: boolean }) {
+  const [sortBy, setSortBy] = useState<AffinitySort>("completion_rate");
+  if (isLoading) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Author & Narrator Affinity</h2><ChartSkeleton height={220} /></section>;
+  if (isError) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Author & Narrator Affinity</h2><Card><CardContent><p className="text-sm text-destructive">Affinity rankings could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  const sortPeople = (people: AffinityPerson[]) => [...people].sort((left, right) => {
+    const difference = right[sortBy] - left[sortBy];
+    return difference || left.name.localeCompare(right.name);
+  });
+  const authors = sortPeople(data?.authors ?? []);
+  const narrators = sortPeople(data?.narrators ?? []);
+  return <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold text-text-primary">Author & Narrator Affinity</h2><p className="text-xs text-text-secondary mt-1">At least three library books are required. Multiple credits count for every listed person, so totals can exceed your book count.</p></div><div className="inline-flex rounded-lg border border-border p-1" role="group" aria-label="Affinity ranking sort"><button type="button" aria-pressed={sortBy === "completion_rate"} onClick={() => setSortBy("completion_rate")} className={`rounded-md px-3 py-1.5 text-sm ${sortBy === "completion_rate" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-hover"}`}>Completion rate</button><button type="button" aria-pressed={sortBy === "completed_books"} onClick={() => setSortBy("completed_books")} className={`rounded-md px-3 py-1.5 text-sm ${sortBy === "completed_books" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-hover"}`}>Completed</button><button type="button" aria-pressed={sortBy === "listened_hours"} onClick={() => setSortBy("listened_hours")} className={`rounded-md px-3 py-1.5 text-sm ${sortBy === "listened_hours" ? "bg-accent text-white" : "text-text-secondary hover:bg-surface-hover"}`}>Listening hours</button></div></div><div className="grid grid-cols-1 xl:grid-cols-2 gap-6"><Card><CardContent><h3 className="font-medium text-text-primary mb-3">Authors</h3><AffinityRanking title="Author" people={authors} /></CardContent></Card><Card><CardContent><h3 className="font-medium text-text-primary mb-3">Narrators</h3><AffinityRanking title="Narrator" people={narrators} /></CardContent></Card></div></section>;
+}
+
+function GenreCompletionCorrelationSection({ data, isLoading, isError }: { data: GenreCompletionCorrelation[] | undefined; isLoading: boolean; isError: boolean }) {
+  if (isLoading) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Genre Completion Association</h2><ChartSkeleton height={220} /></section>;
+  if (isError) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Genre Completion Association</h2><Card><CardContent><p className="text-sm text-destructive">Genre completion data could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  if (!data?.length) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Genre Completion Association</h2><Card><CardContent><p className="text-sm text-text-secondary">No genres have at least three started or completed books with known progress.</p></CardContent></Card></section>;
+  return <section className="space-y-4"><div><h2 className="text-lg font-semibold text-text-primary">Genre Completion Association</h2><p className="text-xs text-text-secondary mt-1">This is an observed association in your library, not evidence that a genre causes a completion outcome.</p></div><Card><CardContent className="overflow-x-auto"><table className="w-full text-sm"><thead className="text-left text-xs text-text-secondary"><tr><th className="pb-2 font-medium">Genre</th><th className="pb-2 font-medium text-right">Finished / known</th><th className="pb-2 font-medium text-right">Completion rate</th><th className="pb-2 font-medium text-right">Median pace</th></tr></thead><tbody className="divide-y divide-border">{data.map((genre) => <tr key={genre.name}><td className="py-2.5 font-medium text-text-primary">{genre.name}</td><td className="py-2.5 text-right text-text-secondary">{genre.completed_books} / {genre.known_progress_books}</td><td className="py-2.5 text-right text-text-secondary">{genre.completion_rate}%</td><td className="py-2.5 text-right text-text-secondary">{genre.median_days_to_finish == null ? "—" : `${genre.median_days_to_finish}d`}<span className="sr-only"> based on {genre.pace_qualifying_books} completed books with valid start and finish dates</span></td></tr>)}</tbody></table><p className="text-xs text-text-secondary mt-3">Completion rate uses only books with a known ABS progress record. Median pace excludes completed books without valid start and finish dates.</p></CardContent></Card></section>;
+}
+
+function DurationCompletionCorrelationSection({ data, isLoading, isError, onBookClick }: { data: DurationCompletionCorrelation | undefined; isLoading: boolean; isError: boolean; onBookClick: (bookId: string) => void }) {
+  if (isLoading) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Length & Completion Pace</h2><ChartSkeleton height={300} /></section>;
+  if (isError) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Length & Completion Pace</h2><Card><CardContent><p className="text-sm text-destructive">Length and completion pace could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  if (!data?.points.length) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Length & Completion Pace</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books with valid duration, start, and finish data are available for this period.</p></CardContent></Card></section>;
+  const relationship = data.direction === "positive" ? "Longer books tend to take more days to finish in this sample." : data.direction === "negative" ? "Longer books tend to take fewer days to finish in this sample." : "There is no clear duration-and-pace relationship in this sample.";
+  return <section className="space-y-4"><div><h2 className="text-lg font-semibold text-text-primary">Length & Completion Pace</h2><p className="text-xs text-text-secondary mt-1">Based on {data.qualifying_books} completed book{data.qualifying_books === 1 ? "" : "s"} with valid duration, start, and finish data.</p></div><Card><CardContent><ResponsiveContainer width="100%" height={300}><ScatterChart margin={{ top: 12, right: 12, bottom: 8, left: -8 }}><CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" /><XAxis type="number" dataKey="duration_hours" name="Length" unit="h" tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} /><YAxis type="number" dataKey="days_to_finish" name="Days to finish" unit="d" tick={{ fill: "var(--color-text-secondary)", fontSize: 12 }} /><Tooltip contentStyle={TOOLTIP_STYLE} cursor={CURSOR_STYLE} formatter={(value: number, name: string) => [name === "Length" ? `${value} hrs` : `${value} days`, name]} labelFormatter={(_, payload) => payload?.[0]?.payload?.title ?? "Completed book"} /><Scatter data={data.points} fill="var(--color-chart-3)" cursor="pointer" onClick={(point) => { const id = (point as { id?: string }).id; if (id) onBookClick(id); }} /></ScatterChart></ResponsiveContainer><p className="text-xs text-text-secondary mt-3">{data.qualifying_books >= 10 ? `${relationship}${data.correlation_coefficient == null ? " The Pearson coefficient is unavailable because the data lacks meaningful variation." : ` Pearson correlation: ${data.correlation_coefficient}.`}` : "A direction summary needs at least ten qualifying completed books."}</p><details className="mt-3 text-sm"><summary className="cursor-pointer text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">Inspect completed titles</summary><div className="mt-2 flex flex-wrap gap-2">{data.points.map((point) => <button key={point.id} type="button" onClick={() => onBookClick(point.id)} className="rounded-md border border-border px-2 py-1 text-xs text-text-secondary hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">{point.title}</button>)}</div></details><p className="sr-only">Scatter plot of each completed book’s duration in hours against days to finish. Select a title to inspect the completed book.</p></CardContent></Card></section>;
+}
+
+export function ExtraListeningSection({ data, isLoading, isError, onBookClick }: { data: ExtraListening | undefined; isLoading: boolean; isError: boolean; onBookClick: (bookId: string) => void }) {
+  if (isLoading) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Extra Listening</h2><ChartSkeleton height={160} /></section>;
+  if (isError) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Extra Listening</h2><Card><CardContent><p className="text-sm text-destructive">Extra listening could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  if (!data || data.qualifying_books === 0) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Extra Listening</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books with valid media duration and listening data are available for this period.</p></CardContent></Card></section>;
+  if (!data.books.length) return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Extra Listening</h2><Card><CardContent><p className="text-sm text-text-secondary">No completed books reached 125% of their media duration in this period.</p></CardContent></Card></section>;
+  return <section className="space-y-4"><div><h2 className="text-lg font-semibold text-text-primary">Extra Listening</h2><p className="text-xs text-text-secondary mt-1">Completed books with listening time at or above 125% of media duration.</p></div><Card><CardContent className="space-y-3">{data.books.map((book) => <button key={book.id} type="button" onClick={() => onBookClick(book.id)} className="flex w-full items-center justify-between gap-4 rounded-lg border border-border p-3 text-left hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"><span><span className="block font-medium text-text-primary">{book.title}</span><span className="block text-xs text-text-secondary mt-1">{book.author} · {book.listened_hours}h listened / {book.duration_hours}h media</span></span><span className="text-sm font-bold text-accent">{book.listening_ratio}%</span></button>)}<p className="text-xs text-text-secondary">This does not necessarily mean you re-listened: playback restarts, seeking, and ABS session accounting can also increase the ratio.</p></CardContent></Card></section>;
 }
 
 // ---------------------------------------------------------------------------
@@ -402,14 +562,14 @@ function RecapSection({
         )}
         {data.fastest_read && (
           <RecapCard
-            label="Fastest read"
+            label="Fastest read (outlier)"
             value={`${data.fastest_read.days}d`}
             sub={<AbsBookLink itemId={data.fastest_read.id} className="hover:text-accent hover:underline">{data.fastest_read.title}</AbsBookLink>}
           />
         )}
         {data.slowest_read && (
           <RecapCard
-            label="Slowest read"
+            label="Slowest read (outlier)"
             value={`${data.slowest_read.days}d`}
             sub={<AbsBookLink itemId={data.slowest_read.id} className="hover:text-accent hover:underline">{data.slowest_read.title}</AbsBookLink>}
           />
@@ -467,9 +627,18 @@ function paceLabel(booksFinished: number, target: number, year: string): string 
   return `Behind by ${behind}`;
 }
 
+export function GoalForecastSummary({ data, isLoading, isError }: { data: GoalForecast | undefined; isLoading: boolean; isError: boolean }) {
+  if (isLoading) return <Skeleton className="h-16 w-full mt-4" />;
+  if (isError) return <p className="mt-4 pt-4 border-t border-border text-xs text-destructive">Goal forecast could not be loaded. Your goal progress is still available.</p>;
+  if (!data?.has_goal) return null;
+  if (!data.eligible) return data.ineligibility_reason ? <p className="mt-4 pt-4 border-t border-border text-xs text-text-secondary">Forecast unavailable: {data.ineligibility_reason}</p> : null;
+  return <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-3"><div><p className="text-2xl font-bold text-text-primary">{data.projected_books}</p><p className="text-xs text-text-secondary">Estimated books by year end</p></div><div><p className="text-2xl font-bold text-text-primary">{data.required_books_per_week}</p><p className="text-xs text-text-secondary">Books per remaining week to reach your goal</p></div><p className="sm:col-span-2 text-xs text-text-secondary">Estimate based on {data.trailing_30_day_completions} completed book{data.trailing_30_day_completions === 1 ? "" : "s"} in the trailing 30 days.</p></div>;
+}
+
 function GoalCard({ booksFinished, year }: { booksFinished: number; year: string }) {
   const goals = useGoals();
   const setGoal = useSetGoal();
+  const forecast = useGoalForecast(year);
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -570,6 +739,8 @@ function GoalCard({ booksFinished, year }: { booksFinished: number; year: string
               </div>
             </div>
           )}
+
+          {target > 0 && <GoalForecastSummary data={forecast.data} isLoading={forecast.isLoading} isError={forecast.isError} />}
 
           {editing && (
             <div className="mt-4 pt-4 border-t border-border flex items-center gap-2">
@@ -778,10 +949,19 @@ function ActivityHeatmap({
 // Statistics drill-down
 // ---------------------------------------------------------------------------
 
-type DetailView = { kind: "books"; month?: string } | { kind: "hours" } | { kind: "activity"; date?: string };
+type DetailView = { kind: "books"; month?: string; durationBucket?: string; bookId?: string } | { kind: "hours"; month?: string } | { kind: "activity"; date?: string };
 
 function formatFinishedAt(timestamp: number | null | undefined) {
   return timestamp ? new Date(timestamp).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "Finished date unavailable";
+}
+
+function isInDurationBucket(duration: number, bucket: string) {
+  const hours = duration / 3600;
+  if (bucket === "Under 5 hours") return hours < 5;
+  if (bucket === "5–9:59 hours") return hours >= 5 && hours < 10;
+  if (bucket === "10–19:59 hours") return hours >= 10 && hours < 20;
+  if (bucket === "20–29:59 hours") return hours >= 20 && hours < 30;
+  return bucket === "30 hours or more" && hours >= 30;
 }
 
 function StatisticsDetailDialog({
@@ -801,16 +981,25 @@ function StatisticsDetailDialog({
   year: string;
   onSelectDay: (date: string) => void;
 }) {
-  const period = view.kind === "books" ? view.month : undefined;
-  const books = period
+  const period = view.kind === "books" || view.kind === "hours" ? view.month : undefined;
+  const durationBucket = view.kind === "books" ? view.durationBucket : undefined;
+  const bookId = view.kind === "books" ? view.bookId : undefined;
+  const periodBooks = period
     ? (detail?.books ?? []).filter((book) => book.finished_at && new Date(book.finished_at).toISOString().startsWith(period))
     : detail?.books ?? [];
+  const bucketBooks = durationBucket
+    ? periodBooks.filter((book) => isInDurationBucket(book.duration, durationBucket))
+    : periodBooks;
+  const books = bookId ? bucketBooks.filter((book) => book.id === bookId) : bucketBooks;
+  const listeningDays = period
+    ? (detail?.listening_days ?? []).filter((day) => day.date.startsWith(period))
+    : detail?.listening_days ?? [];
   const selectedDay = view.kind === "activity" && view.date
     ? detail?.listening_days.find((day) => day.date === view.date)
     : undefined;
   const title = view.kind === "books"
-    ? period ? `Books finished in ${period.length === 4 ? period : new Date(`${period}-01T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : "Books finished"
-    : view.kind === "hours" ? "Listening time breakdown" : "Listening calendar";
+    ? bookId ? "Completed book" : durationBucket ? `Completed books: ${durationBucket}` : period ? `Books finished in ${period.length === 4 ? period : new Date(`${period}-01T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : "Books finished"
+    : view.kind === "hours" ? period ? `Listening time in ${new Date(`${period}-01T12:00:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" })}` : "Listening time breakdown" : "Listening calendar";
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -835,7 +1024,7 @@ function StatisticsDetailDialog({
             </div>
           ) : view.kind === "hours" ? (
             <div className="space-y-3">
-              {(detail?.listening_days ?? []).map((day) => (
+              {listeningDays.map((day) => (
                 <div key={day.date} className="rounded-lg border border-border p-3 hover:bg-surface-hover">
                   <button onClick={() => onSelectDay(day.date)} className="w-full text-left">
                     <div className="flex justify-between gap-3"><span className="font-medium text-text-primary">{new Date(`${day.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}</span><span className="text-sm text-accent">{day.minutes} min</span></div>
@@ -843,7 +1032,7 @@ function StatisticsDetailDialog({
                   <p className="mt-1 text-sm text-text-secondary truncate">{day.books.map((book, index) => <span key={`${book.id}-${book.title}`}>{index > 0 && ", "}{book.id ? <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">{book.title}</AbsBookLink> : book.title}</span>)}</p>
                 </div>
               ))}
-              {(detail?.listening_days.length ?? 0) === 0 && <p className="py-8 text-center text-sm text-text-secondary">No listening sessions recorded.</p>}
+              {listeningDays.length === 0 && <p className="py-8 text-center text-sm text-text-secondary">No listening sessions recorded.</p>}
             </div>
           ) : (
             <div className="space-y-5">
@@ -893,6 +1082,15 @@ export default function StatisticsPage() {
   const recap = useRecap(year);
   const heatmap = useHeatmap(year);
   const habits = useListeningHabits(year);
+  const completionVelocity = useCompletionVelocity(year);
+  const monthlyComparison = useMonthlyComparison(year);
+  const bookLengthPreferences = useBookLengthPreferences(year);
+  const backlogHealth = useBacklogHealth();
+  const seriesProgress = useSeriesProgress();
+  const affinity = useAuthorNarratorAffinity();
+  const genreCompletion = useGenreCompletionCorrelation();
+  const durationCompletion = useDurationCompletionCorrelation(year);
+  const extraListening = useExtraListening(year);
   const detail = useStatisticsDetail(year);
 
   const statsLoading = overall.isLoading || yearly.isLoading || (year !== "all" && (recap.isLoading || heatmap.isLoading));
@@ -957,6 +1155,24 @@ export default function StatisticsPage() {
 
       <ListeningHabitsSection data={habits.data} isLoading={habits.isLoading} isError={habits.isError} />
 
+      <CompletionVelocitySection data={completionVelocity.data} isLoading={completionVelocity.isLoading} isError={completionVelocity.isError} onMonthClick={(month) => openDetail({ kind: "books", month })} />
+
+      <MonthlyComparisonSection data={monthlyComparison.data} isLoading={monthlyComparison.isLoading} isError={monthlyComparison.isError} onMonthClick={(month, metric) => openDetail(metric === "books" ? { kind: "books", month } : { kind: "hours", month })} />
+
+      <BookLengthPreferencesSection data={bookLengthPreferences.data} isLoading={bookLengthPreferences.isLoading} isError={bookLengthPreferences.isError} onBucketClick={(durationBucket) => openDetail({ kind: "books", durationBucket })} />
+
+      <BacklogHealthSection data={backlogHealth.data} isLoading={backlogHealth.isLoading} isError={backlogHealth.isError} />
+
+      <SeriesProgressSection data={seriesProgress.data} isLoading={seriesProgress.isLoading} isError={seriesProgress.isError} />
+
+      <AuthorNarratorAffinitySection data={affinity.data} isLoading={affinity.isLoading} isError={affinity.isError} />
+
+      <GenreCompletionCorrelationSection data={genreCompletion.data} isLoading={genreCompletion.isLoading} isError={genreCompletion.isError} />
+
+      <DurationCompletionCorrelationSection data={durationCompletion.data} isLoading={durationCompletion.isLoading} isError={durationCompletion.isError} onBookClick={(bookId) => openDetail({ kind: "books", bookId })} />
+
+      <ExtraListeningSection data={extraListening.data} isLoading={extraListening.isLoading} isError={extraListening.isError} onBookClick={(bookId) => openDetail({ kind: "books", bookId })} />
+
       {/* Charts / lists / recap — or empty state */}
       {noData ? (
         <EmptyState year={year} />
@@ -977,25 +1193,6 @@ export default function StatisticsPage() {
               </Card>
             </section>
           )}
-
-          {/* Monthly / yearly breakdown */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-text-primary">
-              {year === "all" ? "Books by Year" : "Monthly Breakdown"}
-            </h2>
-            <Card>
-              <CardContent>
-                {yearly.isLoading ? (
-                  <ChartSkeleton />
-                ) : (
-                  <MonthlyChart
-                    data={yearly.data?.monthly_chart ?? []}
-                    onMonthClick={(month) => openDetail({ kind: "books", month })}
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </section>
 
           {/* Genre + top lists */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

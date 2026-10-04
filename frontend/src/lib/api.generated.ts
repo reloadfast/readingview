@@ -277,6 +277,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/statistics/completion-velocity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Completion Velocity */
+        get: operations["get_completion_velocity_api_statistics_completion_velocity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/monthly-comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Monthly Comparison */
+        get: operations["get_monthly_comparison_api_statistics_monthly_comparison_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/book-length-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Book Length Preferences */
+        get: operations["get_book_length_preferences_api_statistics_book_length_preferences_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/goal-forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Goal Forecast */
+        get: operations["get_goal_forecast_api_statistics_goal_forecast_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/backlog-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Backlog Health */
+        get: operations["get_backlog_health_api_statistics_backlog_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/series-progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Series Progress */
+        get: operations["get_series_progress_api_statistics_series_progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/affinity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Author Narrator Affinity */
+        get: operations["get_author_narrator_affinity_api_statistics_affinity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/genre-completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Genre Completion Correlation */
+        get: operations["get_genre_completion_correlation_api_statistics_genre_completion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/duration-completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Duration Completion Correlation */
+        get: operations["get_duration_completion_correlation_api_statistics_duration_completion_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/statistics/extra-listening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Extra Listening */
+        get: operations["get_extra_listening_api_statistics_extra_listening_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/statistics/detail": {
         parameters: {
             query?: never;
@@ -934,6 +1104,19 @@ export interface components {
             /** Abs Item Id */
             abs_item_id: string;
         };
+        /** AffinityPerson */
+        AffinityPerson: {
+            /** Name */
+            name: string;
+            /** Available Books */
+            available_books: number;
+            /** Completed Books */
+            completed_books: number;
+            /** Completion Rate */
+            completion_rate: number;
+            /** Listened Hours */
+            listened_hours: number;
+        };
         /** AuthorBook */
         AuthorBook: {
             /** Id */
@@ -969,6 +1152,34 @@ export interface components {
             /** Books */
             books: components["schemas"]["AuthorBook"][];
         };
+        /** AuthorNarratorAffinity */
+        AuthorNarratorAffinity: {
+            /** Authors */
+            authors: components["schemas"]["AffinityPerson"][];
+            /** Narrators */
+            narrators: components["schemas"]["AffinityPerson"][];
+        };
+        /** BacklogHealth */
+        BacklogHealth: {
+            /** Unstarted Books */
+            unstarted_books: number;
+            /** In Progress Books */
+            in_progress_books: number;
+            /** Completed Books */
+            completed_books: number;
+            /** Partially Started Books */
+            partially_started_books: number;
+            /** Unstarted Remaining Hours */
+            unstarted_remaining_hours: number;
+            /** In Progress Remaining Hours */
+            in_progress_remaining_hours: number;
+            /** Total Remaining Hours */
+            total_remaining_hours: number;
+            /** Unstarted Duration Books */
+            unstarted_duration_books: number;
+            /** In Progress Duration Books */
+            in_progress_duration_books: number;
+        };
         /** Body_restore_backup_api_restore_post */
         Body_restore_backup_api_restore_post: {
             /** File */
@@ -978,6 +1189,30 @@ export interface components {
         Body_upload_manual_release_cover_api_releases_manual__manual_release_id__cover_post: {
             /** File */
             file: string;
+        };
+        /** BookLengthBucket */
+        BookLengthBucket: {
+            /** Label */
+            label: string;
+            /** Completed Books */
+            completed_books: number;
+            /** Pace Qualifying Books */
+            pace_qualifying_books: number;
+            /** Median Days To Finish */
+            median_days_to_finish?: number | null;
+        };
+        /** BookLengthPreferences */
+        BookLengthPreferences: {
+            /** Year */
+            year: string;
+            /** Timezone */
+            timezone: string;
+            /** Qualifying Books */
+            qualifying_books: number;
+            /** Median Duration Hours */
+            median_duration_hours?: number | null;
+            /** Distribution */
+            distribution: components["schemas"]["BookLengthBucket"][];
         };
         /** BookProgress */
         BookProgress: {
@@ -1035,6 +1270,26 @@ export interface components {
             /** Book Count */
             book_count: number;
         };
+        /** CompletionVelocity */
+        CompletionVelocity: {
+            /** Year */
+            year: string;
+            /** Qualifying Books */
+            qualifying_books: number;
+            /** Median Days */
+            median_days?: number | null;
+            /** Monthly Trend */
+            monthly_trend: components["schemas"]["CompletionVelocityMonth"][];
+        };
+        /** CompletionVelocityMonth */
+        CompletionVelocityMonth: {
+            /** Month */
+            month: string;
+            /** Qualifying Books */
+            qualifying_books: number;
+            /** Median Days */
+            median_days?: number | null;
+        };
         /** CreateCollectionRequest */
         CreateCollectionRequest: {
             /** Name */
@@ -1062,6 +1317,56 @@ export interface components {
             /** Release Date */
             release_date: string | null;
         };
+        /** DurationCompletionCorrelation */
+        DurationCompletionCorrelation: {
+            /** Year */
+            year: string;
+            /** Qualifying Books */
+            qualifying_books: number;
+            /** Points */
+            points: components["schemas"]["DurationCompletionPoint"][];
+            /** Correlation Coefficient */
+            correlation_coefficient?: number | null;
+            /** Correlation Method */
+            correlation_method?: string | null;
+            /** Direction */
+            direction?: string | null;
+        };
+        /** DurationCompletionPoint */
+        DurationCompletionPoint: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Duration Hours */
+            duration_hours: number;
+            /** Days To Finish */
+            days_to_finish: number;
+        };
+        /** ExtraListening */
+        ExtraListening: {
+            /** Year */
+            year: string;
+            /** Qualifying Books */
+            qualifying_books: number;
+            /** Books */
+            books: components["schemas"]["ExtraListeningBook"][];
+        };
+        /** ExtraListeningBook */
+        ExtraListeningBook: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Author */
+            author: string;
+            /** Duration Hours */
+            duration_hours: number;
+            /** Listened Hours */
+            listened_hours: number;
+            /** Listening Ratio */
+            listening_ratio: number;
+        };
         /** FeedbackRequest */
         FeedbackRequest: {
             /** Vote */
@@ -1074,12 +1379,59 @@ export interface components {
             /** Ol Key */
             ol_key?: string | null;
         };
+        /** GenreCompletionCorrelation */
+        GenreCompletionCorrelation: {
+            /** Name */
+            name: string;
+            /** Known Progress Books */
+            known_progress_books: number;
+            /** Started Or Completed Books */
+            started_or_completed_books: number;
+            /** Completed Books */
+            completed_books: number;
+            /** Completion Rate */
+            completion_rate: number;
+            /** Pace Qualifying Books */
+            pace_qualifying_books: number;
+            /** Median Days To Finish */
+            median_days_to_finish?: number | null;
+        };
         /** GenreCount */
         GenreCount: {
             /** Name */
             name: string;
             /** Books */
             books: number;
+        };
+        /** GoalForecast */
+        GoalForecast: {
+            /** Year */
+            year: number;
+            /** Has Goal */
+            has_goal: boolean;
+            /**
+             * Eligible
+             * @default false
+             */
+            eligible: boolean;
+            /** Target Books */
+            target_books?: number | null;
+            /**
+             * Books Completed
+             * @default 0
+             */
+            books_completed: number;
+            /**
+             * Trailing 30 Day Completions
+             * @default 0
+             */
+            trailing_30_day_completions: number;
+            /** Projected Books */
+            projected_books?: number | null;
+            /** Required Books Per Week */
+            required_books_per_week?: number | null;
+            /** Ineligibility Reason */
+            ineligibility_reason?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1323,6 +1675,24 @@ export interface components {
             status: "watching" | "released" | "owned";
             /** Archived */
             archived?: boolean | null;
+        };
+        /** MonthlyComparison */
+        MonthlyComparison: {
+            /** Year */
+            year: string;
+            /** Timezone */
+            timezone: string;
+            /** Monthly */
+            monthly: components["schemas"]["MonthlyComparisonPoint"][];
+        };
+        /** MonthlyComparisonPoint */
+        MonthlyComparisonPoint: {
+            /** Month */
+            month: string;
+            /** Books Completed */
+            books_completed: number;
+            /** Listening Hours */
+            listening_hours: number;
         };
         /** MonthlyPoint */
         MonthlyPoint: {
@@ -1576,6 +1946,19 @@ export interface components {
             name: string;
             /** Sequence */
             sequence?: string | null;
+        };
+        /** SeriesProgress */
+        SeriesProgress: {
+            /** Name */
+            name: string;
+            /** Completed Books */
+            completed_books: number;
+            /** Remaining Books */
+            remaining_books: number;
+            /** Remaining Hours */
+            remaining_hours: number;
+            /** Remaining Duration Books */
+            remaining_duration_books: number;
         };
         /** SeriesSummary */
         SeriesSummary: {
@@ -2273,6 +2656,272 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListeningHabits"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_completion_velocity_api_statistics_completion_velocity_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionVelocity"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_monthly_comparison_api_statistics_monthly_comparison_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MonthlyComparison"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_book_length_preferences_api_statistics_book_length_preferences_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookLengthPreferences"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_goal_forecast_api_statistics_goal_forecast_get: {
+        parameters: {
+            query?: {
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalForecast"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_backlog_health_api_statistics_backlog_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacklogHealth"];
+                };
+            };
+        };
+    };
+    get_series_progress_api_statistics_series_progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesProgress"][];
+                };
+            };
+        };
+    };
+    get_author_narrator_affinity_api_statistics_affinity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorNarratorAffinity"];
+                };
+            };
+        };
+    };
+    get_genre_completion_correlation_api_statistics_genre_completion_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenreCompletionCorrelation"][];
+                };
+            };
+        };
+    };
+    get_duration_completion_correlation_api_statistics_duration_completion_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DurationCompletionCorrelation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_extra_listening_api_statistics_extra_listening_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtraListening"];
                 };
             };
             /** @description Validation Error */

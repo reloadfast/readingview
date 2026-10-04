@@ -91,6 +91,17 @@ import type { components } from "./api.generated";
 export type StatisticsDetail = components["schemas"]["StatisticsDetail"];
 export type ListeningHabits = components["schemas"]["ListeningHabits"];
 export type ListeningHabitCell = components["schemas"]["ListeningHabitCell"];
+export type CompletionVelocity = components["schemas"]["CompletionVelocity"];
+export type MonthlyComparison = components["schemas"]["MonthlyComparison"];
+export type BookLengthPreferences = components["schemas"]["BookLengthPreferences"];
+export type GoalForecast = components["schemas"]["GoalForecast"];
+export type BacklogHealth = components["schemas"]["BacklogHealth"];
+export type SeriesProgress = components["schemas"]["SeriesProgress"];
+export type AuthorNarratorAffinity = components["schemas"]["AuthorNarratorAffinity"];
+export type AffinityPerson = components["schemas"]["AffinityPerson"];
+export type GenreCompletionCorrelation = components["schemas"]["GenreCompletionCorrelation"];
+export type DurationCompletionCorrelation = components["schemas"]["DurationCompletionCorrelation"];
+export type ExtraListening = components["schemas"]["ExtraListening"];
 
 // ---------------------------------------------------------------------------
 // Core fetch helper
@@ -183,6 +194,46 @@ export function getHeatmap(year: string): Promise<HeatmapData> {
 
 export function getListeningHabits(year: string): Promise<ListeningHabits> {
   return apiFetch(`/statistics/habits?year=${encodeURIComponent(year)}`);
+}
+
+export function getCompletionVelocity(year: string): Promise<CompletionVelocity> {
+  return apiFetch(`/statistics/completion-velocity?year=${encodeURIComponent(year)}`);
+}
+
+export function getMonthlyComparison(year: string): Promise<MonthlyComparison> {
+  return apiFetch(`/statistics/monthly-comparison?year=${encodeURIComponent(year)}`);
+}
+
+export function getBookLengthPreferences(year: string): Promise<BookLengthPreferences> {
+  return apiFetch(`/statistics/book-length-preferences?year=${encodeURIComponent(year)}`);
+}
+
+export function getGoalForecast(year: string): Promise<GoalForecast> {
+  return apiFetch(`/statistics/goal-forecast?year=${encodeURIComponent(year)}`);
+}
+
+export function getBacklogHealth(): Promise<BacklogHealth> {
+  return apiFetch("/statistics/backlog-health");
+}
+
+export function getSeriesProgress(): Promise<SeriesProgress[]> {
+  return apiFetch("/statistics/series-progress");
+}
+
+export function getAuthorNarratorAffinity(): Promise<AuthorNarratorAffinity> {
+  return apiFetch("/statistics/affinity");
+}
+
+export function getGenreCompletionCorrelation(): Promise<GenreCompletionCorrelation[]> {
+  return apiFetch("/statistics/genre-completion");
+}
+
+export function getDurationCompletionCorrelation(year: string): Promise<DurationCompletionCorrelation> {
+  return apiFetch(`/statistics/duration-completion?year=${encodeURIComponent(year)}`);
+}
+
+export function getExtraListening(year: string): Promise<ExtraListening> {
+  return apiFetch(`/statistics/extra-listening?year=${encodeURIComponent(year)}`);
 }
 
 export function getStatisticsDetail(year: string): Promise<StatisticsDetail> {

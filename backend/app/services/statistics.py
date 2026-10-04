@@ -4,9 +4,22 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..schemas.statistics import (
+    AffinityPerson,
     AuthorCount,
+    AuthorNarratorAffinity,
+    BacklogHealth,
+    BookLengthBucket,
+    BookLengthPreferences,
     BookSummary,
+    CompletionVelocity,
+    CompletionVelocityMonth,
+    DurationCompletionCorrelation,
+    DurationCompletionPoint,
+    ExtraListening,
+    ExtraListeningBook,
+    GenreCompletionCorrelation,
     GenreCount,
+    GoalForecast,
     HeatmapData,
     HeatmapPoint,
     ListeningBook,
@@ -14,10 +27,13 @@ from ..schemas.statistics import (
     ListeningDay,
     ListeningHabitCell,
     ListeningHabits,
+    MonthlyComparison,
+    MonthlyComparisonPoint,
     MonthlyPoint,
     OverallStats,
     ReadDuration,
     RecapStats,
+    SeriesProgress,
     SessionDurationBin,
     SessionHabitSummary,
     StatisticBook,
@@ -417,6 +433,701 @@ def compute_listening_habits(
         session_summary=summary,
         duration_distribution=duration_distribution,
         cadence=cadence,
+    )
+
+
+def compute_completion_velocity(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    timezone: str = "UTC",
+) -> CompletionVelocity:
+    """Return representative completion pace for finished books in a period."""
+    local_timezone = _local_timezone(timezone)
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    qualifying: list[tuple[datetime, float]] = []
+
+    for book in _get_finished_books(progress_map, stats_items):
+        started_at = book.get("started_at")
+        finished_at = book.get("finished_at")
+        if (
+            not isinstance(started_at, (int, float))
+            or isinstance(started_at, bool)
+            or not isinstance(finished_at, (int, float))
+            or isinstance(finished_at, bool)
+            or finished_at <= started_at
+        ):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone)
+        except (ValueError, OSError, OverflowError):
+            continue
+        if year != "all" and str(finished.year) != year:
+            continue
+        qualifying.append((finished, (finished_at - started_at) / 86_400_000))
+
+    def median(values: list[float]) -> float:
+        ordered = sorted(values)
+        midpoint = len(ordered) // 2
+        return (
+            ordered[midpoint]
+            if len(ordered) % 2
+            else (ordered[midpoint - 1] + ordered[midpoint]) / 2
+        )
+
+    monthly: dict[str, list[float]] = defaultdict(list)
+    for finished, days in qualifying:
+        monthly[finished.strftime("%Y-%m")].append(days)
+    monthly_trend = [
+        CompletionVelocityMonth(
+            month=month,
+            qualifying_books=len(days),
+            median_days=round(median(days), 1) if len(days) >= 3 else None,
+        )
+        for month, days in sorted(monthly.items())
+    ]
+    return CompletionVelocity(
+        year=year,
+        qualifying_books=len(qualifying),
+        median_days=round(median([days for _, days in qualifying]), 1) if qualifying else None,
+        monthly_trend=monthly_trend,
+    )
+
+
+def compute_monthly_comparison(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    sessions: list[dict[str, Any]],
+    timezone: str = "UTC",
+) -> MonthlyComparison:
+    """Compare completed books with session-derived listening hours by local month."""
+    local_timezone = _local_timezone(timezone)
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    completed: Counter[str] = Counter()
+    listened_seconds: dict[str, float] = defaultdict(float)
+
+    for book in _get_finished_books(progress_map, stats_items):
+        finished_at = book.get("finished_at")
+        if not isinstance(finished_at, (int, float)) or isinstance(finished_at, bool):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone)
+        except (ValueError, OSError, OverflowError):
+            continue
+        if year == "all" or str(finished.year) == year:
+            completed[finished.strftime("%Y-%m")] += 1
+
+    for session in sessions:
+        timestamp = _session_datetime(session, local_timezone)
+        seconds = session.get("timeListening", 0) or 0
+        if (
+            timestamp is None
+            or not isinstance(seconds, (int, float))
+            or isinstance(seconds, bool)
+            or seconds <= 0
+            or (year != "all" and str(timestamp.year) != year)
+        ):
+            continue
+        listened_seconds[timestamp.strftime("%Y-%m")] += seconds
+
+    months = sorted(set(completed) | set(listened_seconds))
+    if year != "all":
+        try:
+            months = [f"{int(year):04d}-{month:02d}" for month in range(1, 13)]
+        except ValueError:
+            months = []
+    return MonthlyComparison(
+        year=year,
+        timezone=local_timezone.key,
+        monthly=[
+            MonthlyComparisonPoint(
+                month=month,
+                books_completed=completed[month],
+                listening_hours=round(listened_seconds[month] / 3600, 1),
+            )
+            for month in months
+        ],
+    )
+
+
+def compute_book_length_preferences(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    timezone: str = "UTC",
+) -> BookLengthPreferences:
+    """Summarize completed-book durations and completion pace by length."""
+    local_timezone = _local_timezone(timezone)
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    buckets = [
+        ("Under 5 hours", 0, 5 * 3600),
+        ("5–9:59 hours", 5 * 3600, 10 * 3600),
+        ("10–19:59 hours", 10 * 3600, 20 * 3600),
+        ("20–29:59 hours", 20 * 3600, 30 * 3600),
+        ("30 hours or more", 30 * 3600, None),
+    ]
+    durations_by_bucket: dict[str, list[float]] = defaultdict(list)
+    pace_by_bucket: dict[str, list[float]] = defaultdict(list)
+    all_durations: list[float] = []
+
+    for book in _get_finished_books(progress_map, stats_items):
+        duration = book.get("duration")
+        finished_at = book.get("finished_at")
+        if (
+            not isinstance(duration, (int, float))
+            or isinstance(duration, bool)
+            or duration <= 0
+            or not isinstance(finished_at, (int, float))
+            or isinstance(finished_at, bool)
+        ):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone)
+        except (ValueError, OSError, OverflowError):
+            continue
+        if year != "all" and str(finished.year) != year:
+            continue
+        bucket = next(
+            (
+                label
+                for label, lower, upper in buckets
+                if duration >= lower and (upper is None or duration < upper)
+            ),
+            None,
+        )
+        if bucket is None:
+            continue
+        all_durations.append(float(duration))
+        durations_by_bucket[bucket].append(float(duration))
+        started_at = book.get("started_at")
+        if (
+            isinstance(started_at, (int, float))
+            and not isinstance(started_at, bool)
+            and finished_at > started_at
+        ):
+            pace_by_bucket[bucket].append((finished_at - started_at) / 86_400_000)
+
+    def median(values: list[float]) -> float:
+        ordered = sorted(values)
+        midpoint = len(ordered) // 2
+        return (
+            ordered[midpoint]
+            if len(ordered) % 2
+            else (ordered[midpoint - 1] + ordered[midpoint]) / 2
+        )
+
+    return BookLengthPreferences(
+        year=year,
+        timezone=local_timezone.key,
+        qualifying_books=len(all_durations),
+        median_duration_hours=(round(median(all_durations) / 3600, 1) if all_durations else None),
+        distribution=[
+            BookLengthBucket(
+                label=label,
+                completed_books=len(durations_by_bucket[label]),
+                pace_qualifying_books=len(pace_by_bucket[label]),
+                median_days_to_finish=(
+                    round(median(pace_by_bucket[label]), 1) if pace_by_bucket[label] else None
+                ),
+            )
+            for label, _, _ in buckets
+        ],
+    )
+
+
+def compute_goal_forecast(
+    year: int,
+    target_books: int | None,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    timezone: str = "UTC",
+    as_of: date | None = None,
+) -> GoalForecast:
+    """Estimate a current-year goal from the preceding 30 calendar days."""
+    if target_books is None:
+        return GoalForecast(year=year, has_goal=False)
+
+    local_timezone = _local_timezone(timezone)
+    today = as_of or datetime.now(local_timezone).date()
+    if today.year != year:
+        return GoalForecast(
+            year=year,
+            has_goal=True,
+            target_books=target_books,
+            ineligibility_reason="Forecasts are available only for the current calendar year.",
+        )
+
+    days_elapsed = (today - date(year, 1, 1)).days + 1
+    if days_elapsed < 14:
+        return GoalForecast(
+            year=year,
+            has_goal=True,
+            target_books=target_books,
+            ineligibility_reason="A forecast needs at least 14 days in the calendar year.",
+        )
+
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    completed_dates: list[date] = []
+    for book in _get_finished_books(progress_map, stats_items):
+        finished_at = book.get("finished_at")
+        if not isinstance(finished_at, (int, float)) or isinstance(finished_at, bool):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone).date()
+        except (ValueError, OSError, OverflowError):
+            continue
+        if finished.year == year and finished <= today:
+            completed_dates.append(finished)
+
+    trailing_start = today - timedelta(days=29)
+    trailing_completions = sum(day >= trailing_start for day in completed_dates)
+    if trailing_completions == 0:
+        return GoalForecast(
+            year=year,
+            has_goal=True,
+            target_books=target_books,
+            books_completed=len(completed_dates),
+            ineligibility_reason="No completed books were recorded in the last 30 days.",
+        )
+
+    days_remaining = (date(year, 12, 31) - today).days
+    projected_books = len(completed_dates) + trailing_completions / 30 * days_remaining
+    required_books_per_week = (
+        max(target_books - len(completed_dates), 0) / (days_remaining / 7) if days_remaining else 0
+    )
+    return GoalForecast(
+        year=year,
+        has_goal=True,
+        eligible=True,
+        target_books=target_books,
+        books_completed=len(completed_dates),
+        trailing_30_day_completions=trailing_completions,
+        projected_books=round(projected_books, 1),
+        required_books_per_week=round(required_books_per_week, 1),
+    )
+
+
+def compute_backlog_health(
+    library_items: list[dict[str, Any]], progress_map: dict[str, Any]
+) -> BacklogHealth:
+    """Summarize current library backlog without estimating missing durations or progress."""
+    unstarted_books = 0
+    in_progress_books = 0
+    completed_books = 0
+    unstarted_remaining_seconds = 0.0
+    in_progress_remaining_seconds = 0.0
+    unstarted_duration_books = 0
+    in_progress_duration_books = 0
+
+    for item in library_items:
+        item_id = item.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            continue
+        progress = progress_map.get(item_id)
+        raw_media = item.get("media")
+        media: dict[str, Any] = raw_media if isinstance(raw_media, dict) else {}
+        duration = media.get("duration", 0)
+        valid_duration = (
+            isinstance(duration, (int, float)) and not isinstance(duration, bool) and duration > 0
+        )
+        if isinstance(progress, dict) and progress.get("isFinished"):
+            completed_books += 1
+            continue
+
+        progress_value = progress.get("progress") if isinstance(progress, dict) else None
+        valid_progress = (
+            isinstance(progress_value, (int, float))
+            and not isinstance(progress_value, bool)
+            and 0 < progress_value < 1
+        )
+        if valid_progress:
+            in_progress_books += 1
+            if (
+                valid_duration
+                and isinstance(duration, (int, float))
+                and isinstance(progress_value, (int, float))
+            ):
+                in_progress_remaining_seconds += duration * (1 - progress_value)
+                in_progress_duration_books += 1
+        elif progress is None or progress_value == 0:
+            unstarted_books += 1
+            if valid_duration and isinstance(duration, (int, float)):
+                unstarted_remaining_seconds += duration
+                unstarted_duration_books += 1
+
+    return BacklogHealth(
+        unstarted_books=unstarted_books,
+        in_progress_books=in_progress_books,
+        completed_books=completed_books,
+        partially_started_books=in_progress_books,
+        unstarted_remaining_hours=round(unstarted_remaining_seconds / 3600, 1),
+        in_progress_remaining_hours=round(in_progress_remaining_seconds / 3600, 1),
+        total_remaining_hours=round(
+            (unstarted_remaining_seconds + in_progress_remaining_seconds) / 3600, 1
+        ),
+        unstarted_duration_books=unstarted_duration_books,
+        in_progress_duration_books=in_progress_duration_books,
+    )
+
+
+def compute_series_progress(
+    all_library_series: list[list[dict[str, Any]]], progress_map: dict[str, Any]
+) -> list[SeriesProgress]:
+    """List complete series records that still have books left to finish."""
+    results: list[SeriesProgress] = []
+    for library_series in all_library_series:
+        for series in library_series:
+            name = series.get("name")
+            books = series.get("books")
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or not isinstance(books, list)
+                or not books
+            ):
+                continue
+            if any(
+                not isinstance(book, dict) or not isinstance(book.get("id"), str) or not book["id"]
+                for book in books
+            ):
+                continue
+
+            completed = 0
+            remaining = 0
+            remaining_seconds = 0.0
+            remaining_duration_books = 0
+            for book in books:
+                book_id = book["id"]
+                progress = progress_map.get(book_id)
+                if isinstance(progress, dict) and progress.get("isFinished"):
+                    completed += 1
+                    continue
+                remaining += 1
+                media = book.get("media") if isinstance(book.get("media"), dict) else {}
+                duration = media.get("duration", 0)
+                if (
+                    not isinstance(duration, (int, float))
+                    or isinstance(duration, bool)
+                    or duration <= 0
+                ):
+                    continue
+                progress_value = progress.get("progress") if isinstance(progress, dict) else None
+                if progress is None:
+                    remaining_seconds += duration
+                    remaining_duration_books += 1
+                elif (
+                    isinstance(progress_value, (int, float))
+                    and not isinstance(progress_value, bool)
+                    and 0 <= progress_value < 1
+                ):
+                    remaining_seconds += duration * (1 - progress_value)
+                    remaining_duration_books += 1
+
+            if remaining:
+                results.append(
+                    SeriesProgress(
+                        name=name.strip(),
+                        completed_books=completed,
+                        remaining_books=remaining,
+                        remaining_hours=round(remaining_seconds / 3600, 1),
+                        remaining_duration_books=remaining_duration_books,
+                    )
+                )
+    return sorted(
+        results,
+        key=lambda series: (
+            series.remaining_books,
+            series.remaining_hours if series.remaining_duration_books else float("inf"),
+            series.name.lower(),
+        ),
+    )
+
+
+def _credit_names(metadata: dict[str, Any], plural_key: str, singular_key: str) -> list[str]:
+    """Return distinct credited names from ABS's list and display-name variants."""
+    raw = metadata.get(plural_key)
+    names: list[str] = []
+    if isinstance(raw, list):
+        for value in raw:
+            if isinstance(value, dict) and isinstance(value.get("name"), str):
+                names.append(value["name"])
+            elif isinstance(value, str):
+                names.append(value)
+    elif isinstance(raw, str):
+        names.extend(raw.split(","))
+    if not names:
+        display_name = metadata.get(singular_key)
+        if isinstance(display_name, str):
+            names.extend(display_name.split(","))
+    return list(dict.fromkeys(name.strip() for name in names if name.strip()))
+
+
+def compute_author_narrator_affinity(
+    library_items: list[dict[str, Any]],
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+) -> AuthorNarratorAffinity:
+    """Rank people credited on at least three library books by listening affinity."""
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    people: dict[str, dict[str, dict[str, float]]] = {
+        "authors": defaultdict(lambda: {"available": 0, "completed": 0, "seconds": 0}),
+        "narrators": defaultdict(lambda: {"available": 0, "completed": 0, "seconds": 0}),
+    }
+    keys = {
+        "authors": ("authors", "authorName"),
+        "narrators": ("narrators", "narratorName"),
+    }
+
+    for item in library_items:
+        item_id = item.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            continue
+        raw_media = item.get("media")
+        media: dict[str, Any] = raw_media if isinstance(raw_media, dict) else {}
+        raw_metadata = media.get("metadata")
+        metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+        progress = progress_map.get(item_id)
+        completed = isinstance(progress, dict) and progress.get("isFinished") is True
+        stats_item = stats_items.get(item_id, {})
+        seconds = stats_item.get("timeListening", 0) if isinstance(stats_item, dict) else 0
+        valid_seconds = (
+            float(seconds)
+            if isinstance(seconds, (int, float)) and not isinstance(seconds, bool) and seconds >= 0
+            else 0.0
+        )
+        for group, (plural_key, singular_key) in keys.items():
+            for name in _credit_names(metadata, plural_key, singular_key):
+                person = people[group][name]
+                person["available"] += 1
+                person["completed"] += int(completed)
+                person["seconds"] += valid_seconds
+
+    def ranking(group: str) -> list[AffinityPerson]:
+        result = [
+            AffinityPerson(
+                name=name,
+                available_books=int(values["available"]),
+                completed_books=int(values["completed"]),
+                completion_rate=round(values["completed"] / values["available"] * 100, 1),
+                listened_hours=round(values["seconds"] / 3600, 1),
+            )
+            for name, values in people[group].items()
+            if values["available"] >= 3
+        ]
+        return sorted(
+            result,
+            key=lambda person: (
+                -person.completion_rate,
+                -person.completed_books,
+                -person.listened_hours,
+                person.name.lower(),
+            ),
+        )
+
+    return AuthorNarratorAffinity(authors=ranking("authors"), narrators=ranking("narrators"))
+
+
+def compute_genre_completion_correlation(
+    library_items: list[dict[str, Any]], progress_map: dict[str, Any]
+) -> list[GenreCompletionCorrelation]:
+    """Describe completion outcomes by genre without making causal claims."""
+    genres: dict[str, dict[str, Any]] = defaultdict(
+        lambda: {"known": 0, "started": 0, "completed": 0, "pace": []}
+    )
+    for item in library_items:
+        item_id = item.get("id")
+        if not isinstance(item_id, str) or not item_id:
+            continue
+        raw_media = item.get("media")
+        media: dict[str, Any] = raw_media if isinstance(raw_media, dict) else {}
+        raw_metadata = media.get("metadata")
+        metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+        item_genres = metadata.get("genres")
+        if not isinstance(item_genres, list):
+            continue
+        progress = progress_map.get(item_id)
+        if not isinstance(progress, dict):
+            continue
+        is_finished = progress.get("isFinished") is True
+        progress_value = progress.get("progress")
+        is_started = (
+            is_finished
+            or (
+                isinstance(progress_value, (int, float))
+                and not isinstance(progress_value, bool)
+                and progress_value > 0
+            )
+            or isinstance(progress.get("startedAt"), (int, float))
+        )
+        genre_names = dict.fromkeys(
+            name.strip() for name in item_genres if isinstance(name, str) and name.strip()
+        )
+        for genre in genre_names:
+            entry = genres[genre]
+            entry["known"] += 1
+            entry["started"] += int(is_started)
+            entry["completed"] += int(is_finished)
+            started_at = progress.get("startedAt")
+            finished_at = progress.get("finishedAt")
+            if (
+                is_finished
+                and isinstance(started_at, (int, float))
+                and not isinstance(started_at, bool)
+                and isinstance(finished_at, (int, float))
+                and not isinstance(finished_at, bool)
+                and finished_at > started_at
+            ):
+                entry["pace"].append((finished_at - started_at) / 86_400_000)
+
+    def median(values: list[float]) -> float:
+        ordered = sorted(values)
+        midpoint = len(ordered) // 2
+        return (
+            ordered[midpoint]
+            if len(ordered) % 2
+            else (ordered[midpoint - 1] + ordered[midpoint]) / 2
+        )
+
+    result = [
+        GenreCompletionCorrelation(
+            name=name,
+            known_progress_books=entry["known"],
+            started_or_completed_books=entry["started"],
+            completed_books=entry["completed"],
+            completion_rate=round(entry["completed"] / entry["known"] * 100, 1),
+            pace_qualifying_books=len(entry["pace"]),
+            median_days_to_finish=round(median(entry["pace"]), 1) if entry["pace"] else None,
+        )
+        for name, entry in genres.items()
+        if entry["started"] >= 3
+    ]
+    return sorted(result, key=lambda genre: (-genre.completion_rate, genre.name.lower()))
+
+
+def compute_duration_completion_correlation(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    timezone: str = "UTC",
+) -> DurationCompletionCorrelation:
+    """Compare completed-book duration with elapsed days using Pearson correlation."""
+    local_timezone = _local_timezone(timezone)
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    points: list[DurationCompletionPoint] = []
+    for book in _get_finished_books(progress_map, stats_items):
+        duration = book.get("duration")
+        started_at = book.get("started_at")
+        finished_at = book.get("finished_at")
+        if (
+            not isinstance(duration, (int, float))
+            or isinstance(duration, bool)
+            or duration <= 0
+            or not isinstance(started_at, (int, float))
+            or isinstance(started_at, bool)
+            or not isinstance(finished_at, (int, float))
+            or isinstance(finished_at, bool)
+            or finished_at <= started_at
+        ):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone)
+        except (ValueError, OSError, OverflowError):
+            continue
+        if year != "all" and str(finished.year) != year:
+            continue
+        points.append(
+            DurationCompletionPoint(
+                id=book["id"],
+                title=book["title"],
+                duration_hours=round(duration / 3600, 1),
+                days_to_finish=round((finished_at - started_at) / 86_400_000, 1),
+            )
+        )
+
+    coefficient: float | None = None
+    direction: str | None = None
+    if len(points) >= 10:
+        durations = [point.duration_hours for point in points]
+        days = [point.days_to_finish for point in points]
+        duration_mean = sum(durations) / len(durations)
+        days_mean = sum(days) / len(days)
+        duration_variance = sum((value - duration_mean) ** 2 for value in durations)
+        days_variance = sum((value - days_mean) ** 2 for value in days)
+        if duration_variance > 0 and days_variance > 0:
+            covariance = sum(
+                (duration - duration_mean) * (day - days_mean)
+                for duration, day in zip(durations, days, strict=True)
+            )
+            coefficient = round(covariance / (duration_variance * days_variance) ** 0.5, 2)
+            if coefficient >= 0.2:
+                direction = "positive"
+            elif coefficient <= -0.2:
+                direction = "negative"
+            else:
+                direction = "no clear"
+        else:
+            direction = "no clear"
+
+    return DurationCompletionCorrelation(
+        year=year,
+        qualifying_books=len(points),
+        points=points,
+        correlation_coefficient=coefficient,
+        correlation_method="Pearson correlation coefficient" if coefficient is not None else None,
+        direction=direction,
+    )
+
+
+def compute_extra_listening(
+    year: str,
+    progress_map: dict[str, Any],
+    listening_stats: dict[str, Any],
+    timezone: str = "UTC",
+) -> ExtraListening:
+    """Surface completed titles whose ABS listening time reaches 125% of duration."""
+    local_timezone = _local_timezone(timezone)
+    stats_items = listening_stats.get("items", {}) if listening_stats else {}
+    qualifying_books = 0
+    books: list[ExtraListeningBook] = []
+    for book in _get_finished_books(progress_map, stats_items):
+        duration = book.get("duration")
+        listened = book.get("time_listening")
+        finished_at = book.get("finished_at")
+        if (
+            not isinstance(duration, (int, float))
+            or isinstance(duration, bool)
+            or duration <= 0
+            or not isinstance(listened, (int, float))
+            or isinstance(listened, bool)
+            or listened < 0
+            or not isinstance(finished_at, (int, float))
+            or isinstance(finished_at, bool)
+        ):
+            continue
+        try:
+            finished = datetime.fromtimestamp(finished_at / 1000, tz=local_timezone)
+        except (ValueError, OSError, OverflowError):
+            continue
+        if year != "all" and str(finished.year) != year:
+            continue
+        qualifying_books += 1
+        ratio = listened / duration
+        if ratio >= 1.25:
+            books.append(
+                ExtraListeningBook(
+                    id=book["id"],
+                    title=book["title"],
+                    author=book["author"],
+                    duration_hours=round(duration / 3600, 1),
+                    listened_hours=round(listened / 3600, 1),
+                    listening_ratio=round(ratio * 100, 1),
+                )
+            )
+    return ExtraListening(
+        year=year,
+        qualifying_books=qualifying_books,
+        books=sorted(books, key=lambda book: (-book.listening_ratio, book.title.lower())),
     )
 
 

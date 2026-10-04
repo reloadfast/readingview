@@ -9,10 +9,20 @@ from app.services.statistics import (
     _get_finished_books,
     _group_by_month,
     _group_by_year,
+    compute_author_narrator_affinity,
+    compute_backlog_health,
+    compute_book_length_preferences,
+    compute_completion_velocity,
+    compute_duration_completion_correlation,
+    compute_extra_listening,
+    compute_genre_completion_correlation,
+    compute_goal_forecast,
     compute_heatmap,
     compute_listening_habits,
+    compute_monthly_comparison,
     compute_overall_stats,
     compute_recap,
+    compute_series_progress,
     compute_statistics_detail,
     compute_yearly_stats,
 )
@@ -257,6 +267,489 @@ def test_compute_recap_empty_year():
     recap = compute_recap("2099", _PROGRESS_MAP, _LISTENING_STATS)
     assert recap.books_finished == 0
     assert recap.longest_book is None
+
+
+# ---------------------------------------------------------------------------
+# compute_completion_velocity
+# ---------------------------------------------------------------------------
+
+
+def test_completion_velocity_reports_median_and_monthly_threshold():
+    progress = {
+        "jan-1": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 2)},
+        "jan-2": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 4)},
+        "jan-3": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 10)},
+        "feb-1": {"isFinished": True, "startedAt": _ts(2024, 2, 1), "finishedAt": _ts(2024, 2, 3)},
+        "invalid": {
+            "isFinished": True,
+            "startedAt": _ts(2024, 2, 4),
+            "finishedAt": _ts(2024, 2, 4),
+        },
+        "missing": {"isFinished": True, "finishedAt": _ts(2024, 2, 5)},
+    }
+
+    result = compute_completion_velocity("2024", progress, {"items": {}})
+
+    assert result.qualifying_books == 4
+    assert result.median_days == 2.5
+    assert [
+        (month.month, month.qualifying_books, month.median_days) for month in result.monthly_trend
+    ] == [
+        ("2024-01", 3, 3.0),
+        ("2024-02", 1, None),
+    ]
+
+
+def test_completion_velocity_uses_local_finished_year_and_handles_empty_data():
+    # Midnight UTC is still Dec. 31 in Los Angeles, so it belongs to 2023 there.
+    progress = {
+        "boundary": {
+            "isFinished": True,
+            "startedAt": _ts(2023, 12, 30),
+            "finishedAt": _ts(2024, 1, 1),
+        }
+    }
+
+    result = compute_completion_velocity("2023", progress, {"items": {}}, "America/Los_Angeles")
+    empty = compute_completion_velocity("2024", progress, {"items": {}}, "America/Los_Angeles")
+
+    assert result.qualifying_books == 1
+    assert result.median_days == 2.0
+    assert empty.qualifying_books == 0
+    assert empty.median_days is None
+    assert empty.monthly_trend == []
+
+
+# ---------------------------------------------------------------------------
+# compute_monthly_comparison
+# ---------------------------------------------------------------------------
+
+
+def test_monthly_comparison_uses_sessions_for_hours_and_includes_empty_months():
+    progress = {
+        "finished": {"isFinished": True, "finishedAt": _ts(2024, 1, 10)},
+        "not-finished": {"isFinished": False, "finishedAt": _ts(2024, 1, 12)},
+    }
+    sessions = [
+        _session(2024, 1, 5, 90 * 60),
+        _session(2024, 2, 1, 30 * 60),
+        _session(2024, 2, 2, 0),
+        _session(2023, 12, 31, 60 * 60),
+    ]
+
+    result = compute_monthly_comparison("2024", progress, {"items": {}}, sessions)
+
+    assert result.timezone == "UTC"
+    assert len(result.monthly) == 12
+    assert result.monthly[0].model_dump() == {
+        "month": "2024-01",
+        "books_completed": 1,
+        "listening_hours": 1.5,
+    }
+    assert result.monthly[1].model_dump() == {
+        "month": "2024-02",
+        "books_completed": 0,
+        "listening_hours": 0.5,
+    }
+    assert result.monthly[2].model_dump() == {
+        "month": "2024-03",
+        "books_completed": 0,
+        "listening_hours": 0.0,
+    }
+
+
+def test_monthly_comparison_applies_local_timezone_to_sessions_and_completions():
+    progress = {
+        "boundary": {
+            "isFinished": True,
+            "finishedAt": _ts(2024, 1, 1),
+        }
+    }
+    sessions = [{"updatedAt": _ts(2024, 1, 1), "timeListening": 3600}]
+
+    result = compute_monthly_comparison(
+        "2023", progress, {"items": {}}, sessions, "America/Los_Angeles"
+    )
+
+    assert result.monthly[-1].model_dump() == {
+        "month": "2023-12",
+        "books_completed": 1,
+        "listening_hours": 1.0,
+    }
+
+
+# ---------------------------------------------------------------------------
+# compute_book_length_preferences
+# ---------------------------------------------------------------------------
+
+
+def test_book_length_preferences_buckets_durations_and_completion_pace():
+    progress = {
+        "short": {
+            "isFinished": True,
+            "duration": 4 * 3600,
+            "startedAt": _ts(2024, 1, 1),
+            "finishedAt": _ts(2024, 1, 3),
+        },
+        "medium-1": {
+            "isFinished": True,
+            "duration": 6 * 3600,
+            "startedAt": _ts(2024, 1, 1),
+            "finishedAt": _ts(2024, 1, 5),
+        },
+        "medium-2": {"isFinished": True, "duration": 9.5 * 3600, "finishedAt": _ts(2024, 2, 5)},
+        "long": {
+            "isFinished": True,
+            "duration": 35 * 3600,
+            "startedAt": _ts(2024, 2, 1),
+            "finishedAt": _ts(2024, 2, 11),
+        },
+        "invalid": {"isFinished": True, "duration": 0, "finishedAt": _ts(2024, 2, 3)},
+    }
+
+    result = compute_book_length_preferences("2024", progress, {"items": {}})
+
+    assert result.qualifying_books == 4
+    assert result.median_duration_hours == 7.8
+    assert [
+        (
+            item.label,
+            item.completed_books,
+            item.pace_qualifying_books,
+            item.median_days_to_finish,
+        )
+        for item in result.distribution
+    ] == [
+        ("Under 5 hours", 1, 1, 2.0),
+        ("5–9:59 hours", 2, 1, 4.0),
+        ("10–19:59 hours", 0, 0, None),
+        ("20–29:59 hours", 0, 0, None),
+        ("30 hours or more", 1, 1, 10.0),
+    ]
+
+
+def test_book_length_preferences_excludes_unattributable_or_wrong_year_books():
+    progress = {
+        "boundary": {"isFinished": True, "duration": 4 * 3600, "finishedAt": _ts(2024, 1, 1)},
+        "missing-finish": {"isFinished": True, "duration": 4 * 3600},
+    }
+
+    result = compute_book_length_preferences("2023", progress, {"items": {}}, "America/Los_Angeles")
+
+    assert result.qualifying_books == 1
+    assert result.distribution[0].completed_books == 1
+    assert result.distribution[0].median_days_to_finish is None
+
+
+# ---------------------------------------------------------------------------
+# compute_goal_forecast
+# ---------------------------------------------------------------------------
+
+
+def test_goal_forecast_projects_from_trailing_30_day_completion_pace():
+    progress = {
+        "old": {"isFinished": True, "finishedAt": _ts(2024, 1, 1)},
+        "recent-1": {"isFinished": True, "finishedAt": _ts(2024, 1, 20)},
+        "recent-2": {"isFinished": True, "finishedAt": _ts(2024, 2, 10)},
+    }
+
+    result = compute_goal_forecast(2024, 12, progress, {"items": {}}, as_of=date(2024, 2, 15))
+
+    assert result.eligible is True
+    assert result.books_completed == 3
+    assert result.trailing_30_day_completions == 2
+    assert result.projected_books == 24.3
+    assert result.required_books_per_week == 0.2
+
+
+def test_goal_forecast_enforces_eligibility_rules():
+    progress = {"old": {"isFinished": True, "finishedAt": _ts(2024, 1, 1)}}
+
+    too_early = compute_goal_forecast(2024, 12, progress, {"items": {}}, as_of=date(2024, 1, 10))
+    no_recent_completion = compute_goal_forecast(
+        2024, 12, progress, {"items": {}}, as_of=date(2024, 2, 15)
+    )
+    no_goal = compute_goal_forecast(2024, None, progress, {"items": {}}, as_of=date(2024, 2, 15))
+
+    assert too_early.eligible is False
+    assert "14 days" in (too_early.ineligibility_reason or "")
+    assert no_recent_completion.eligible is False
+    assert "last 30 days" in (no_recent_completion.ineligibility_reason or "")
+    assert no_goal.has_goal is False
+
+
+# ---------------------------------------------------------------------------
+# compute_backlog_health
+# ---------------------------------------------------------------------------
+
+
+def test_backlog_health_counts_statuses_and_remaining_time():
+    items = [
+        {"id": "unstarted", "media": {"duration": 10 * 3600}},
+        {"id": "in-progress", "media": {"duration": 20 * 3600}},
+        {"id": "completed", "media": {"duration": 5 * 3600}},
+        {"id": "missing-duration", "media": {}},
+    ]
+    progress = {
+        "in-progress": {"progress": 0.25, "isFinished": False},
+        "completed": {"progress": 1, "isFinished": True},
+        "missing-duration": {"progress": 0.5, "isFinished": False},
+    }
+
+    result = compute_backlog_health(items, progress)
+
+    assert result.unstarted_books == 1
+    assert result.in_progress_books == 2
+    assert result.completed_books == 1
+    assert result.partially_started_books == 2
+    assert result.unstarted_remaining_hours == 10.0
+    assert result.in_progress_remaining_hours == 15.0
+    assert result.total_remaining_hours == 25.0
+    assert result.unstarted_duration_books == 1
+    assert result.in_progress_duration_books == 1
+
+
+def test_backlog_health_omits_invalid_progress_and_duration_from_totals():
+    items = [
+        {"id": "zero-progress", "media": {"duration": 4 * 3600}},
+        {"id": "invalid-progress", "media": {"duration": 4 * 3600}},
+        {"id": "invalid-duration", "media": {"duration": -10}},
+    ]
+    progress = {
+        "zero-progress": {"progress": 0, "isFinished": False},
+        "invalid-progress": {"progress": "half", "isFinished": False},
+        "invalid-duration": {"progress": 0.5, "isFinished": False},
+    }
+
+    result = compute_backlog_health(items, progress)
+
+    assert result.unstarted_books == 1
+    assert result.in_progress_books == 1
+    assert result.unstarted_remaining_hours == 4.0
+    assert result.in_progress_remaining_hours == 0.0
+    assert result.total_remaining_hours == 4.0
+
+
+# ---------------------------------------------------------------------------
+# compute_series_progress
+# ---------------------------------------------------------------------------
+
+
+def test_series_progress_orders_closest_series_and_calculates_remaining_hours():
+    series = [
+        [
+            {
+                "name": "Two Left",
+                "books": [
+                    {"id": "done", "media": {"duration": 10 * 3600}},
+                    {"id": "partial", "media": {"duration": 10 * 3600}},
+                    {"id": "new", "media": {"duration": 5 * 3600}},
+                ],
+            },
+            {
+                "name": "One Left",
+                "books": [
+                    {"id": "done-2", "media": {"duration": 10 * 3600}},
+                    {"id": "new-2", "media": {"duration": 8 * 3600}},
+                ],
+            },
+        ]
+    ]
+    progress = {
+        "done": {"isFinished": True},
+        "partial": {"isFinished": False, "progress": 0.5},
+        "done-2": {"isFinished": True},
+    }
+
+    result = compute_series_progress(series, progress)
+
+    assert [item.name for item in result] == ["One Left", "Two Left"]
+    assert result[0].model_dump() == {
+        "name": "One Left",
+        "completed_books": 1,
+        "remaining_books": 1,
+        "remaining_hours": 8.0,
+        "remaining_duration_books": 1,
+    }
+    assert result[1].remaining_hours == 10.0
+
+
+def test_series_progress_excludes_complete_and_insufficient_series_data():
+    series = [
+        [
+            {"name": "Complete", "books": [{"id": "done", "media": {"duration": 3600}}]},
+            {"name": "No books", "books": []},
+            {"name": "Missing id", "books": [{"media": {"duration": 3600}}]},
+        ]
+    ]
+
+    result = compute_series_progress(series, {"done": {"isFinished": True}})
+
+    assert result == []
+
+
+# ---------------------------------------------------------------------------
+# compute_author_narrator_affinity
+# ---------------------------------------------------------------------------
+
+
+def test_author_narrator_affinity_counts_multi_credit_and_filters_small_libraries():
+    items = [
+        {"id": "one", "media": {"metadata": {"authorName": "Ada, Bea", "narratorName": "Nia"}}},
+        {
+            "id": "two",
+            "media": {"metadata": {"authors": [{"name": "Ada"}], "narrators": ["Nia", "Omar"]}},
+        },
+        {"id": "three", "media": {"metadata": {"authorName": "Ada", "narratorName": "Nia"}}},
+        {"id": "four", "media": {"metadata": {"authorName": "Bea", "narratorName": "Omar"}}},
+    ]
+    progress = {
+        "one": {"isFinished": True},
+        "two": {"isFinished": True},
+        "three": {"isFinished": False},
+    }
+    stats = {
+        "items": {
+            "one": {"timeListening": 3600},
+            "two": {"timeListening": 7200},
+            "three": {"timeListening": 1800},
+            "four": {"timeListening": -1},
+        }
+    }
+
+    result = compute_author_narrator_affinity(items, progress, stats)
+
+    assert [person.model_dump() for person in result.authors] == [
+        {
+            "name": "Ada",
+            "available_books": 3,
+            "completed_books": 2,
+            "completion_rate": 66.7,
+            "listened_hours": 3.5,
+        }
+    ]
+    assert [person.model_dump() for person in result.narrators] == [
+        {
+            "name": "Nia",
+            "available_books": 3,
+            "completed_books": 2,
+            "completion_rate": 66.7,
+            "listened_hours": 3.5,
+        }
+    ]
+
+
+# ---------------------------------------------------------------------------
+# compute_genre_completion_correlation
+# ---------------------------------------------------------------------------
+
+
+def test_genre_completion_correlation_uses_known_progress_denominator():
+    items = [
+        {"id": "one", "media": {"metadata": {"genres": ["Fantasy", "Adventure"]}}},
+        {"id": "two", "media": {"metadata": {"genres": ["Fantasy"]}}},
+        {"id": "three", "media": {"metadata": {"genres": ["Fantasy"]}}},
+        {"id": "four", "media": {"metadata": {"genres": ["Fantasy"]}}},
+        {"id": "five", "media": {"metadata": {"genres": ["Adventure"]}}},
+    ]
+    progress = {
+        "one": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 3)},
+        "two": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 7)},
+        "three": {"isFinished": False, "progress": 0.5},
+        "four": {"isFinished": False, "progress": 0},
+        "five": {"isFinished": True, "startedAt": _ts(2024, 1, 1), "finishedAt": _ts(2024, 1, 5)},
+    }
+
+    result = compute_genre_completion_correlation(items, progress)
+
+    assert [genre.model_dump() for genre in result] == [
+        {
+            "name": "Fantasy",
+            "known_progress_books": 4,
+            "started_or_completed_books": 3,
+            "completed_books": 2,
+            "completion_rate": 50.0,
+            "pace_qualifying_books": 2,
+            "median_days_to_finish": 4.0,
+        }
+    ]
+
+
+# ---------------------------------------------------------------------------
+# compute_duration_completion_correlation
+# ---------------------------------------------------------------------------
+
+
+def test_duration_completion_correlation_reports_pearson_direction_for_ten_books():
+    progress = {
+        f"book-{index}": {
+            "isFinished": True,
+            "duration": index * 3600,
+            "startedAt": _ts(2024, 1, 1),
+            "finishedAt": _ts(2024, 1, 1 + index),
+        }
+        for index in range(1, 11)
+    }
+    stats = {
+        "items": {
+            f"book-{index}": {"mediaMetadata": {"title": f"Book {index}"}} for index in range(1, 11)
+        }
+    }
+
+    result = compute_duration_completion_correlation("2024", progress, stats)
+
+    assert result.qualifying_books == 10
+    assert result.correlation_coefficient == 1.0
+    assert result.correlation_method == "Pearson correlation coefficient"
+    assert result.direction == "positive"
+
+
+def test_duration_completion_correlation_omits_coefficient_without_variation():
+    progress = {
+        f"book-{index}": {
+            "isFinished": True,
+            "duration": 10 * 3600,
+            "startedAt": _ts(2024, 1, 1),
+            "finishedAt": _ts(2024, 1, 1 + index),
+        }
+        for index in range(1, 11)
+    }
+
+    result = compute_duration_completion_correlation("2024", progress, {"items": {}})
+
+    assert result.correlation_coefficient is None
+    assert result.correlation_method is None
+    assert result.direction == "no clear"
+
+
+# ---------------------------------------------------------------------------
+# compute_extra_listening
+# ---------------------------------------------------------------------------
+
+
+def test_extra_listening_surfaces_completed_titles_at_125_percent_or_more():
+    progress = {
+        "threshold": {"isFinished": True, "duration": 10 * 3600, "finishedAt": _ts(2024, 1, 1)},
+        "above": {"isFinished": True, "duration": 5 * 3600, "finishedAt": _ts(2024, 1, 2)},
+        "below": {"isFinished": True, "duration": 5 * 3600, "finishedAt": _ts(2024, 1, 3)},
+        "invalid": {"isFinished": True, "duration": 0, "finishedAt": _ts(2024, 1, 4)},
+    }
+    stats = {
+        "items": {
+            "threshold": {"timeListening": 12.5 * 3600, "mediaMetadata": {"title": "Threshold"}},
+            "above": {"timeListening": 8 * 3600, "mediaMetadata": {"title": "Above"}},
+            "below": {"timeListening": 6 * 3600, "mediaMetadata": {"title": "Below"}},
+            "invalid": {"timeListening": 100 * 3600},
+        }
+    }
+
+    result = compute_extra_listening("2024", progress, stats)
+
+    assert result.qualifying_books == 3
+    assert [(book.title, book.listening_ratio) for book in result.books] == [
+        ("Above", 160.0),
+        ("Threshold", 125.0),
+    ]
 
 
 # ---------------------------------------------------------------------------
