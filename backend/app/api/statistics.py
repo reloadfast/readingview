@@ -4,9 +4,11 @@ from datetime import datetime
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from ..api.deps import abs_cache
+from ..api.deps import abs_cache, current_settings
+from ..models.settings import Settings
 from ..schemas.statistics import (
     HeatmapData,
+    ListeningHabits,
     OverallStats,
     RecapStats,
     StatisticsDetail,
@@ -77,6 +79,21 @@ async def get_heatmap(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     return stats_svc.compute_heatmap(year, sessions)
+
+
+@router.get("/statistics/habits", response_model=ListeningHabits)
+async def get_listening_habits(
+    year: str = Query(default=str(datetime.now().year)),
+    client: AbsDataCache = Depends(abs_cache),
+    settings: Settings | None = Depends(current_settings),
+) -> ListeningHabits:
+    try:
+        sessions = await client.get_user_listening_sessions()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    timezone = settings.timezone if settings else "UTC"
+    return stats_svc.compute_listening_habits(year, sessions, timezone)
 
 
 @router.get("/statistics/detail", response_model=StatisticsDetail)

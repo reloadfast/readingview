@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ..schemas.statistics import (
     AuthorCount,
@@ -9,17 +10,40 @@ from ..schemas.statistics import (
     HeatmapData,
     HeatmapPoint,
     ListeningBook,
+    ListeningCadence,
     ListeningDay,
+    ListeningHabitCell,
+    ListeningHabits,
     MonthlyPoint,
     OverallStats,
     ReadDuration,
     RecapStats,
+    SessionDurationBin,
+    SessionHabitSummary,
     StatisticBook,
     StatisticsDetail,
     StreakInfo,
     YearlyPoint,
     YearlyStats,
 )
+
+
+def _local_timezone(timezone: str) -> ZoneInfo:
+    """Return the configured local timezone, falling back safely to UTC."""
+    try:
+        return ZoneInfo(timezone)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("UTC")
+
+
+def _session_datetime(session: dict[str, Any], timezone: ZoneInfo) -> datetime | None:
+    timestamp = session.get("updatedAt") or session.get("startedAt")
+    if not timestamp:
+        return None
+    try:
+        return datetime.fromtimestamp(timestamp / 1000, tz=timezone)
+    except (ValueError, TypeError, OSError):
+        return None
 
 
 def _get_finished_books(
@@ -293,6 +317,107 @@ def compute_heatmap(year: str, sessions: list[dict]) -> HeatmapData:
 
     data = [HeatmapPoint(date=d, minutes=m) for d, m in sorted(daily.items())]
     return HeatmapData(year=year, data=data)
+
+
+def compute_listening_habits(
+    year: str,
+    sessions: list[dict[str, Any]],
+    timezone: str = "UTC",
+) -> ListeningHabits:
+    """Calculate local-time listening habits from positive-duration ABS sessions."""
+    local_timezone = _local_timezone(timezone)
+    cells: dict[tuple[int, int], dict[str, Any]] = defaultdict(
+        lambda: {"seconds": 0, "sessions": 0}
+    )
+    active_dates: set[date] = set()
+    durations: list[float] = []
+
+    for session in sessions:
+        dt = _session_datetime(session, local_timezone)
+        seconds = session.get("timeListening", 0) or 0
+        if dt is None or not isinstance(seconds, (int, float)) or seconds <= 0:
+            continue
+        if year != "all" and str(dt.year) != year:
+            continue
+
+        cells[(dt.weekday(), dt.hour)]["seconds"] += seconds
+        cells[(dt.weekday(), dt.hour)]["sessions"] += 1
+        active_dates.add(dt.date())
+        durations.append(float(seconds))
+
+    weekday_hour = [
+        ListeningHabitCell(
+            weekday=weekday,
+            hour=hour,
+            minutes=round(value["seconds"] / 60),
+            sessions=value["sessions"],
+        )
+        for (weekday, hour), value in sorted(cells.items())
+    ]
+    peak = max(weekday_hour, key=lambda cell: (cell.minutes, cell.sessions), default=None)
+
+    bins = [
+        ("Under 15 min", 0, 15 * 60),
+        ("15–29 min", 15 * 60, 30 * 60),
+        ("30–59 min", 30 * 60, 60 * 60),
+        ("60 min or more", 60 * 60, None),
+    ]
+    duration_distribution = [
+        SessionDurationBin(
+            label=label,
+            sessions=sum(
+                1
+                for duration in durations
+                if duration >= lower and (upper is None or duration < upper)
+            ),
+        )
+        for label, lower, upper in bins
+    ]
+
+    if durations:
+        sorted_durations = sorted(durations)
+        midpoint = len(sorted_durations) // 2
+        median_seconds = (
+            sorted_durations[midpoint]
+            if len(sorted_durations) % 2
+            else (sorted_durations[midpoint - 1] + sorted_durations[midpoint]) / 2
+        )
+        summary = SessionHabitSummary(
+            qualifying_sessions=len(durations),
+            average_minutes=round(sum(durations) / len(durations) / 60, 1),
+            median_minutes=round(median_seconds / 60, 1),
+            sessions_per_active_day=round(len(durations) / len(active_dates), 1),
+            longest_session_minutes=round(max(durations) / 60, 1),
+        )
+    else:
+        summary = SessionHabitSummary(qualifying_sessions=0)
+
+    if year == "all" and active_dates:
+        total_days = (max(active_dates) - min(active_dates)).days + 1
+    elif year != "all":
+        try:
+            selected_year = int(year)
+            total_days = 366 if date(selected_year, 12, 31).timetuple().tm_yday == 366 else 365
+        except ValueError:
+            total_days = 0
+    else:
+        total_days = 0
+    cadence = ListeningCadence(
+        active_days=len(active_dates),
+        total_days=total_days,
+        active_day_percentage=(
+            round(len(active_dates) / total_days * 100, 1) if total_days else None
+        ),
+    )
+    return ListeningHabits(
+        year=year,
+        timezone=local_timezone.key,
+        weekday_hour=weekday_hour,
+        peak=peak,
+        session_summary=summary,
+        duration_distribution=duration_distribution,
+        cadence=cadence,
+    )
 
 
 def compute_statistics_detail(

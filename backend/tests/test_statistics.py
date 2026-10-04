@@ -10,6 +10,7 @@ from app.services.statistics import (
     _group_by_month,
     _group_by_year,
     compute_heatmap,
+    compute_listening_habits,
     compute_overall_stats,
     compute_recap,
     compute_statistics_detail,
@@ -319,3 +320,61 @@ def test_compute_heatmap_skips_missing_ts():
     sessions = [{"timeListening": 3600}]  # no updatedAt/startedAt
     result = compute_heatmap("2024", sessions)
     assert result.data == []
+
+
+# ---------------------------------------------------------------------------
+# compute_listening_habits
+# ---------------------------------------------------------------------------
+
+
+def test_listening_habits_calculates_summary_distribution_and_cadence():
+    sessions = [
+        _session(2024, 3, 4, 10 * 60),  # Monday
+        _session(2024, 3, 4, 20 * 60),
+        _session(2024, 3, 5, 45 * 60),  # Tuesday
+        _session(2024, 3, 5, 60 * 60),
+        _session(2024, 3, 5, 0),  # excluded
+        {"updatedAt": _ts(2024, 3, 5), "timeListening": -60},  # excluded
+    ]
+    result = compute_listening_habits("2024", sessions, "UTC")
+
+    assert result.session_summary.qualifying_sessions == 4
+    assert result.session_summary.average_minutes == 33.8
+    assert result.session_summary.median_minutes == 32.5
+    assert result.session_summary.longest_session_minutes == 60.0
+    assert result.session_summary.sessions_per_active_day == 2.0
+    assert result.cadence.active_days == 2
+    assert result.cadence.total_days == 366
+    assert result.cadence.active_day_percentage == pytest.approx(0.5)
+    assert [(item.label, item.sessions) for item in result.duration_distribution] == [
+        ("Under 15 min", 1),
+        ("15–29 min", 1),
+        ("30–59 min", 1),
+        ("60 min or more", 1),
+    ]
+
+
+def test_listening_habits_uses_configured_timezone_before_filtering_year():
+    # This timestamp is 2024 in UTC, but still Dec 31, 2023 in Los Angeles.
+    sessions = [{"updatedAt": _ts(2024, 1, 1), "timeListening": 3600}]
+
+    result = compute_listening_habits("2023", sessions, "America/Los_Angeles")
+
+    assert result.timezone == "America/Los_Angeles"
+    assert result.session_summary.qualifying_sessions == 1
+    assert result.weekday_hour[0].weekday == 6
+    assert result.weekday_hour[0].hour == 16
+
+
+def test_listening_habits_empty_and_all_time_span():
+    empty = compute_listening_habits("2024", [{"updatedAt": _ts(2024, 1, 1), "timeListening": 0}])
+    assert empty.session_summary.qualifying_sessions == 0
+    assert empty.cadence.active_days == 0
+    assert empty.cadence.total_days == 366
+    assert empty.cadence.active_day_percentage == 0.0
+
+    all_time = compute_listening_habits(
+        "all",
+        [_session(2024, 1, 1, 60), _session(2024, 1, 3, 60)],
+    )
+    assert all_time.cadence.total_days == 3

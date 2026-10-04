@@ -89,6 +89,8 @@ export type {
 import type { components } from "./api.generated";
 
 export type StatisticsDetail = components["schemas"]["StatisticsDetail"];
+export type ListeningHabits = components["schemas"]["ListeningHabits"];
+export type ListeningHabitCell = components["schemas"]["ListeningHabitCell"];
 
 // ---------------------------------------------------------------------------
 // Core fetch helper
@@ -177,6 +179,10 @@ export function getRecap(year: string): Promise<RecapStats> {
 
 export function getHeatmap(year: string): Promise<HeatmapData> {
   return apiFetch(`/statistics/heatmap?year=${encodeURIComponent(year)}`);
+}
+
+export function getListeningHabits(year: string): Promise<ListeningHabits> {
+  return apiFetch(`/statistics/habits?year=${encodeURIComponent(year)}`);
 }
 
 export function getStatisticsDetail(year: string): Promise<StatisticsDetail> {

@@ -83,6 +83,44 @@ class HeatmapData(BaseModel):
     data: list[HeatmapPoint]
 
 
+class ListeningHabitCell(BaseModel):
+    """Listening attributed to the local timestamp of each ABS session."""
+
+    weekday: int  # Monday is 0
+    hour: int  # local hour, 0-23
+    minutes: int
+    sessions: int
+
+
+class SessionDurationBin(BaseModel):
+    label: str
+    sessions: int
+
+
+class SessionHabitSummary(BaseModel):
+    qualifying_sessions: int
+    average_minutes: float | None = None
+    median_minutes: float | None = None
+    sessions_per_active_day: float | None = None
+    longest_session_minutes: float | None = None
+
+
+class ListeningCadence(BaseModel):
+    active_days: int
+    total_days: int
+    active_day_percentage: float | None = None
+
+
+class ListeningHabits(BaseModel):
+    year: str
+    timezone: str
+    weekday_hour: list[ListeningHabitCell]
+    peak: ListeningHabitCell | None = None
+    session_summary: SessionHabitSummary
+    duration_distribution: list[SessionDurationBin]
+    cadence: ListeningCadence
+
+
 class StatisticBook(BaseModel):
     id: str
     title: str

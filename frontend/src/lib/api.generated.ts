@@ -260,6 +260,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/statistics/habits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Listening Habits */
+        get: operations["get_listening_habits_api_statistics_habits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/statistics/detail": {
         parameters: {
             query?: never;
@@ -1165,6 +1182,15 @@ export interface components {
             /** Minutes */
             minutes: number;
         };
+        /** ListeningCadence */
+        ListeningCadence: {
+            /** Active Days */
+            active_days: number;
+            /** Total Days */
+            total_days: number;
+            /** Active Day Percentage */
+            active_day_percentage?: number | null;
+        };
         /** ListeningDay */
         ListeningDay: {
             /** Date */
@@ -1173,6 +1199,34 @@ export interface components {
             minutes: number;
             /** Books */
             books: components["schemas"]["ListeningBook"][];
+        };
+        /**
+         * ListeningHabitCell
+         * @description Listening attributed to the local timestamp of each ABS session.
+         */
+        ListeningHabitCell: {
+            /** Weekday */
+            weekday: number;
+            /** Hour */
+            hour: number;
+            /** Minutes */
+            minutes: number;
+            /** Sessions */
+            sessions: number;
+        };
+        /** ListeningHabits */
+        ListeningHabits: {
+            /** Year */
+            year: string;
+            /** Timezone */
+            timezone: string;
+            /** Weekday Hour */
+            weekday_hour: components["schemas"]["ListeningHabitCell"][];
+            peak?: components["schemas"]["ListeningHabitCell"] | null;
+            session_summary: components["schemas"]["SessionHabitSummary"];
+            /** Duration Distribution */
+            duration_distribution: components["schemas"]["SessionDurationBin"][];
+            cadence: components["schemas"]["ListeningCadence"];
         };
         /** ManualReleaseCreate */
         ManualReleaseCreate: {
@@ -1539,6 +1593,26 @@ export interface components {
             not_started: number;
             /** Percent Complete */
             percent_complete: number;
+        };
+        /** SessionDurationBin */
+        SessionDurationBin: {
+            /** Label */
+            label: string;
+            /** Sessions */
+            sessions: number;
+        };
+        /** SessionHabitSummary */
+        SessionHabitSummary: {
+            /** Qualifying Sessions */
+            qualifying_sessions: number;
+            /** Average Minutes */
+            average_minutes?: number | null;
+            /** Median Minutes */
+            median_minutes?: number | null;
+            /** Sessions Per Active Day */
+            sessions_per_active_day?: number | null;
+            /** Longest Session Minutes */
+            longest_session_minutes?: number | null;
         };
         /** SettingsPatch */
         SettingsPatch: {
@@ -2168,6 +2242,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HeatmapData"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_listening_habits_api_statistics_habits_get: {
+        parameters: {
+            query?: {
+                year?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListeningHabits"];
                 };
             };
             /** @description Validation Error */

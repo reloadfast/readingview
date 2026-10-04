@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -16,10 +16,10 @@ import {
 } from "recharts";
 import { BookOpen, Clock, TrendingUp, Flame, Pencil, Check, X } from "lucide-react";
 import { AbsBookLink, Card, CardContent, Skeleton, Select } from "@/components/ui";
-import { useStatistics, useYearlyStats, useRecap, useHeatmap, useStatisticsDetail } from "@/hooks/useStatistics";
+import { useStatistics, useYearlyStats, useRecap, useHeatmap, useListeningHabits, useStatisticsDetail } from "@/hooks/useStatistics";
 import { useGoals, useSetGoal } from "@/hooks/useGoals";
 import { formatDuration } from "@/lib/utils";
-import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint, StatisticsDetail } from "@/lib/api";
+import type { RecapStats, AuthorCount, GenreCount, HeatmapPoint, ListeningHabitCell, ListeningHabits, StatisticsDetail } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -93,6 +93,79 @@ function StatCardSkeleton() {
 
 function ChartSkeleton({ height = 300 }: { height?: number }) {
   return <Skeleton className="w-full rounded-xl" style={{ height }} />;
+}
+
+// ---------------------------------------------------------------------------
+// Listening habits
+// ---------------------------------------------------------------------------
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function formatMinutes(minutes: number | null | undefined) {
+  return minutes === null || minutes === undefined ? "—" : `${minutes % 1 === 0 ? minutes : minutes.toFixed(1)} min`;
+}
+
+function ListeningHabitsSection({ data, isLoading, isError }: { data: ListeningHabits | undefined; isLoading: boolean; isError: boolean }) {
+  const [selected, setSelected] = useState<ListeningHabitCell | null>(null);
+
+  if (isLoading) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Listening Habits</h2><ChartSkeleton height={260} /></section>;
+  }
+  if (isError) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Listening Habits</h2><Card><CardContent><p className="text-sm text-destructive">Listening habits could not be loaded. Your other statistics are still available.</p></CardContent></Card></section>;
+  }
+  if (!data || data.session_summary.qualifying_sessions === 0) {
+    return <section className="space-y-4"><h2 className="text-lg font-semibold text-text-primary">Listening Habits</h2><Card><CardContent><p className="text-sm text-text-secondary">No positive-duration listening sessions are available for this period.</p></CardContent></Card></section>;
+  }
+
+  const cellByPosition = new Map(data.weekday_hour.map((cell) => [`${cell.weekday}-${cell.hour}`, cell]));
+  const maxMinutes = Math.max(...data.weekday_hour.map((cell) => cell.minutes), 1);
+  const inspected = selected ?? data.peak;
+  const peakLabel = data.peak ? `${WEEKDAYS[data.peak.weekday]} at ${String(data.peak.hour).padStart(2, "0")}:00` : "—";
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-text-primary">Listening Habits</h2>
+        <p className="text-xs text-text-secondary mt-1">Session minutes are attributed to each session’s timestamp in {data.timezone}.</p>
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex items-baseline justify-between gap-3"><h3 className="font-medium text-text-primary">When you listen</h3><span className="text-xs text-text-secondary">Peak: {peakLabel}</span></div>
+            <div className="overflow-x-auto">
+              <div className="grid min-w-[640px] grid-cols-[3rem_repeat(24,minmax(1rem,1fr))] gap-1" role="grid" aria-label="Listening minutes by weekday and hour">
+                <span />
+                {Array.from({ length: 24 }, (_, hour) => <span key={hour} className="text-center text-[10px] text-text-secondary">{hour % 3 === 0 ? hour : ""}</span>)}
+                {WEEKDAYS.map((weekday, weekdayIndex) => <Fragment key={weekday}>
+                  <span key={`${weekday}-label`} className="self-center text-xs text-text-secondary">{weekday}</span>
+                  {Array.from({ length: 24 }, (_, hour) => {
+                    const cell = cellByPosition.get(`${weekdayIndex}-${hour}`);
+                    const opacity = cell ? Math.max(0.12, cell.minutes / maxMinutes) : 0.05;
+                    const label = `${weekday}, ${String(hour).padStart(2, "0")}:00: ${cell?.minutes ?? 0} minutes across ${cell?.sessions ?? 0} sessions`;
+                    return <button key={`${weekday}-${hour}`} type="button" role="gridcell" aria-label={label} title={label} onClick={() => setSelected(cell ?? null)} className="aspect-square min-h-4 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" style={{ backgroundColor: `color-mix(in srgb, var(--color-accent) ${Math.round(opacity * 100)}%, transparent)` }} />;
+                  })}
+                </Fragment>)}
+              </div>
+            </div>
+            <p className="text-xs text-text-secondary" aria-live="polite">{inspected ? `${WEEKDAYS[inspected.weekday]} at ${String(inspected.hour).padStart(2, "0")}:00 — ${inspected.minutes} minutes across ${inspected.sessions} session${inspected.sessions === 1 ? "" : "s"}.` : "Select a time slot to inspect it."}</p>
+            <p className="sr-only">{data.peak ? `Highest listening time is ${peakLabel}, with ${data.peak.minutes} minutes across ${data.peak.sessions} sessions.` : "No listening time is available."}</p>
+          </CardContent>
+        </Card>
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            ["Average session", formatMinutes(data.session_summary.average_minutes)],
+            ["Median session", formatMinutes(data.session_summary.median_minutes)],
+            ["Longest session", formatMinutes(data.session_summary.longest_session_minutes)],
+            ["Sessions / active day", data.session_summary.sessions_per_active_day ?? "—"],
+            ["Active listening days", `${data.cadence.active_days} / ${data.cadence.total_days}`],
+            ["Days with activity", data.cadence.active_day_percentage == null ? "—" : `${data.cadence.active_day_percentage}%`],
+          ].map(([label, value]) => <Card key={label}><CardContent><p className="text-2xl font-bold text-text-primary">{value}</p><p className="text-xs text-text-secondary mt-1">{label}</p></CardContent></Card>)}
+        </div>
+      </div>
+      <Card><CardContent><h3 className="font-medium text-text-primary mb-3">Session length distribution</h3><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{data.duration_distribution.map((bin) => <div key={bin.label} className="rounded-lg bg-surface-hover p-3"><p className="text-xl font-bold text-text-primary">{bin.sessions}</p><p className="text-xs text-text-secondary">{bin.label}</p></div>)}</div><p className="text-xs text-text-secondary mt-3">Based on {data.session_summary.qualifying_sessions} positive-duration session{data.session_summary.qualifying_sessions === 1 ? "" : "s"}.</p></CardContent></Card>
+    </section>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -819,6 +892,7 @@ export default function StatisticsPage() {
   const yearly = useYearlyStats(year);
   const recap = useRecap(year);
   const heatmap = useHeatmap(year);
+  const habits = useListeningHabits(year);
   const detail = useStatisticsDetail(year);
 
   const statsLoading = overall.isLoading || yearly.isLoading || (year !== "all" && (recap.isLoading || heatmap.isLoading));
@@ -880,6 +954,8 @@ export default function StatisticsPage() {
 
       {/* Reading goal — not shown for all-time view */}
       {year !== "all" && <GoalCard booksFinished={booksInYear} year={year} />}
+
+      <ListeningHabitsSection data={habits.data} isLoading={habits.isLoading} isError={habits.isError} />
 
       {/* Charts / lists / recap — or empty state */}
       {noData ? (
