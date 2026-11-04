@@ -68,15 +68,31 @@ Ollama, notification or production service.
 
 ## Runner prerequisites
 
-`ubuntu-latest` preserves the existing label on the self-hosted `unraid-runner`;
-it does not request a GitHub runner or establish its installed tools. Before
-enabling this workflow, infrastructure must verify that label's mapping to a
-maintained internal runner image pinned by digest and record that digest and
-tool versions in its inventory. This repository cannot establish that mapping
-from workflow source alone.
+`ubuntu-latest` preserves the existing label on the self-hosted `unraid-runner`.
+The workflow explicitly selects this maintained internal job image instead of
+using that label's generic image:
+
+`forgejo.moseisley.es/wind/readingview-ci@sha256:5d9d1134ca6f6fa48cb9814b4d003eafdfe37d5d8baaacba9271ed60abfd8955`
+
+Its source is `docker/ci/Dockerfile`. It derives from the existing internal
+ReadRadar tool image at digest
+`sha256:865eef6e4fdba8c3b26cf5d102ba553b3f29a8d59eb04d36cc26c16176936d3b`
+and adds checksum-verified Node 24.19.0 and pnpm 10.32.1 distributions. The base
+supplies Python 3.12.16, Docker CLI 28.5.2, Buildx 0.29.1, Gitleaks
+8.30.1, Trivy 0.76.1, ShellCheck 0.11.0, Git, jq, curl and Bash. The derived image
+upgrades uv to 0.13.5 to fix GHSA-hq85-5cpj-mr62. ReadRadar's
+`docker/ci/Dockerfile` records the base's pinned source inventory.
+
+The image was built separately in the actual CI daemon and published as
+`readingview-ci:2026-11-04-v2`. Routine application jobs only consume its digest;
+they never build or install their own toolchain. Keep old tool images available
+for existing jobs. To maintain it, update the isolated `docker/ci` context, build
+and verify a new versioned image, publish it to Forgejo, verify anonymous pull
+access, then update the workflow digest in a reviewed commit. No runner daemon
+configuration or running application container is modified by this process.
 
 The maintained image must supply Python 3.12 (and Python 3.12+ as `python3` for
-retention), uv 0.10.0, Node 24, pnpm 10.32.1, Git, Bash, curl, jq, Docker CLI
+retention), uv 0.13.5, Node 24, pnpm 10.32.1, Git, Bash, curl, jq, Docker CLI
 with Buildx supporting `imagetools create --prefer-index=false`, Gitleaks with
 `dir` and `[[allowlists]]` support, and Trivy. Infrastructure must pin the scanner
 versions/images and verify database downloads or internal mirrors. There are no
@@ -91,6 +107,10 @@ automatic workflow token, full history and `persist-credentials: false`.
 The first live run reported Node 24.19.0. The frontend manifest and CI guard now
 require Node 24, and the Docker frontend builder uses `node:24.19.0-slim` to
 match that runner baseline. No runtime installer is added to the workflow.
+The next run confirmed that the generic job image lacked pnpm. Explicitly
+selecting the maintained tool image supplies the entire required inventory.
+`scripts/ci/preflight.sh` checks that inventory before project verification and
+reports all missing executables together.
 
 Verify internal Forgejo TLS, REST API routing, DinD DNS, default-builder access
 and the centrally managed Docker Hub pull mirror on the actual runner. No
@@ -149,8 +169,10 @@ Before marking compliance complete or changing required merge checks:
    rate-limit backoff, retained rollback digests and child manifests on the
    actual DinD/Forgejo topology.
 
-No publication, package deletion, secret configuration, runner provisioning,
-production restart or remote canary is performed by the source adaptation.
+The initial source adaptation performed no publication, package deletion,
+secret configuration, runner provisioning or production restart. Follow-up
+validation provisioned only the separate CI tool image described above; it did
+not publish or deploy the ReadingView application.
 
 ## Local validation (November 4, 2026)
 
@@ -166,6 +188,25 @@ production restart or remote canary is performed by the source adaptation.
 - All 30 upstream offline publication/retention checks pass against the copied
   shared scripts, which also match upstream byte-for-byte. Workflow structure,
   shell syntax, embedded smoke Python and Gitleaks TOML syntax are checked.
-- Docker/Buildx, Trivy and Gitleaks executables are unavailable locally. Actual
-  image build/smoke/scans, publication, retention and runner configuration remain
-  live adoption gates; no success is claimed for them.
+- Initial workstation validation had no Docker/Buildx, Trivy or Gitleaks. The
+  follow-up checks below were run through the actual CI daemon. Application
+  publication, retention and a successful Actions run remain unverified.
+- Follow-up verification on the actual CI daemon passed preflight, the complete
+  verification adapter (313 backend tests at 83.34% coverage, five frontend
+  tests, production build and OpenAPI consistency) and the security adapter
+  (Gitleaks, Bandit, strict Python audit and the frontend HIGH/CRITICAL gate)
+  inside the maintained tool image with fresh disposable container storage.
+- The maintained image's digest was pulled anonymously through the actual CI
+  daemon, confirming that PR jobs need no registry write credentials to use it.
+- A disposable production-image build and smoke test also passed, including
+  migrations, static assets, settings and restart persistence. Trivy's database
+  download and image scan ran successfully, then blocked publication on Debian
+  vulnerabilities and an unnecessary uv installer in the runtime image. The
+  Dockerfile now removes uv after the frozen install; unresolved Debian findings
+  remain blocking rather than being suppressed.
+- The final uv 0.13.5 tool image passed the complete verification and security
+  adapters again and was published/pulled by its pinned digest. The final
+  application-image build and smoke test passed. Trivy reported zero Python
+  vulnerability findings and zero secret findings, but 49 Debian findings
+  across 20 packages with no fixed versions reported. Publication remains
+  blocked by that gate; no vulnerability exceptions were added.

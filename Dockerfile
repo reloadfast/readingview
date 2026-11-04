@@ -23,8 +23,9 @@ RUN groupadd -g 100 appgroup 2>/dev/null || true \
 
 COPY backend/ ./backend/
 # Use the same locked runtime dependencies as CI; dev extras stay out of the image.
-RUN pip install --no-cache-dir uv==0.10.0 \
-    && uv sync --project backend --frozen --no-dev --no-editable --no-cache
+RUN pip install --no-cache-dir uv==0.13.5 \
+    && uv sync --project backend --frozen --no-dev --no-editable --no-cache \
+    && pip uninstall --yes uv
 ENV PATH="/app/backend/.venv/bin:$PATH"
 
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist

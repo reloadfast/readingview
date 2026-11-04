@@ -2,9 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-# Runtimes and tooling come from the maintained runner, never per-job installers.
-node -e 'if (process.versions.node.split(".")[0] !== "24") throw new Error(`CI requires Node 24; found ${process.version}`)'
-test "$(pnpm --version)" = "10.32.1"
+bash scripts/ci/preflight.sh
 export UV_PYTHON_DOWNLOADS=never
 uv sync --project backend --frozen --extra dev --python 3.12
 

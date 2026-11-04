@@ -12,8 +12,10 @@ concurrency:
   cancel-in-progress: false
 jobs:
   ci:
-    # Existing label on unraid-runner; provision its pinned tool image before adoption.
+    # Maintained tool image, built separately from docker/ci/Dockerfile.
     runs-on: ubuntu-latest
+    container:
+      image: forgejo.moseisley.es/wind/readingview-ci@sha256:5d9d1134ca6f6fa48cb9814b4d003eafdfe37d5d8baaacba9271ed60abfd8955
     timeout-minutes: 30
     env:
       IMAGE: forgejo.moseisley.es/wind/readingview
