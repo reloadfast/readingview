@@ -20,5 +20,5 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
     },
   },
-  eslintConfigPrettier,
+  eslintConfigPrettier
 );

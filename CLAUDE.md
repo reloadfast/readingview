@@ -10,36 +10,39 @@
 
 ## CI Workflow Rules
 
-- Workflow file lives at `.forgejo/workflows/` — the runner ignores `.github/workflows/`.
-- Never use actions not mirrored on `data.forgejo.org`. Use `run:` shell steps instead.
-- Confirmed unavailable on `data.forgejo.org`: `aquasecurity/trivy-action`, `github/codeql-action`, `actions/upload-artifact`, `peter-evans/dockerhub-description`. Replace all with CLI equivalents.
-- Trivy: install via `curl | sh`, run as CLI. Exit-code 0 (report, don't block).
+- Follow Golden CI 4.0.0 at global-standards commit
+  `64ec40904a302c81c23aeb51c9de1fb2292969ba`; see `docs/ci.md` for provenance,
+  runner prerequisites and the outstanding live adoption gates.
+- `.forgejo/workflows/ci.yml` verifies main PRs, main pushes and manual runs in
+  one job. Every check, including OpenAPI, gates the single local image build,
+  smoke test and blocking Trivy scan. Only a successful main push may publish.
+- Use fully qualified `data.forgejo.org` action URLs pinned to reviewed commits.
+  Checkout uses the automatic workflow token without persistent credentials.
+- Tooling is pre-provisioned and pinned in the maintained internal runner image;
+  no `curl | sh`, `@latest` installers or shared toolcache mutation in CI.
+- Trivy scans the local candidate for HIGH/CRITICAL vulnerabilities and secrets
+  with exit-code 1. Gitleaks redacts repository findings; dependency audits fail
+  on findings or scanner/service errors.
+- Keep `scripts/ci/container.sh`, `publish.sh` and `prune_registry.py` identical
+  to the recorded standards revision. Publication promotes the tested digest,
+  verifies latest, then retains three distinct releases. No global Docker prune
+  or automatic deployment. Review rollback requirements before live adoption.
 
 ### Python in CI — hard-won rules
 
 **Use `uv`, not `actions/setup-python`.** The runner mounts a shared toolcache volume at `/mnt/cache/appdata/ci-tool-cache`. Concurrent jobs both calling `actions/setup-python` race to install Python there and corrupt each other's pip. `uv` avoids this entirely — it manages Python in `~/.local/share/uv` which is safe for concurrent access.
 
-CI pattern for any job needing Python:
-```yaml
-- name: Install uv
-  run: |
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-- name: Set up Python 3.12
-  run: |
-    uv venv --python 3.12 backend/.venv
-    echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
-    echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
-
-- name: Install dependencies
-  run: uv pip install -e ".[dev]"
-  working-directory: backend
+CI uses the committed lockfile and the runner's Python 3.12:
+```bash
+uv sync --project backend --frozen --extra dev --python 3.12
+uv run --project backend --frozen --extra dev ruff check backend/
+uv run --project backend --frozen --extra dev mypy --ignore-missing-imports backend/
 ```
 
 Key points:
-- Use `uv pip install`, not bare `pip install -e`. The project build backend (`setuptools>=61`) is below the PEP 660 threshold (64+) that newer pip requires for editable installs. `uv pip` handles it.
-- Write `VIRTUAL_ENV` to `$GITHUB_ENV` so uv knows which venv to target in all subsequent steps.
+- Never resolve unlocked development tools during CI. Use `uv sync --frozen`
+  with the dev extra and run Python checks through `uv run --frozen --extra dev`.
+- The production image uses the same lockfile without development extras.
 - **Do not use Python 3.14 in CI.** The `actions/python-versions` release for 3.14 is broken (missing `mmap` module, pip fails to install). Stay on 3.12.
 
 **mypy must be invoked as `mypy --ignore-missing-imports backend/` from the repo root.** Running `mypy .` from `working-directory: backend` finds `backend/pyproject.toml` and applies `strict = true`, which surfaces ~400 pre-existing violations that have never been enforced. The pre-push hook also uses `--ignore-missing-imports backend/` from root — keep CI identical to the hook.

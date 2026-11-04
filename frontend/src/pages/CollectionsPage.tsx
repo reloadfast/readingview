@@ -44,7 +44,7 @@ function NewCollectionForm({ onClose }: { onClose: () => void }) {
     if (!name.trim()) return;
     create.mutate(
       { name: name.trim(), description: description.trim() || null },
-      { onSuccess: onClose },
+      { onSuccess: onClose }
     );
   };
 
@@ -116,8 +116,14 @@ function CollectionCard({
             onChange={(e) => setNameValue(e.target.value)}
             onBlur={saveRename}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); saveRename(); }
-              if (e.key === "Escape") { setNameValue(collection.name); setEditingName(false); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                saveRename();
+              }
+              if (e.key === "Escape") {
+                setNameValue(collection.name);
+                setEditingName(false);
+              }
             }}
             autoFocus
           />
@@ -131,7 +137,10 @@ function CollectionCard({
         )}
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
-            onClick={() => { setEditingName(true); setNameValue(collection.name); }}
+            onClick={() => {
+              setEditingName(true);
+              setNameValue(collection.name);
+            }}
             className="p-1.5 rounded hover:bg-surface-hover text-text-secondary hover:text-text-primary"
             title="Rename"
           >
@@ -152,7 +161,9 @@ function CollectionCard({
       )}
 
       <div className="flex items-center gap-3 text-xs text-text-secondary">
-        <span>{collection.book_count} book{collection.book_count !== 1 ? "s" : ""}</span>
+        <span>
+          {collection.book_count} book{collection.book_count !== 1 ? "s" : ""}
+        </span>
         <span>{collection.created_at}</span>
       </div>
 
@@ -200,7 +211,7 @@ function AddBookPanel({
     (b) =>
       !existingIds.has(b.id) &&
       (b.title.toLowerCase().includes(search.toLowerCase()) ||
-        b.authors.toLowerCase().includes(search.toLowerCase())),
+        b.authors.toLowerCase().includes(search.toLowerCase()))
   );
 
   const toggle = (id: string) => {
@@ -243,9 +254,7 @@ function AddBookPanel({
       </div>
 
       <div className="max-h-64 overflow-y-auto divide-y divide-border border border-border rounded-lg">
-        {isLoading && (
-          <div className="px-4 py-3 text-sm text-text-secondary">Loading library…</div>
-        )}
+        {isLoading && <div className="px-4 py-3 text-sm text-text-secondary">Loading library…</div>}
         {!isLoading && filtered.length === 0 && (
           <div className="px-4 py-3 text-sm text-text-secondary">No books found</div>
         )}
@@ -266,7 +275,12 @@ function AddBookPanel({
               iconClassName="w-4 h-4 text-text-secondary opacity-40"
             />
             <div className="flex-1 min-w-0">
-              <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+              <AbsBookLink
+                itemId={book.id}
+                className="block text-sm text-text-primary truncate hover:text-accent hover:underline"
+              >
+                {book.title}
+              </AbsBookLink>
               <p className="text-xs text-text-secondary truncate">{book.authors}</p>
             </div>
           </label>
@@ -291,13 +305,7 @@ function AddBookPanel({
 // Book row in detail view — cover art, title, author, remove confirm
 // ---------------------------------------------------------------------------
 
-function BookRow({
-  book,
-  collectionId,
-}: {
-  book: LibraryBook;
-  collectionId: number;
-}) {
+function BookRow({ book, collectionId }: { book: LibraryBook; collectionId: number }) {
   const [confirming, setConfirming] = useState(false);
   const remove = useRemoveFromCollection();
 
@@ -305,7 +313,12 @@ function BookRow({
     <div className="flex items-center gap-3 py-2.5 px-1">
       <CoverImage book={book} />
       <div className="flex-1 min-w-0">
-        <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+        <AbsBookLink
+          itemId={book.id}
+          className="block text-sm text-text-primary truncate hover:text-accent hover:underline"
+        >
+          {book.title}
+        </AbsBookLink>
         <p className="text-xs text-text-secondary truncate">{book.authors}</p>
       </div>
       <div className="flex-shrink-0">
@@ -385,9 +398,7 @@ function CollectionDetailView({
         </Button>
       </div>
 
-      {detail?.description && (
-        <p className="text-sm text-text-secondary">{detail.description}</p>
-      )}
+      {detail?.description && <p className="text-sm text-text-secondary">{detail.description}</p>}
 
       {showAddBook && (
         <AddBookPanel
@@ -435,12 +446,7 @@ export default function CollectionsPage() {
   const { data, isLoading } = useCollections();
 
   if (selectedId !== null) {
-    return (
-      <CollectionDetailView
-        collectionId={selectedId}
-        onBack={() => setSelectedId(null)}
-      />
-    );
+    return <CollectionDetailView collectionId={selectedId} onBack={() => setSelectedId(null)} />;
   }
 
   return (
@@ -457,9 +463,7 @@ export default function CollectionsPage() {
         </Button>
       </div>
 
-      {showNewForm && (
-        <NewCollectionForm onClose={() => setShowNewForm(false)} />
-      )}
+      {showNewForm && <NewCollectionForm onClose={() => setShowNewForm(false)} />}
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -471,18 +475,12 @@ export default function CollectionsPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
           <FolderOpen className="w-12 h-12 text-text-secondary opacity-30" />
           <p className="text-lg font-medium text-text-primary">No collections yet.</p>
-          <p className="text-sm text-text-secondary">
-            Create one to organise your library.
-          </p>
+          <p className="text-sm text-text-secondary">Create one to organise your library.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(data ?? []).map((c) => (
-            <CollectionCard
-              key={c.id}
-              collection={c}
-              onSelect={() => setSelectedId(c.id)}
-            />
+            <CollectionCard key={c.id} collection={c} onSelect={() => setSelectedId(c.id)} />
           ))}
         </div>
       )}

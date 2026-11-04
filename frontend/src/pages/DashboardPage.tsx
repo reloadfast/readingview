@@ -72,7 +72,12 @@ function InProgressCard({ book }: { book: LibraryBook }) {
         iconClassName="w-4 h-4 text-text-secondary opacity-40"
       />
       <div className="min-w-0 flex-1">
-        <AbsBookLink itemId={book.id} className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+        <AbsBookLink
+          itemId={book.id}
+          className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline"
+        >
+          {book.title}
+        </AbsBookLink>
         <p className="text-xs text-text-secondary truncate">
           {book.authors.split(",").map((a, i, arr) => {
             const name = a.trim();
@@ -115,7 +120,12 @@ function FinishedRow({ book }: { book: LibraryBook }) {
         iconClassName="w-4 h-4 text-text-secondary opacity-40"
       />
       <div className="min-w-0 flex-1">
-        <AbsBookLink itemId={book.id} className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+        <AbsBookLink
+          itemId={book.id}
+          className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline"
+        >
+          {book.title}
+        </AbsBookLink>
         <p className="text-xs text-text-secondary">
           {book.authors.split(",").map((a, i, arr) => {
             const name = a.trim();

@@ -1,5 +1,18 @@
 import { useState } from "react";
-import { Archive, BookMarked, Check, Copy, Download, EyeOff, HelpCircle, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  Archive,
+  BookMarked,
+  Check,
+  Copy,
+  Download,
+  EyeOff,
+  HelpCircle,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Badge, Button, Input, Select, Skeleton } from "@/components/ui";
 import {
@@ -36,7 +49,7 @@ function ReleaseDateBadge({ dateStr }: { dateStr: string | null }) {
   today.setHours(0, 0, 0, 0);
   const diffDays = Math.ceil((releaseDate.getTime() - today.getTime()) / 86_400_000);
 
-  if (diffDays <= 0)  return <Badge variant="positive">{dateStr}</Badge>;
+  if (diffDays <= 0) return <Badge variant="positive">{dateStr}</Badge>;
   if (diffDays <= 30) return <Badge variant="warning">{dateStr}</Badge>;
   return <Badge variant="neutral">{dateStr}</Badge>;
 }
@@ -66,7 +79,7 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
         release_date: dateVal || null,
         notes: notesVal || null,
       },
-      { onSuccess: () => setEditing(false) },
+      { onSuccess: () => setEditing(false) }
     );
   }
 
@@ -111,7 +124,10 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
             {release.release_date_confirmed ? (
               <Check className="w-3 h-3 text-green-500 shrink-0" aria-label="Date confirmed" />
             ) : (
-              <HelpCircle className="w-3 h-3 text-text-secondary opacity-40 shrink-0" aria-label="Date unconfirmed" />
+              <HelpCircle
+                className="w-3 h-3 text-text-secondary opacity-40 shrink-0"
+                aria-label="Date unconfirmed"
+              />
             )}
           </div>
         </td>
@@ -176,7 +192,7 @@ function ReleaseRow({ release }: { release: ReleaseOut }) {
                   "flex items-center gap-1 text-xs px-2 py-1.5 rounded-md border transition-colors",
                   confirmedVal
                     ? "border-green-500 text-green-500 bg-green-500/10"
-                    : "border-border text-text-secondary hover:border-text-secondary",
+                    : "border-border text-text-secondary hover:border-text-secondary"
                 )}
               >
                 <Check className="w-3 h-3" />
@@ -214,8 +230,8 @@ function ReleasesTab() {
   const [calendarCopied, setCalendarCopied] = useState(false);
 
   const releases = useReleases(authorFilter !== AUTHOR_ALL ? authorFilter : undefined, showHidden);
-  const tracked  = useTrackedAuthors();
-  const refresh  = useRefreshReleases();
+  const tracked = useTrackedAuthors();
+  const refresh = useRefreshReleases();
   const manual = useManualReleases();
 
   const authorOptions = [
@@ -244,11 +260,7 @@ function ReleasesTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <Select
-          options={authorOptions}
-          value={authorFilter}
-          onValueChange={setAuthorFilter}
-        />
+        <Select options={authorOptions} value={authorFilter} onValueChange={setAuthorFilter} />
         <div className="flex items-center gap-3">
           <a
             href="/api/releases/calendar.ics"
@@ -338,7 +350,9 @@ function ReleasesTab() {
               </tr>
             </thead>
             <tbody>
-              {releases.data?.map((r) => <ReleaseRow key={r.id} release={r} />)}
+              {releases.data?.map((r) => (
+                <ReleaseRow key={r.id} release={r} />
+              ))}
             </tbody>
           </table>
         </div>
@@ -349,27 +363,33 @@ function ReleasesTab() {
             Manual tracking
           </div>
           <div className="divide-y divide-border">
-            {manual.data?.filter((entry) => entry.status === "watching").map((entry) => (
-              <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text-primary">{entry.title || "Untitled release"}</p>
-                  <p className="text-xs text-text-secondary">{entry.author || "Unknown author"}</p>
+            {manual.data
+              ?.filter((entry) => entry.status === "watching")
+              .map((entry) => (
+                <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text-primary">
+                      {entry.title || "Untitled release"}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {entry.author || "Unknown author"}
+                    </p>
+                  </div>
+                  <ReleaseDateBadge dateStr={entry.release_date} />
+                  <Badge variant="neutral">{entry.status}</Badge>
+                  {hasCalendarDate(entry.release_date) && (
+                    <a
+                      href={`/api/releases/manual/${entry.id}/calendar.ics`}
+                      download={`readingview-manual-release-${entry.id}.ics`}
+                      className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+                      title="Download calendar entry"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Calendar
+                    </a>
+                  )}
                 </div>
-                <ReleaseDateBadge dateStr={entry.release_date} />
-                <Badge variant="neutral">{entry.status}</Badge>
-                {hasCalendarDate(entry.release_date) && (
-                  <a
-                    href={`/api/releases/manual/${entry.id}/calendar.ics`}
-                    download={`readingview-manual-release-${entry.id}.ics`}
-                    className="inline-flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
-                    title="Download calendar entry"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Calendar
-                  </a>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
@@ -384,7 +404,7 @@ function ReleasesTab() {
 function AddAuthorSearch({ trackedNames }: { trackedNames: Set<string> }) {
   const [q, setQ] = useState("");
   const search = useSearchAuthors(q);
-  const add    = useAddTrackedAuthor();
+  const add = useAddTrackedAuthor();
 
   return (
     <div className="space-y-2">
@@ -540,13 +560,7 @@ function manualInput(entry?: ManualRelease): ManualReleaseInput {
   };
 }
 
-function ManualReleaseEditor({
-  entry,
-  onDone,
-}: {
-  entry?: ManualRelease;
-  onDone: () => void;
-}) {
+function ManualReleaseEditor({ entry, onDone }: { entry?: ManualRelease; onDone: () => void }) {
   const [values, setValues] = useState<ManualReleaseInput>(() => manualInput(entry));
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const create = useCreateManualRelease();
@@ -571,7 +585,9 @@ function ManualReleaseEditor({
       const media = current.media ?? [];
       return {
         ...current,
-        media: media.includes(medium) ? media.filter((item) => item !== medium) : [...media, medium],
+        media: media.includes(medium)
+          ? media.filter((item) => item !== medium)
+          : [...media, medium],
       };
     });
   }
@@ -593,10 +609,28 @@ function ManualReleaseEditor({
   return (
     <div className="space-y-4 rounded-xl border border-border bg-surface p-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Input value={values.author ?? ""} onChange={(e) => setText("author", e.target.value)} placeholder="Author" />
-        <Input value={values.title ?? ""} onChange={(e) => setText("title", e.target.value)} placeholder="Book title" />
-        <Input value={values.series ?? ""} onChange={(e) => setText("series", e.target.value)} placeholder="Series" />
-        <Input type="number" step="any" value={values.series_number ?? ""} onChange={(e) => setSeriesNumber(e.target.value)} placeholder="Series number" />
+        <Input
+          value={values.author ?? ""}
+          onChange={(e) => setText("author", e.target.value)}
+          placeholder="Author"
+        />
+        <Input
+          value={values.title ?? ""}
+          onChange={(e) => setText("title", e.target.value)}
+          placeholder="Book title"
+        />
+        <Input
+          value={values.series ?? ""}
+          onChange={(e) => setText("series", e.target.value)}
+          placeholder="Series"
+        />
+        <Input
+          type="number"
+          step="any"
+          value={values.series_number ?? ""}
+          onChange={(e) => setSeriesNumber(e.target.value)}
+          placeholder="Series number"
+        />
         <Input
           value={values.release_date ?? ""}
           onChange={(e) => setText("release_date", e.target.value)}
@@ -604,8 +638,16 @@ function ManualReleaseEditor({
           pattern="\\d{4}(-\\d{2}-\\d{2})?"
           title="Use YYYY or YYYY-MM-DD"
         />
-        <Input value={values.cover_url ?? ""} onChange={(e) => setText("cover_url", e.target.value)} placeholder="Cover image URL" />
-        <Input value={values.link_url ?? ""} onChange={(e) => setText("link_url", e.target.value)} placeholder="Relevant link" />
+        <Input
+          value={values.cover_url ?? ""}
+          onChange={(e) => setText("cover_url", e.target.value)}
+          placeholder="Cover image URL"
+        />
+        <Input
+          value={values.link_url ?? ""}
+          onChange={(e) => setText("link_url", e.target.value)}
+          placeholder="Relevant link"
+        />
       </div>
       <textarea
         value={values.comments ?? ""}
@@ -616,15 +658,24 @@ function ManualReleaseEditor({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="text-xs text-text-secondary">Medium</span>
         {MEDIUMS.map((medium) => (
-          <label key={medium.value} className="flex items-center gap-1.5 text-sm text-text-secondary">
-            <input type="checkbox" checked={(values.media ?? []).includes(medium.value)} onChange={() => toggleMedium(medium.value)} />
+          <label
+            key={medium.value}
+            className="flex items-center gap-1.5 text-sm text-text-secondary"
+          >
+            <input
+              type="checkbox"
+              checked={(values.media ?? []).includes(medium.value)}
+              onChange={() => toggleMedium(medium.value)}
+            />
             {medium.label}
           </label>
         ))}
         <Select
           className="ml-auto"
           value={values.status ?? "watching"}
-          onValueChange={(status) => setValues((current) => ({ ...current, status: status as ManualRelease["status"] }))}
+          onValueChange={(status) =>
+            setValues((current) => ({ ...current, status: status as ManualRelease["status"] }))
+          }
           options={[
             { value: "watching", label: "Watching" },
             { value: "released", label: "Released" },
@@ -635,7 +686,11 @@ function ManualReleaseEditor({
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm text-text-secondary">
           <span className="mr-2">Upload cover</span>
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+          />
         </label>
         <button
           onClick={() => setValues((current) => ({ ...current, last_checked_at: Date.now() }))}
@@ -643,16 +698,24 @@ function ManualReleaseEditor({
         >
           Mark checked today
         </button>
-        {values.last_checked_at && <span className="text-xs text-text-secondary">Checked {new Date(values.last_checked_at).toLocaleDateString()}</span>}
+        {values.last_checked_at && (
+          <span className="text-xs text-text-secondary">
+            Checked {new Date(values.last_checked_at).toLocaleDateString()}
+          </span>
+        )}
         <div className="ml-auto flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onDone}>Cancel</Button>
+          <Button variant="ghost" size="sm" onClick={onDone}>
+            Cancel
+          </Button>
           <Button size="sm" disabled={pending} onClick={() => void save()} pendingText="Saving…">
             Save
           </Button>
         </div>
       </div>
       {error instanceof Error && <p className="text-sm text-red-400">{error.message}</p>}
-      <p className="text-xs text-text-secondary">Duplicates are blocked by author, title, release date, and medium.</p>
+      <p className="text-xs text-text-secondary">
+        Duplicates are blocked by author, title, release date, and medium.
+      </p>
     </div>
   );
 }
@@ -664,18 +727,42 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="flex gap-3 p-3">
-        {cover ? <img src={cover} alt="" className="h-16 w-12 rounded object-contain bg-background" /> : <div className="h-16 w-12 rounded bg-background" />}
+        {cover ? (
+          <img src={cover} alt="" className="h-16 w-12 rounded object-contain bg-background" />
+        ) : (
+          <div className="h-16 w-12 rounded bg-background" />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-text-primary">{entry.title || "Untitled release"}</p>
             <Badge variant="neutral">{entry.status}</Badge>
-            {entry.media.map((medium) => <Badge key={medium} variant="neutral">{medium}</Badge>)}
+            {entry.media.map((medium) => (
+              <Badge key={medium} variant="neutral">
+                {medium}
+              </Badge>
+            ))}
           </div>
-          <p className="text-sm text-text-secondary">{entry.author || "Unknown author"}{entry.series ? ` · ${entry.series}${entry.series_number != null ? ` #${entry.series_number}` : ""}` : ""}</p>
+          <p className="text-sm text-text-secondary">
+            {entry.author || "Unknown author"}
+            {entry.series
+              ? ` · ${entry.series}${entry.series_number != null ? ` #${entry.series_number}` : ""}`
+              : ""}
+          </p>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-text-secondary">
             <ReleaseDateBadge dateStr={entry.release_date} />
-            {entry.last_checked_at && <span>Checked {new Date(entry.last_checked_at).toLocaleDateString()}</span>}
-            {entry.link_url && <a className="text-accent hover:underline" href={entry.link_url} target="_blank" rel="noopener noreferrer">Link</a>}
+            {entry.last_checked_at && (
+              <span>Checked {new Date(entry.last_checked_at).toLocaleDateString()}</span>
+            )}
+            {entry.link_url && (
+              <a
+                className="text-accent hover:underline"
+                href={entry.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Link
+              </a>
+            )}
           </div>
         </div>
         <div className="flex items-start gap-2">
@@ -690,7 +777,9 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
               <Download className="h-3.5 w-3.5" />
             </a>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setEditing((current) => !current)}><Pencil className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditing((current) => !current)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -702,8 +791,16 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
           </Button>
         </div>
       </div>
-      {entry.comments && !editing && <p className="px-3 pb-3 text-sm text-text-secondary whitespace-pre-wrap">{entry.comments}</p>}
-      {editing && <div className="border-t border-border p-3"><ManualReleaseEditor entry={entry} onDone={() => setEditing(false)} /></div>}
+      {entry.comments && !editing && (
+        <p className="px-3 pb-3 text-sm text-text-secondary whitespace-pre-wrap">
+          {entry.comments}
+        </p>
+      )}
+      {editing && (
+        <div className="border-t border-border p-3">
+          <ManualReleaseEditor entry={entry} onDone={() => setEditing(false)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -716,21 +813,48 @@ function ManualTrackingTab() {
   const visible = (releases.data ?? []).filter(
     (entry) =>
       (showArchived || !entry.archived) &&
-      (showArchived || showHistory || entry.status === "watching"),
+      (showArchived || showHistory || entry.status === "watching")
   );
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3">
-          <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={showHistory} onChange={(e) => setShowHistory(e.target.checked)} /> Show released &amp; owned</label>
-          <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived</label>
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={showHistory}
+              onChange={(e) => setShowHistory(e.target.checked)}
+            />{" "}
+            Show released &amp; owned
+          </label>
+          <label className="flex items-center gap-2 text-sm text-text-secondary">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+            />{" "}
+            Show archived
+          </label>
         </div>
-        <Button size="sm" onClick={() => setAdding(true)}><Plus className="mr-1 h-4 w-4" />Add release</Button>
+        <Button size="sm" onClick={() => setAdding(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          Add release
+        </Button>
       </div>
       {adding && <ManualReleaseEditor onDone={() => setAdding(false)} />}
-      {releases.isLoading ? <Skeleton className="h-40 w-full rounded-xl" /> : visible.length === 0 ? (
-        <div className="py-16 text-center text-sm text-text-secondary">No manual releases yet. Add anything you want to keep an eye on.</div>
-      ) : <div className="space-y-3">{visible.map((entry) => <ManualReleaseRow key={entry.id} entry={entry} />)}</div>}
+      {releases.isLoading ? (
+        <Skeleton className="h-40 w-full rounded-xl" />
+      ) : visible.length === 0 ? (
+        <div className="py-16 text-center text-sm text-text-secondary">
+          No manual releases yet. Add anything you want to keep an eye on.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {visible.map((entry) => (
+            <ManualReleaseRow key={entry.id} entry={entry} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -54,8 +54,7 @@ export function useRemoveTrackedAuthor() {
 export function usePatchRelease() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: PatchReleaseRequest & { id: number }) =>
-      patchRelease(id, body),
+    mutationFn: ({ id, ...body }: PatchReleaseRequest & { id: number }) => patchRelease(id, body),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["releases"] });
     },

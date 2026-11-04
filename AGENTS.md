@@ -61,8 +61,7 @@ The supported persistent database is async SQLite (`DATABASE_URL`, normally unde
 Install backend dependencies with Python 3.12 and `uv` when available (CI requires it):
 
 ```bash
-uv venv --python 3.12 backend/.venv
-cd backend && uv pip install -e '.[dev]'
+uv sync --project backend --frozen --extra dev --python 3.12
 cd frontend && corepack enable && pnpm install --frozen-lockfile
 ```
 
@@ -90,6 +89,7 @@ Important: `make lint` and `backend/Makefile` run `ruff --fix` and `ruff format`
 
 ## CI and delivery
 
-- CI is `.forgejo/workflows/ci.yml`, run on Forgejo’s self-hosted runner. Use actions mirrored at `data.forgejo.org`; use `uv` rather than `actions/setup-python`.
-- The image is built from the root `Dockerfile`, smoke-tested, and pushed only on `main` to `forgejo.moseisley.es/wind/readingview` using `FORGEJO_TOKEN`.
+- CI follows Golden CI 4.0.0; `docs/ci.md` records the exact standards revision and runner/adoption prerequisites. `.forgejo/workflows/ci.yml` runs one gated job on the internal runner using a fully qualified, commit-pinned checkout action.
+- Use the committed `backend/uv.lock` with `uv sync --frozen --extra dev` and `uv run --frozen --extra dev`; frontend installs use pinned pnpm and the frozen lockfile. Runner tooling is pre-provisioned, never installed dynamically by the workflow.
+- PRs/manual runs build, smoke-test and scan the local image. Only successful main pushes publish to `forgejo.moseisley.es/wind/readingview`, injecting `FORGEJO_TOKEN` only into the publisher. The shared publisher promotes by digest and retains three distinct releases after verification. No global Docker pruning or automatic deployment.
 - Do not change deployment, registry, or CI behavior incidentally while making an application change.

@@ -32,5 +32,9 @@ export function CoverImage({
     </div>
   );
 
-  return <AbsBookLink itemId={book.id} className="block">{image}</AbsBookLink>;
+  return (
+    <AbsBookLink itemId={book.id} className="block">
+      {image}
+    </AbsBookLink>
+  );
 }

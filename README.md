@@ -100,6 +100,7 @@ See [`.env.example`](.env.example) for the full template.
 ## Documentation
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Docker, Docker Compose, reverse proxy, local dev, updating
+- **[docs/ci.md](docs/ci.md)** — CI checks, runner prerequisites, image publication and retention
 
 ## License
 

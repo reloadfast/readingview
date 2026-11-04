@@ -25,16 +25,16 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: "/",            icon: LayoutDashboard, label: "Dashboard",   end: true },
-  { to: "/library",     icon: BookOpen,        label: "Library"               },
-  { to: "/statistics",  icon: BarChart3,       label: "Statistics"            },
-  { to: "/authors",     icon: Users,           label: "Authors"               },
-  { to: "/narrators",   icon: Mic,             label: "Narrators"             },
-  { to: "/series",      icon: BookMarked,      label: "Series"                },
-  { to: "/releases",    icon: Calendar,        label: "Releases"              },
-  { to: "/collections",    icon: FolderOpen, label: "Collections"    },
-  { to: "/recommendations", icon: Sparkles,   label: "Recommendations" },
-  { to: "/settings",       icon: Settings,   label: "Settings"       },
+  { to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/library", icon: BookOpen, label: "Library" },
+  { to: "/statistics", icon: BarChart3, label: "Statistics" },
+  { to: "/authors", icon: Users, label: "Authors" },
+  { to: "/narrators", icon: Mic, label: "Narrators" },
+  { to: "/series", icon: BookMarked, label: "Series" },
+  { to: "/releases", icon: Calendar, label: "Releases" },
+  { to: "/collections", icon: FolderOpen, label: "Collections" },
+  { to: "/recommendations", icon: Sparkles, label: "Recommendations" },
+  { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
 interface SidebarProps {
@@ -55,7 +55,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         "fixed inset-y-0 left-0 z-30 flex w-56 flex-col border-r border-border bg-surface",
         "transition-transform duration-200",
         "md:static md:translate-x-0",
-        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >
       <div className="flex h-14 shrink-0 items-center border-b border-border px-4">
@@ -74,7 +74,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
                   ? "bg-surface-hover text-text-primary font-medium"
-                  : "text-text-secondary hover:bg-surface-hover hover:text-text-primary",
+                  : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
               )
             }
           >

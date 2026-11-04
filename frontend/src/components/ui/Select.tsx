@@ -23,7 +23,7 @@ export function Select({ options, value, onValueChange, placeholder, className }
           "inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-surface text-sm text-text-primary",
           "focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background",
           "data-[placeholder]:text-text-secondary",
-          className,
+          className
         )}
       >
         <RadixSelect.Value placeholder={placeholder} />

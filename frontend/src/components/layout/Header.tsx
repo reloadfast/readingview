@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/Button";
 import { refreshAbsCache } from "@/lib/api";
 
 const PAGE_TITLES: Record<string, string> = {
-  "/":            "Dashboard",
-  "/library":     "Library",
-  "/statistics":  "Statistics",
-  "/authors":     "Authors",
-  "/narrators":   "Narrators",
-  "/series":      "Series",
-  "/releases":    "Releases",
+  "/": "Dashboard",
+  "/library": "Library",
+  "/statistics": "Statistics",
+  "/authors": "Authors",
+  "/narrators": "Narrators",
+  "/series": "Series",
+  "/releases": "Releases",
   "/collections": "Collections",
-  "/settings":    "Settings",
+  "/settings": "Settings",
 };
 
 const ABS_QUERY_KEYS = ["library", "statistics", "series", "narrators", "authors"];

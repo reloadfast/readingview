@@ -1,0 +1,8 @@
+node_modules/
+dist/
+pnpm-lock.yaml
+public/openapi.json
+src/lib/api.generated.ts
+src/lib/api.schemas.ts
+vite.config.js
+vite.config.d.ts

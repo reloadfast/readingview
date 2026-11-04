@@ -1,215 +1,45 @@
-# Actions verified against data.forgejo.org as required by CLAUDE.md ("Never use actions
-# not mirrored on data.forgejo.org"). Verification date: 2026-05-08.
-#   actions/checkout@v4   → https://data.forgejo.org/actions/checkout   (v4.3.1 present)
-#   actions/setup-node@v4 → https://data.forgejo.org/actions/setup-node  (v4.4.0 present)
-# Note: actions/setup-python@v5 removed — concurrent jobs shared a mounted toolcache
-# volume and raced to install Python, corrupting each other. uv manages its own Python
-# cache (~/.local/share/uv) which handles concurrent access safely.
+# Golden CI 4.0.0 — global-standards 64ec40904a302c81c23aeb51c9de1fb2292969ba.
+# Runner prerequisites and adoption gates: docs/ci.md.
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
+  workflow_dispatch:
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  REGISTRY: forgejo.moseisley.es
-  IMAGE: forgejo.moseisley.es/wind/readingview
-
-permissions:
-  contents: read
-
+  group: ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  backend:
+  ci:
+    # Existing label on unraid-runner; provision its pinned tool image before adoption.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      IMAGE: forgejo.moseisley.es/wind/readingview
+      REGISTRY: forgejo.moseisley.es
+      REGISTRY_USERNAME: Wind
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Set up Python 3.12
-        run: |
-          uv venv --python 3.12 backend/.venv
-          echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
-
-      - name: Install dependencies
-        run: uv pip install -e ".[dev]"
-        working-directory: backend
-
-      - name: Lint
-        run: ruff check backend/
-
-      - name: Format check
-        run: ruff format --check backend/
-
-      - name: Type check
-        run: mypy --ignore-missing-imports backend/
-
-      - name: Security scan
-        run: bandit -r backend/app backend/book_recommender && pip-audit
-
-      - name: Test
-        run: pytest --cov --cov-fail-under=80
-        working-directory: backend
-
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          node-version: "22"
-
-      - name: Enable corepack
-        run: corepack enable && corepack prepare --activate
-        working-directory: frontend
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: frontend
-
-      - name: Lint
-        run: pnpm lint
-        working-directory: frontend
-
-      - name: Type check
-        run: pnpm type-check
-        working-directory: frontend
-
-      - name: Audit
-        run: pnpm audit
-        working-directory: frontend
-
-  openapi-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Set up Python 3.12
-        run: |
-          uv venv --python 3.12 backend/.venv
-          echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> $GITHUB_PATH
-          echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/backend/.venv" >> $GITHUB_ENV
-
-      - name: Install backend dependencies
-        run: uv pip install -e ".[dev]"
-        working-directory: backend
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Enable corepack
-        run: corepack enable && corepack prepare --activate
-        working-directory: frontend
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: frontend
-
-      - name: Export OpenAPI spec
+          token: ${{ github.token }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify locked dependencies and project checks
+        run: bash scripts/ci/verify.sh
+      - name: Secret and dependency checks
+        run: bash scripts/ci/security.sh
+      - name: Build, smoke-test and scan local image
+        run: bash scripts/ci/container.sh
+      - name: Publish tested image and retain three releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          SECRET_KEY: ci-openapi-check
-          DATABASE_URL: "sqlite+aiosqlite:////tmp/openapi-check.db"
-          COVER_CACHE_ENABLED: "false"
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+        run: bash scripts/ci/publish.sh
+      - name: Remove this run's local candidate
+        if: always()
         run: |
-          cd backend
-          python -c "import json,sys; sys.path.insert(0,'.'); from app.main import app; print(json.dumps(app.openapi()))" > /tmp/openapi.json
-
-      - name: Regenerate types
-        run: pnpm openapi --spec-path /tmp/openapi.json
-        working-directory: frontend
-
-      - name: Fail if api.generated.ts is out of date
-        run: |
-          git diff --exit-code frontend/src/lib/api.generated.ts \
-            || { echo "api.generated.ts is out of date — run: pnpm openapi"; exit 1; }
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: [backend, frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build image
-        run: |
-          SHA=$(git rev-parse --short HEAD)
-          docker build --build-arg GIT_SHA=${SHA} -t ${{ env.IMAGE }}:latest -t ${{ env.IMAGE }}:sha-${SHA} .
-
-      - name: Smoke test
-        run: |
-          docker rm -f smoke 2>/dev/null || true
-          docker run -d --name smoke \
-            -e SECRET_KEY=smoke-test-key \
-            ${{ env.IMAGE }}:latest
-          OK=0
-          for i in $(seq 1 60); do
-            if docker exec smoke curl -sf http://127.0.0.1:8000/api/health > /dev/null 2>&1; then
-              OK=1
-              break
-            fi
-            sleep 1
-          done
-          if [ "$OK" = "0" ]; then
-            docker logs smoke
-            exit 1
+          if [ -n "${CI_LOCAL_IMAGE:-}" ]; then
+            docker image rm "$CI_LOCAL_IMAGE" >/dev/null 2>&1 || true
           fi
-          echo "Health OK"
-          if ! docker exec smoke curl -sf http://127.0.0.1:8000/api/settings > /dev/null 2>&1; then
-            echo "ERROR: /api/settings failed — migrations likely did not run"
-            docker logs smoke
-            docker rm -f smoke
-            exit 1
-          fi
-          echo "Migrations OK"
-          docker rm -f smoke
-
-      - name: Log in to registry
-        run: echo "${{ secrets.FORGEJO_TOKEN }}" | docker login ${{ env.REGISTRY }} -u Wind --password-stdin
-
-      - name: Push image
-        run: |
-          SHA=$(git rev-parse --short HEAD)
-          SHA_IMAGE="${{ env.IMAGE }}:sha-${SHA}"
-          LATEST_IMAGE="${{ env.IMAGE }}:latest"
-
-          # Forgejo rate-limits blob upload sessions. Push the immutable SHA tag
-          # first, retrying 429s with bounded backoff.
-          for ATTEMPT in 1 2 3 4 5; do
-            if docker push "$SHA_IMAGE"; then
-              break
-            fi
-            if [ "$ATTEMPT" -eq 5 ]; then
-              echo "Image push failed after ${ATTEMPT} attempts"
-              exit 1
-            fi
-            DELAY=$((15 * (2 ** (ATTEMPT - 1))))
-            echo "Registry push failed; retrying in ${DELAY}s (attempt $((ATTEMPT + 1))/5)"
-            sleep "$DELAY"
-          done
-
-          # The Docker build emits a manifest list, which cannot be used as a
-          # docker manifest create source. After the SHA push, Docker recognizes
-          # all layers as present and this second push only publishes latest.
-          sleep 8
-          docker push "$LATEST_IMAGE"
-
-      - name: Prune images
-        if: success()
-        run: docker image prune -f

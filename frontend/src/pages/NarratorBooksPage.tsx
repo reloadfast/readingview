@@ -58,7 +58,12 @@ export default function NarratorBooksPage() {
               {data.books.map((book) => (
                 <div key={book.id} className="py-3 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <AbsBookLink itemId={book.id} className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+                    <AbsBookLink
+                      itemId={book.id}
+                      className="block text-sm font-medium text-text-primary truncate hover:text-accent hover:underline"
+                    >
+                      {book.title}
+                    </AbsBookLink>
                     {book.author && (
                       <Link
                         to={`/authors/${encodeURIComponent(book.author)}`}

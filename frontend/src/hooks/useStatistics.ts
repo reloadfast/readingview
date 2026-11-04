@@ -1,5 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAuthorNarratorAffinity, getBacklogHealth, getBookLengthPreferences, getCompletionVelocity, getDurationCompletionCorrelation, getExtraListening, getGenreCompletionCorrelation, getGoalForecast, getHeatmap, getListeningHabits, getMonthlyComparison, getRecap, getSeriesProgress, getStatistics, getStatisticsDetail, getYearlyStats } from "../lib/api";
+import {
+  getAuthorNarratorAffinity,
+  getBacklogHealth,
+  getBookLengthPreferences,
+  getCompletionVelocity,
+  getDurationCompletionCorrelation,
+  getExtraListening,
+  getGenreCompletionCorrelation,
+  getGoalForecast,
+  getHeatmap,
+  getListeningHabits,
+  getMonthlyComparison,
+  getRecap,
+  getSeriesProgress,
+  getStatistics,
+  getStatisticsDetail,
+  getYearlyStats,
+} from "../lib/api";
 
 export function useStatistics() {
   return useQuery({

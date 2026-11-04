@@ -23,10 +23,7 @@ export function Table<T>({ columns, data, className, rowKey }: TableProps<T>) {
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                className={cn(
-                  "py-3 px-4 text-left text-text-secondary font-medium",
-                  col.className
-                )}
+                className={cn("py-3 px-4 text-left text-text-secondary font-medium", col.className)}
               >
                 {col.header}
               </th>
@@ -46,9 +43,7 @@ export function Table<T>({ columns, data, className, rowKey }: TableProps<T>) {
                 >
                   {col.cell
                     ? col.cell(row)
-                    : String(
-                        (row as Record<string, unknown>)[String(col.key)] ?? ""
-                      )}
+                    : String((row as Record<string, unknown>)[String(col.key)] ?? "")}
                 </td>
               ))}
             </tr>

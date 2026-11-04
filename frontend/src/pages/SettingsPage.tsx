@@ -24,7 +24,15 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function FieldRow({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
+function FieldRow({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
@@ -35,7 +43,9 @@ function FieldRow({ label, htmlFor, children }: { label: string; htmlFor?: strin
 
 function InlineFeedback({ text, isError }: { text: string; isError?: boolean }) {
   return (
-    <p className={`text-xs mt-1 ${isError ? "text-red-500" : "text-green-600 dark:text-green-400"}`}>
+    <p
+      className={`text-xs mt-1 ${isError ? "text-red-500" : "text-green-600 dark:text-green-400"}`}
+    >
       {text}
     </p>
   );
@@ -51,7 +61,12 @@ function useSavedFeedback() {
     timer.current = setTimeout(() => setSaved(false), 3000);
   };
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
 
   return { saved, triggerSaved };
 }
@@ -135,20 +150,13 @@ function AbsSection({ settings }: { settings: SettingsRead }) {
         >
           Test Connection
         </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={update.isPending}
-          pendingText="Saving…"
-        >
+        <Button size="sm" onClick={handleSave} disabled={update.isPending} pendingText="Saving…">
           Save
         </Button>
         {saved && <InlineFeedback text="Saved." />}
       </div>
 
-      {testStatus && (
-        <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />
-      )}
+      {testStatus && <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />}
     </section>
   );
 }
@@ -175,7 +183,10 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
     setTestStatus(null);
     try {
       const res = await testNotifications();
-      setTestStatus({ ok: res.ok, msg: res.ok ? "Notification sent." : (res.error ?? "Delivery failed") });
+      setTestStatus({
+        ok: res.ok,
+        msg: res.ok ? "Notification sent." : (res.error ?? "Delivery failed"),
+      });
     } catch (e) {
       setTestStatus({ ok: false, msg: String(e) });
     } finally {
@@ -200,7 +211,9 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
 
       <div className="flex items-center gap-3">
         <Switch id="notif-enabled" checked={enabled} onCheckedChange={setEnabled} />
-        <Label htmlFor="notif-enabled" className="cursor-pointer">Enable notifications</Label>
+        <Label htmlFor="notif-enabled" className="cursor-pointer">
+          Enable notifications
+        </Label>
       </div>
 
       <div className={`space-y-4 ${!enabled ? "opacity-50 pointer-events-none" : ""}`}>
@@ -261,20 +274,13 @@ function NotificationsSection({ settings }: { settings: SettingsRead }) {
         >
           Test Connection
         </Button>
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={update.isPending}
-          pendingText="Saving…"
-        >
+        <Button size="sm" onClick={handleSave} disabled={update.isPending} pendingText="Saving…">
           Save
         </Button>
         {saved && <InlineFeedback text="Saved." />}
       </div>
 
-      {testStatus && (
-        <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />
-      )}
+      {testStatus && <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />}
     </section>
   );
 }
@@ -305,17 +311,13 @@ function ReleaseTrackerSection({ settings }: { settings: SettingsRead }) {
           onChange={(e) => setCron(e.target.value)}
         />
         <p className="text-xs text-text-secondary">
-          Standard 5-field cron expression (minute hour day month weekday). Default: daily at 06:00 UTC.
+          Standard 5-field cron expression (minute hour day month weekday). Default: daily at 06:00
+          UTC.
         </p>
       </FieldRow>
 
       <div className="flex items-center gap-3">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={update.isPending}
-          pendingText="Saving…"
-        >
+        <Button size="sm" onClick={handleSave} disabled={update.isPending} pendingText="Saving…">
           Save
         </Button>
         {saved && <InlineFeedback text="Saved." />}
@@ -354,7 +356,7 @@ function RecommenderSection({ settings }: { settings: SettingsRead }) {
         recommender_min_similarity: minSim,
         recommender_explanations_enabled: explanations,
       },
-      { onSuccess: triggerSaved },
+      { onSuccess: triggerSaved }
     );
   };
 
@@ -364,16 +366,14 @@ function RecommenderSection({ settings }: { settings: SettingsRead }) {
 
       <div className="flex items-center gap-3">
         <Switch id="rec-enabled" checked={enabled} onCheckedChange={setEnabled} />
-        <Label htmlFor="rec-enabled" className="cursor-pointer">Enable recommender</Label>
+        <Label htmlFor="rec-enabled" className="cursor-pointer">
+          Enable recommender
+        </Label>
       </div>
 
       <div className={`space-y-4 ${!enabled ? "opacity-50 pointer-events-none" : ""}`}>
         <FieldRow label="Vector backend" htmlFor="rec-backend">
-          <Select
-            options={VECTOR_BACKEND_OPTIONS}
-            value={backend}
-            onValueChange={setBackend}
-          />
+          <Select options={VECTOR_BACKEND_OPTIONS} value={backend} onValueChange={setBackend} />
         </FieldRow>
 
         <FieldRow label="Embedding model" htmlFor="rec-embed">
@@ -420,19 +420,17 @@ function RecommenderSection({ settings }: { settings: SettingsRead }) {
             onCheckedChange={setExplanations}
             disabled={!enabled}
           />
-          <Label htmlFor="rec-explanations" className={`cursor-pointer ${!enabled ? "opacity-50" : ""}`}>
+          <Label
+            htmlFor="rec-explanations"
+            className={`cursor-pointer ${!enabled ? "opacity-50" : ""}`}
+          >
             Generate explanations
           </Label>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={update.isPending}
-          pendingText="Saving…"
-        >
+        <Button size="sm" onClick={handleSave} disabled={update.isPending} pendingText="Saving…">
           Save
         </Button>
         {saved && <InlineFeedback text="Saved." />}
@@ -460,7 +458,11 @@ function LlmSection({ settings }: { settings: SettingsRead }) {
   const [apiKey, setApiKey] = useState("");
   const [model, setModel] = useState(settings.llm_model ?? "");
 
-  const [testStatus, setTestStatus] = useState<{ ok: boolean; msg: string; models?: string[] } | null>(null);
+  const [testStatus, setTestStatus] = useState<{
+    ok: boolean;
+    msg: string;
+    models?: string[];
+  } | null>(null);
   const [testing, setTesting] = useState(false);
 
   const needsApiKey = llmType === "ollama_bearer" || llmType === "openai";
@@ -477,7 +479,11 @@ function LlmSection({ settings }: { settings: SettingsRead }) {
       });
       if (res.ok) {
         const modelList = res.models ?? [];
-        setTestStatus({ ok: true, msg: `Connected — ${modelList.length} model(s) available`, models: modelList });
+        setTestStatus({
+          ok: true,
+          msg: `Connected — ${modelList.length} model(s) available`,
+          models: modelList,
+        });
       } else {
         setTestStatus({ ok: false, msg: res.error ?? "Connection failed" });
       }
@@ -504,11 +510,7 @@ function LlmSection({ settings }: { settings: SettingsRead }) {
 
       {/* Step 1 — type */}
       <FieldRow label="LLM type" htmlFor="llm-type">
-        <Select
-          options={LLM_TYPE_OPTIONS}
-          value={llmType}
-          onValueChange={setLlmType}
-        />
+        <Select options={LLM_TYPE_OPTIONS} value={llmType} onValueChange={setLlmType} />
       </FieldRow>
 
       {/* Step 2 — base URL */}
@@ -547,9 +549,7 @@ function LlmSection({ settings }: { settings: SettingsRead }) {
         Test Connection
       </Button>
 
-      {testStatus && (
-        <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />
-      )}
+      {testStatus && <InlineFeedback text={testStatus.msg} isError={!testStatus.ok} />}
 
       {/* Step 5 — model chips */}
       {testStatus?.ok && testStatus.models && testStatus.models.length > 0 && (
@@ -582,12 +582,7 @@ function LlmSection({ settings }: { settings: SettingsRead }) {
       </FieldRow>
 
       <div className="flex items-center gap-3">
-        <Button
-          size="sm"
-          onClick={handleSave}
-          disabled={update.isPending}
-          pendingText="Saving…"
-        >
+        <Button size="sm" onClick={handleSave} disabled={update.isPending} pendingText="Saving…">
           Save
         </Button>
         {saved && <InlineFeedback text="Saved." />}
@@ -657,19 +652,12 @@ function BackupSection() {
             accept=".tar.gz"
             className="text-sm text-text-secondary file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-border file:bg-surface file:text-xs file:text-text-primary file:cursor-pointer hover:file:bg-surface-hover"
           />
-          <Button
-            size="sm"
-            onClick={handleRestore}
-            disabled={uploading}
-            pendingText="Restoring…"
-          >
+          <Button size="sm" onClick={handleRestore} disabled={uploading} pendingText="Restoring…">
             <Upload className="w-4 h-4 mr-1.5" />
             Restore
           </Button>
         </div>
-        {restoreStatus && (
-          <InlineFeedback text={restoreStatus.msg} isError={!restoreStatus.ok} />
-        )}
+        {restoreStatus && <InlineFeedback text={restoreStatus.msg} isError={!restoreStatus.ok} />}
       </div>
     </section>
   );
@@ -683,9 +671,7 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useSettings();
 
   if (isLoading || !settings) {
-    return (
-      <div className="p-6 text-sm text-text-secondary">Loading settings…</div>
-    );
+    return <div className="p-6 text-sm text-text-secondary">Loading settings…</div>;
   }
 
   return (

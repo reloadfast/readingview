@@ -61,11 +61,7 @@ export function WebSocketProvider({
     };
   }, [queryClient]);
 
-  return (
-    <WebSocketContext.Provider value={{ connected }}>
-      {children}
-    </WebSocketContext.Provider>
-  );
+  return <WebSocketContext.Provider value={{ connected }}>{children}</WebSocketContext.Provider>;
 }
 
 export function useWebSocket(): WebSocketContextValue {

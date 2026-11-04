@@ -1,0 +1,16 @@
+title = "ReadingView repository secret scan"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated dependencies and local build/test data (not source configuration)"
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''^frontend/dist/''',
+  '''(^|/)__pycache__/''',
+  '''(^|/)\.pytest_cache/''',
+  '''(^|/)\.mypy_cache/''',
+  '''(^|/)\.ruff_cache/''',
+]

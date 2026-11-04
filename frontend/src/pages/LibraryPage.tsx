@@ -95,9 +95,7 @@ function SimilarRecCard({ rec }: { rec: Recommendation }) {
 
 function SimilarSlideOver({ book }: { book: LibraryBook }) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useRecommendations(
-    open ? { book_ids: [book.id] } : undefined,
-  );
+  const { data, isLoading } = useRecommendations(open ? { book_ids: [book.id] } : undefined);
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -121,7 +119,12 @@ function SimilarSlideOver({ book }: { book: LibraryBook }) {
               <Dialog.Title className="text-sm font-semibold text-text-primary">
                 Similar to
               </Dialog.Title>
-              <AbsBookLink itemId={book.id} className="block text-xs text-text-secondary line-clamp-1 mt-0.5 hover:text-accent hover:underline">{book.title}</AbsBookLink>
+              <AbsBookLink
+                itemId={book.id}
+                className="block text-xs text-text-secondary line-clamp-1 mt-0.5 hover:text-accent hover:underline"
+              >
+                {book.title}
+              </AbsBookLink>
             </div>
             <Dialog.Close asChild>
               <button className="text-text-secondary hover:text-text-primary ml-4 shrink-0">
@@ -147,7 +150,9 @@ function SimilarSlideOver({ book }: { book: LibraryBook }) {
               <div className="text-center py-12 text-text-secondary">
                 <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No similar books found.</p>
-                <p className="text-xs mt-1 opacity-70">Try ingesting more books via the Recommendations page.</p>
+                <p className="text-xs mt-1 opacity-70">
+                  Try ingesting more books via the Recommendations page.
+                </p>
               </div>
             )}
             {data?.map((rec) => (
@@ -205,7 +210,9 @@ function NotesDialog({ book }: { book: LibraryBook }) {
         >
           <div className="flex items-start justify-between mb-3">
             <Dialog.Title className="text-sm font-semibold text-text-primary line-clamp-2 pr-4">
-              <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">{book.title}</AbsBookLink>
+              <AbsBookLink itemId={book.id} className="hover:text-accent hover:underline">
+                {book.title}
+              </AbsBookLink>
             </Dialog.Title>
             <Dialog.Close asChild>
               <button className="text-text-secondary hover:text-text-primary shrink-0">
@@ -255,7 +262,12 @@ function BookCard({ book }: { book: LibraryBook }) {
         book={book}
         className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center"
       />
-      <AbsBookLink itemId={book.id} className="text-sm font-medium text-text-primary line-clamp-2 hover:text-accent hover:underline">{book.title}</AbsBookLink>
+      <AbsBookLink
+        itemId={book.id}
+        className="text-sm font-medium text-text-primary line-clamp-2 hover:text-accent hover:underline"
+      >
+        {book.title}
+      </AbsBookLink>
       <p className="text-xs text-text-secondary line-clamp-1">
         {book.authors.split(",").map((a, i, arr) => {
           const name = a.trim();
@@ -309,7 +321,9 @@ function BookCard({ book }: { book: LibraryBook }) {
               Done
             </Badge>
           ) : remaining != null ? (
-            <span className="text-xs text-text-secondary">{formatDuration(remaining)} remaining</span>
+            <span className="text-xs text-text-secondary">
+              {formatDuration(remaining)} remaining
+            </span>
           ) : null}
         </>
       )}
@@ -367,7 +381,9 @@ export default function LibraryPage() {
 
   const tab = searchParams.get("tab") ?? "all";
   const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const sort = (searchParams.get("sort") ?? settings?.library_sort_default ?? "title") as NonNullable<LibraryParams["sort"]>;
+  const sort = (searchParams.get("sort") ??
+    settings?.library_sort_default ??
+    "title") as NonNullable<LibraryParams["sort"]>;
   const reverse = searchParams.get("reverse") === "true";
   const urlSearch = searchParams.get("search") ?? "";
 
@@ -384,7 +400,7 @@ export default function LibraryPage() {
           next.set("page", "1");
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     }, 300);
     return () => clearTimeout(t);
@@ -418,7 +434,7 @@ export default function LibraryPage() {
         next.delete("page");
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }
 
@@ -430,7 +446,7 @@ export default function LibraryPage() {
         next.set("page", "1");
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }
 
@@ -441,7 +457,7 @@ export default function LibraryPage() {
         next.set("page", String(p));
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }
 
@@ -454,7 +470,7 @@ export default function LibraryPage() {
         next.set("page", "1");
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }
 
@@ -496,11 +512,7 @@ export default function LibraryPage() {
             </div>
             {tab === "all" && (
               <div className="flex items-center gap-1">
-                <Select
-                  options={SORT_OPTIONS}
-                  value={sort}
-                  onValueChange={setSort}
-                />
+                <Select options={SORT_OPTIONS} value={sort} onValueChange={setSort} />
                 <button
                   type="button"
                   onClick={toggleReverse}
@@ -519,8 +531,16 @@ export default function LibraryPage() {
                   type="button"
                   onClick={setDefaultSort}
                   disabled={updateSettings.isPending}
-                  title={settings?.library_sort_default === sort ? "Current default sort" : "Set as default sort"}
-                  aria-label={settings?.library_sort_default === sort ? "Current default sort" : "Set as default sort"}
+                  title={
+                    settings?.library_sort_default === sort
+                      ? "Current default sort"
+                      : "Set as default sort"
+                  }
+                  aria-label={
+                    settings?.library_sort_default === sort
+                      ? "Current default sort"
+                      : "Set as default sort"
+                  }
                   className={`p-2 rounded-md border border-border transition-colors disabled:opacity-40 ${
                     settings?.library_sort_default === sort
                       ? "text-amber-400 bg-amber-400/10"

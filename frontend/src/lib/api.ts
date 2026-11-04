@@ -110,7 +110,7 @@ export type ExtraListening = components["schemas"]["ExtraListening"];
 class ApiError extends Error {
   constructor(
     public status: number,
-    message: string,
+    message: string
   ) {
     super(message);
     this.name = "ApiError";
@@ -228,7 +228,9 @@ export function getGenreCompletionCorrelation(): Promise<GenreCompletionCorrelat
   return apiFetch("/statistics/genre-completion");
 }
 
-export function getDurationCompletionCorrelation(year: string): Promise<DurationCompletionCorrelation> {
+export function getDurationCompletionCorrelation(
+  year: string
+): Promise<DurationCompletionCorrelation> {
   return apiFetch(`/statistics/duration-completion?year=${encodeURIComponent(year)}`);
 }
 
@@ -314,7 +316,6 @@ export function refreshReleases(): Promise<RefreshResult> {
   return apiFetch("/releases/refresh", { method: "POST" });
 }
 
-
 export function patchRelease(id: number, body: PatchReleaseRequest): Promise<ReleaseOut> {
   return apiFetch(`/releases/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 }
@@ -367,10 +368,7 @@ export function createManualRelease(body: ManualReleaseInput): Promise<ManualRel
   return apiFetch("/releases/manual", { method: "POST", body: JSON.stringify(body) });
 }
 
-export function updateManualRelease(
-  id: number,
-  body: ManualReleaseInput,
-): Promise<ManualRelease> {
+export function updateManualRelease(id: number, body: ManualReleaseInput): Promise<ManualRelease> {
   return apiFetch(`/releases/manual/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 }
 
@@ -538,7 +536,6 @@ export function setGoal(year: number, target_books: number): Promise<ReadingGoal
 // ---------------------------------------------------------------------------
 // Notes
 // ---------------------------------------------------------------------------
-
 
 export function getNote(absItemId: string): Promise<NoteOut> {
   return apiFetch(`/notes/${encodeURIComponent(absItemId)}`);

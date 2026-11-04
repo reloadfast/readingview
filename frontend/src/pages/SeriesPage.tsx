@@ -10,11 +10,7 @@ import type { SeriesSummary } from "@/lib/api";
 
 function ProgressBar({ percent }: { percent: number }) {
   const fill =
-    percent === 100
-      ? "bg-accent-positive"
-      : percent > 0
-        ? "bg-accent-warning"
-        : "bg-border";
+    percent === 100 ? "bg-accent-positive" : percent > 0 ? "bg-accent-warning" : "bg-border";
 
   return (
     <div
@@ -24,7 +20,10 @@ function ProgressBar({ percent }: { percent: number }) {
       aria-valuemax={100}
       className="h-1.5 w-full rounded-full bg-surface-hover overflow-hidden"
     >
-      <div className={`h-full rounded-full transition-all ${fill}`} style={{ width: `${percent}%` }} />
+      <div
+        className={`h-full rounded-full transition-all ${fill}`}
+        style={{ width: `${percent}%` }}
+      />
     </div>
   );
 }
@@ -78,7 +77,10 @@ function SeriesDetailPanel({ name }: { name: string }) {
       {data.books.map((book) => (
         <div key={book.id} className="py-2 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">
+            <AbsBookLink
+              itemId={book.id}
+              className="block text-sm text-text-primary truncate hover:text-accent hover:underline"
+            >
               {book.sequence ? `${book.sequence}. ` : ""}
               {book.title}
             </AbsBookLink>
@@ -135,14 +137,14 @@ type SortKey = "completion" | "title" | "count";
 
 const SORT_OPTIONS = [
   { value: "completion", label: "Completion %" },
-  { value: "title",      label: "Title A–Z" },
-  { value: "count",      label: "Book Count" },
+  { value: "title", label: "Title A–Z" },
+  { value: "count", label: "Book Count" },
 ];
 
 function sortSeries(data: SeriesSummary[], key: SortKey): SeriesSummary[] {
   return [...data].sort((a, b) => {
     if (key === "completion") return b.percent_complete - a.percent_complete;
-    if (key === "title")      return a.name.localeCompare(b.name);
+    if (key === "title") return a.name.localeCompare(b.name);
     return b.total - a.total;
   });
 }
@@ -161,11 +163,7 @@ export default function SeriesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-text-primary">Series</h1>
-        <Select
-          options={SORT_OPTIONS}
-          value={sort}
-          onValueChange={(v) => setSort(v as SortKey)}
-        />
+        <Select options={SORT_OPTIONS} value={sort} onValueChange={(v) => setSort(v as SortKey)} />
       </div>
 
       {isLoading ? (

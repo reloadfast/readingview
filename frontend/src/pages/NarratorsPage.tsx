@@ -46,14 +46,19 @@ function NarratorDetailPanel({ name }: { name: string }) {
       {data.books.map((book) => (
         <div key={book.id} className="py-2 flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <AbsBookLink itemId={book.id} className="block text-sm text-text-primary truncate hover:text-accent hover:underline">{book.title}</AbsBookLink>
+            <AbsBookLink
+              itemId={book.id}
+              className="block text-sm text-text-primary truncate hover:text-accent hover:underline"
+            >
+              {book.title}
+            </AbsBookLink>
             <Link
-          to={`/authors/${encodeURIComponent(book.author)}`}
-          className="text-xs text-text-secondary hover:text-accent hover:underline"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {book.author}
-        </Link>
+              to={`/authors/${encodeURIComponent(book.author)}`}
+              className="text-xs text-text-secondary hover:text-accent hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {book.author}
+            </Link>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-xs text-text-secondary">{book.duration_formatted}</span>
@@ -85,9 +90,7 @@ function NarratorCard({ narrator }: { narrator: NarratorSummary }) {
             <span className="text-xs text-text-secondary">
               {narrator.book_count} book{narrator.book_count !== 1 ? "s" : ""}
             </span>
-            <span className="text-xs text-text-secondary">
-              {narrator.total_hours.toFixed(1)}h
-            </span>
+            <span className="text-xs text-text-secondary">{narrator.total_hours.toFixed(1)}h</span>
             {narrator.finished_count > 0 && (
               <span className="text-xs text-text-secondary">
                 {narrator.finished_count} finished
@@ -119,9 +122,7 @@ function EmptyState({ filtered }: { filtered: boolean }) {
         {filtered ? "No narrators match your search" : "No narrators found"}
       </p>
       {!filtered && (
-        <p className="text-sm text-text-secondary">
-          Narrators from your library will appear here.
-        </p>
+        <p className="text-sm text-text-secondary">Narrators from your library will appear here.</p>
       )}
     </div>
   );

@@ -7,9 +7,9 @@ const badgeVariants = cva(
     variants: {
       variant: {
         positive: "bg-accent-positive/15 text-accent-positive",
-        warning:  "bg-accent-warning/15 text-accent-warning",
-        danger:   "bg-accent-danger/15 text-accent-danger",
-        neutral:  "border border-border text-text-secondary",
+        warning: "bg-accent-warning/15 text-accent-warning",
+        danger: "bg-accent-danger/15 text-accent-danger",
+        neutral: "border border-border text-text-secondary",
       },
     },
     defaultVariants: {
@@ -19,11 +19,8 @@ const badgeVariants = cva(
 );
 
 interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+  extends React.HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
 export function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <span className={cn(badgeVariants({ variant, className }))} {...props} />
-  );
+  return <span className={cn(badgeVariants({ variant, className }))} {...props} />;
 }

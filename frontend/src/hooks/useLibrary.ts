@@ -18,7 +18,6 @@ export function useInProgress() {
   });
 }
 
-
 export function useBook(id: string) {
   return useQuery({
     queryKey: ["library", id],

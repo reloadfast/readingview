@@ -26,14 +26,17 @@ if (useLocalSpec) {
   // Spec provided externally — run openapi-typescript to a temp file and diff
   const tmpOut = join(__dirname, "../public/api.generated.ts.tmp");
   try {
-    execSync(
-      `npx openapi-typescript "${process.argv[specFlagIndex + 1]}" -o ${tmpOut}`,
-      { stdio: "inherit" }
-    );
+    execSync(`npx openapi-typescript "${process.argv[specFlagIndex + 1]}" -o ${tmpOut}`, {
+      stdio: "inherit",
+    });
     const current = JSON.parse(readFileSync(specPath, "utf-8"));
     const expected = JSON.parse(readFileSync(process.argv[specFlagIndex + 1], "utf-8"));
-    const currentSpecHash = JSON.stringify(current).split("\n").reduce((a, l) => a + l.length, 0);
-    const expectedSpecHash = JSON.stringify(expected).split("\n").reduce((a, l) => a + l.length, 0);
+    const currentSpecHash = JSON.stringify(current)
+      .split("\n")
+      .reduce((a, l) => a + l.length, 0);
+    const expectedSpecHash = JSON.stringify(expected)
+      .split("\n")
+      .reduce((a, l) => a + l.length, 0);
     if (currentSpecHash !== expectedSpecHash) {
       console.error("OpenAPI spec has changed — run `pnpm openapi` to regenerate types.");
       process.exit(1);

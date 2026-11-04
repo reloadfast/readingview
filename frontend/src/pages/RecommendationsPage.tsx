@@ -1,16 +1,7 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import * as Tabs from "@radix-ui/react-tabs";
-import {
-  Sparkles,
-  BookOpen,
-  ThumbsUp,
-  ThumbsDown,
-  X,
-  Search,
-  Settings,
-  Plus,
-} from "lucide-react";
+import { Sparkles, BookOpen, ThumbsUp, ThumbsDown, X, Search, Settings, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AbsBookLink, Input, Skeleton } from "@/components/ui";
 import { useLibrary } from "@/hooks/useLibrary";
@@ -24,10 +15,7 @@ import type { LibraryBook, Recommendation, RecommendationParams } from "@/lib/ap
 
 function OLCover({ coverId, title }: { coverId: number | null; title: string }) {
   const [errored, setErrored] = useState(false);
-  const src =
-    coverId && !errored
-      ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
-      : null;
+  const src = coverId && !errored ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null;
   return (
     <div className="aspect-[2/3] bg-surface-hover rounded-lg overflow-hidden flex items-center justify-center shrink-0 w-20">
       {src ? (
@@ -153,7 +141,10 @@ function ResultsGrid({ params }: { params: RecommendationParams | null }) {
     return (
       <div className="mt-6 text-center py-12 text-text-secondary">
         <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-30" />
-        <p className="text-sm">No recommendations found. Use Ingest book to add candidate titles, or select fewer source books.</p>
+        <p className="text-sm">
+          No recommendations found. Use Ingest book to add candidate titles, or select fewer source
+          books.
+        </p>
       </div>
     );
   }
@@ -178,13 +169,13 @@ function BookCheckbox({
 }) {
   return (
     <label className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-hover cursor-pointer">
-      <input
-        type="checkbox"
-        checked={selected}
-        onChange={onToggle}
-        className="accent-accent"
-      />
-      <AbsBookLink itemId={book.id} className="text-sm text-text-primary line-clamp-1 flex-1 hover:text-accent hover:underline">{book.title}</AbsBookLink>
+      <input type="checkbox" checked={selected} onChange={onToggle} className="accent-accent" />
+      <AbsBookLink
+        itemId={book.id}
+        className="text-sm text-text-primary line-clamp-1 flex-1 hover:text-accent hover:underline"
+      >
+        {book.title}
+      </AbsBookLink>
       <span className="text-xs text-text-secondary shrink-0 line-clamp-1">{book.authors}</span>
     </label>
   );
@@ -197,10 +188,18 @@ function IngestDialog() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const body = Object.fromEntries(
-      Object.entries(form).filter(([, v]) => v.trim() !== ""),
-    ) as { isbn?: string; title?: string; author?: string; work_key?: string };
-    mutate(body, { onSuccess: () => { setOpen(false); setForm({ isbn: "", title: "", author: "", work_key: "" }); } });
+    const body = Object.fromEntries(Object.entries(form).filter(([, v]) => v.trim() !== "")) as {
+      isbn?: string;
+      title?: string;
+      author?: string;
+      work_key?: string;
+    };
+    mutate(body, {
+      onSuccess: () => {
+        setOpen(false);
+        setForm({ isbn: "", title: "", author: "", work_key: "" });
+      },
+    });
   }
 
   return (
@@ -234,11 +233,7 @@ function IngestDialog() {
                   value={form[field]}
                   onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
                   placeholder={
-                    field === "work_key"
-                      ? "/works/OL123W"
-                      : field === "isbn"
-                      ? "9780316129084"
-                      : ""
+                    field === "work_key" ? "/works/OL123W" : field === "isbn" ? "9780316129084" : ""
                   }
                 />
               </div>
@@ -250,10 +245,7 @@ function IngestDialog() {
             )}
             <button
               type="submit"
-              disabled={
-                isPending ||
-                !Object.values(form).some((v) => v.trim() !== "")
-              }
+              disabled={isPending || !Object.values(form).some((v) => v.trim() !== "")}
               className="w-full py-2 text-sm rounded-lg bg-accent text-white hover:opacity-90 disabled:opacity-40"
             >
               {isPending ? "Ingesting…" : "Ingest"}
@@ -274,9 +266,7 @@ export default function RecommendationsPage() {
   const [submittedParams, setSubmittedParams] = useState<RecommendationParams | null>(null);
 
   const allBooks = useLibrary({ sort: "finished", limit: 200 });
-  const finishedBooks = (allBooks.data ?? []).filter(
-    (b) => b.progress?.is_finished,
-  );
+  const finishedBooks = (allBooks.data ?? []).filter((b) => b.progress?.is_finished);
   const filteredBooks = finishedBooks.filter((b) => {
     if (!bookSearch) return true;
     const q = bookSearch.toLowerCase();
@@ -285,7 +275,7 @@ export default function RecommendationsPage() {
 
   function toggleBook(id: string) {
     setSelectedBookIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   }
 
@@ -317,7 +307,8 @@ export default function RecommendationsPage() {
           <Sparkles className="w-10 h-10 mx-auto mb-3 text-text-secondary opacity-40" />
           <p className="text-sm font-medium text-text-primary mb-1">Recommender not enabled</p>
           <p className="text-xs text-text-secondary mb-4">
-            Configure and enable the AI book recommender in Settings to get personalised suggestions.
+            Configure and enable the AI book recommender in Settings to get personalised
+            suggestions.
           </p>
           <Link
             to="/settings"
@@ -348,10 +339,7 @@ export default function RecommendationsPage() {
         <IngestDialog />
       </div>
 
-      <Tabs.Root
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "books" | "prompt")}
-      >
+      <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as "books" | "prompt")}>
         <Tabs.List className="flex gap-1 bg-surface rounded-lg p-1 w-fit">
           <Tabs.Trigger
             value="books"

@@ -76,3 +76,7 @@ markers = [
 [tool.bandit]
 exclude_dirs = ["venv", "alembic", "tests"]
 skips = []
+
+[tool.coverage.run]
+# Async SQLAlchemy switches greenlets inside transactions; trace those frames.
+concurrency = ["greenlet", "thread"]

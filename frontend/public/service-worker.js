@@ -8,9 +8,11 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((names) =>
-      Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))),
-    ),
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)))
+      )
   );
   self.clients.claim();
 });
@@ -18,7 +20,11 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) {
+  if (
+    request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/")
+  ) {
     return;
   }
 
@@ -42,7 +48,7 @@ self.addEventListener("fetch", (event) => {
             void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return response;
-        }),
-    ),
+        })
+    )
   );
 });
