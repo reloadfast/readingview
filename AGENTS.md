@@ -22,7 +22,7 @@ frontend/src/lib/     API client and generated OpenAPI schema types
 .forgejo/workflows/   Forgejo Actions CI (not .github/workflows)
 ```
 
-Production is one Docker image: Node 22 builds the SPA; Python 3.12 runs FastAPI. At start, `entrypoint.sh` applies `alembic upgrade head`, then starts `backend.app.main:app`. FastAPI serves `frontend/dist` and uses `/api` for API/WebSocket traffic. Development runs FastAPI on `:8000` and Vite on `:5173`; Vite proxies `/api` to the backend.
+Production is one Docker image: Node 24 builds the SPA; Python 3.12 runs FastAPI. At start, `entrypoint.sh` applies `alembic upgrade head`, then starts `backend.app.main:app`. FastAPI serves `frontend/dist` and uses `/api` for API/WebSocket traffic. Development runs FastAPI on `:8000` and Vite on `:5173`; Vite proxies `/api` to the backend.
 
 The supported persistent database is async SQLite (`DATABASE_URL`, normally under `/data`). Add an Alembic revision for every persistent-model/schema change; do not rely on `Base.metadata.create_all`.
 

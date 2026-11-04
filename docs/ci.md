@@ -76,7 +76,7 @@ tool versions in its inventory. This repository cannot establish that mapping
 from workflow source alone.
 
 The maintained image must supply Python 3.12 (and Python 3.12+ as `python3` for
-retention), uv 0.10.0, Node 22.12+, pnpm 10.32.1, Git, Bash, curl, jq, Docker CLI
+retention), uv 0.10.0, Node 24, pnpm 10.32.1, Git, Bash, curl, jq, Docker CLI
 with Buildx supporting `imagetools create --prefer-index=false`, Gitleaks with
 `dir` and `[[allowlists]]` support, and Trivy. Infrastructure must pin the scanner
 versions/images and verify database downloads or internal mirrors. There are no
@@ -87,6 +87,10 @@ Checkout is pinned to the mirrored actions/checkout v4.3.1 commit
 `34e114876b0b11c390a56381ad16ebd13914f8d5`, whose action metadata uses Node 20;
 the Forgejo runner must also support that action runtime. The action uses the
 automatic workflow token, full history and `persist-credentials: false`.
+
+The first live run reported Node 24.19.0. The frontend manifest and CI guard now
+require Node 24, and the Docker frontend builder uses `node:24.19.0-slim` to
+match that runner baseline. No runtime installer is added to the workflow.
 
 Verify internal Forgejo TLS, REST API routing, DinD DNS, default-builder access
 and the centrally managed Docker Hub pull mirror on the actual runner. No
@@ -155,6 +159,9 @@ production restart or remote canary is performed by the source adaptation.
 - Node 22.21.1 / pnpm 10.32.1: frontend formatting, lint, types, five Vitest
   tests and production build pass. pnpm audit passes the HIGH/CRITICAL gate;
   two MODERATE findings remain below that configured threshold.
+- After aligning with the live runner's Node 24.19.0, the complete verification
+  adapter passes again, including frozen installs, backend/frontend checks and
+  OpenAPI consistency. Node 24 is now the required frontend baseline.
 - Python 3.12 OpenAPI output generates byte-identical committed API types.
 - All 30 upstream offline publication/retention checks pass against the copied
   shared scripts, which also match upstream byte-for-byte. Workflow structure,

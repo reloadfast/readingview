@@ -77,7 +77,7 @@ readingview/
 │   ├── alembic/               # Database migrations
 │   └── pyproject.toml         # Dependencies
 ├── frontend/                  # React + Vite SPA
-├── Dockerfile                 # Multi-stage build (Python 3.12 + Node 22)
+├── Dockerfile                 # Multi-stage build (Python 3.12 + Node 24)
 ├── docker-compose.yml         # Production compose
 └── .env.example               # Bootstrap env vars
 ```

@@ -81,7 +81,7 @@ readingview/
 ├── frontend/                  # React + Vite SPA
 │   ├── src/                   # Component source
 │   └── dist/                  # Built assets (served by FastAPI, gitignored)
-├── Dockerfile                 # Multi-stage build (Python 3.12 + Node 22)
+├── Dockerfile                 # Multi-stage build (Python 3.12 + Node 24)
 ├── docker-compose.yml         # Production compose (port 8000)
 └── .env.example               # Bootstrap env vars (4 vars only)
 ```
