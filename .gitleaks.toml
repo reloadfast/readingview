@@ -7,6 +7,7 @@ useDefault = true
 description = "Generated dependencies and local build/test data (not source configuration)"
 paths = [
   '''(^|/)node_modules/''',
+  '''(^|/)\.pnpm-store/''',
   '''(^|/)\.venv/''',
   '''^frontend/dist/''',
   '''(^|/)__pycache__/''',
