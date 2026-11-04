@@ -46,7 +46,9 @@ are enforced across the frontend after a one-time formatting pass; generated
 Vite config output is excluded alongside generated API types.
 
 Gitleaks scans the working tree with redaction, including source, tracked
-configuration and CI. Its configuration excludes dependency/build/test caches,
+configuration and CI. The command explicitly loads `.gitleaks.toml` and prints
+redacted finding locations so a failed job identifies the affected files and
+rules. Its configuration excludes dependency/build/test caches,
 not application source. Bandit scans both backend application modules. pip-audit
 audits the installed locked environment including dev tooling and fails on any
 advisory. It exports the actual installed distribution versions and excludes only

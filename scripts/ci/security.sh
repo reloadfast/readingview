@@ -2,8 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-# Scan the working tree, including tracked CI/configuration, with redacted output.
-gitleaks dir . --redact --exit-code 1
+# Pin repository policy and include redacted finding locations in job logs.
+gitleaks dir . --config .gitleaks.toml --redact --verbose --exit-code 1
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 (
