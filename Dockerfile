@@ -8,18 +8,17 @@ COPY frontend/ ./
 RUN pnpm build
 
 # ── Stage 2: runtime ──────────────────────────────────────────────────────────
-FROM python:3.12-slim
+FROM forgejo.moseisley.es/wind/readingview-python:3.12.16-alpine3.24@sha256:69ebe56e2a764c399514a0a6117131cb730cc4d0e71e85c08deb9af74cbb9f41
 WORKDIR /app
 
 ARG GIT_SHA=dev
 ENV GIT_SHA=$GIT_SHA
 ENV PYTHONPATH=/app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN groupadd -g 100 appgroup 2>/dev/null || true \
-    && useradd -r -u 99 -g 100 appuser
+# Alpine's users group is GID 100, preserving the persistent-volume identity.
+RUN apk upgrade --no-cache \
+    && apk add --no-cache tzdata \
+    && adduser -S -D -H -u 99 -G users appuser
 
 COPY backend/ ./backend/
 # Use the same locked runtime dependencies as CI; dev extras stay out of the image.
@@ -48,6 +47,6 @@ USER appuser
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -sf http://localhost:8000/api/health || exit 1
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5).close()"]
 
 CMD ["/entrypoint.sh"]

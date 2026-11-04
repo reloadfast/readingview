@@ -69,6 +69,30 @@ same disposable container and verifies persistence. It removes only that
 container and its anonymous volume. It exposes no host port and uses no ABS,
 Ollama, notification or production service.
 
+## Application runtime base
+
+The linux/amd64 runtime uses Python 3.12.16 on Alpine 3.24, mirrored at
+`forgejo.moseisley.es/wind/readingview-python:3.12.16-alpine3.24` and pinned to
+manifest `sha256:69ebe56e2a764c399514a0a6117131cb730cc4d0e71e85c08deb9af74cbb9f41`.
+That is the evaluated upstream Python manifest, copied unchanged into Forgejo;
+application CI pulls the runtime base from Forgejo without registry credentials.
+Upstream inspection and mirroring were explicitly approved for this adoption.
+Future base updates require a reviewed mirror and digest update.
+
+The Dockerfile upgrades Alpine packages, installs timezone data, and preserves
+UID/GID 99:100. The health check uses Python's standard-library HTTP client,
+so curl and its dependency chain are no longer needed in the runtime. Python
+dependencies still come from the frozen lockfile; the frontend builder and
+blocking vulnerability/secret scan policy are unchanged.
+
+The Debian runtime passed smoke tests but was blocked by 49 HIGH findings in
+20 OS packages without reported fixed versions. Isolated Alpine evaluation
+passed all 313 backend tests with 83.52% coverage, the production build,
+migrations, static assets, settings and restart persistence. Native-library,
+SQLite, TLS and Europe/Madrid timezone checks passed. Trivy 0.76.1 reported zero
+HIGH/CRITICAL vulnerabilities and zero secrets on Alpine 3.24.3. The Forgejo
+mirror's digest and anonymous pull access were verified before adoption.
+
 ## Runner prerequisites
 
 `ubuntu-latest` preserves the existing label on the self-hosted `unraid-runner`.
@@ -205,11 +229,16 @@ not publish or deploy the ReadingView application.
   migrations, static assets, settings and restart persistence. Trivy's database
   download and image scan ran successfully, then blocked publication on Debian
   vulnerabilities and an unnecessary uv installer in the runtime image. The
-  Dockerfile now removes uv after the frozen install; unresolved Debian findings
-  remain blocking rather than being suppressed.
+  Dockerfile removes uv after the frozen install; the Debian findings were
+  blocking rather than suppressed.
 - The final uv 0.13.5 tool image passed the complete verification and security
   adapters again and was published/pulled by its pinned digest. The final
   application-image build and smoke test passed. Trivy reported zero Python
   vulnerability findings and zero secret findings, but 49 Debian findings
-  across 20 packages with no fixed versions reported. Publication remains
-  blocked by that gate; no vulnerability exceptions were added.
+  across 20 packages with no fixed versions reported. That Debian candidate
+  remained blocked by the gate; no vulnerability exceptions were added.
+- The approved Alpine adoption passed the unchanged shared build/smoke/scan
+  adapter using the verified Forgejo base. The runtime preserves UID/GID 99:100,
+  includes Europe/Madrid timezone data and no longer includes curl. Trivy
+  reported zero HIGH/CRITICAL vulnerabilities and zero secrets. Application
+  publication remains the responsibility of the gated main-push workflow.
