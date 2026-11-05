@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from ..services.goodreads import MetadataField, MetadataSource
+
 
 def _validate_release_date(value: str | None) -> str | None:
     """Accept only a calendar year or an ISO calendar date."""
@@ -114,3 +116,43 @@ class ManualReleaseOut(BaseModel):
     updated_at: int
     status: ManualReleaseStatus
     archived: bool
+
+
+class GoodreadsLookupRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2048)
+
+
+class GoodreadsReleaseDraft(BaseModel):
+    """Editable creation fields; checked timestamps are assigned only on save."""
+
+    title: str
+    author: str | None
+    series: str | None
+    series_number: float | None
+    release_date: str | None
+    media: list[ManualReleaseMedium]
+    cover_url: str | None
+    link_url: str
+    status: Literal["watching"] = "watching"
+
+    _validate_date = field_validator("release_date")(_validate_release_date)
+
+
+class GoodreadsExistingRelease(BaseModel):
+    id: int
+    title: str | None
+    author: str | None
+    release_date: str | None
+    media: list[ManualReleaseMedium]
+    status: ManualReleaseStatus
+    archived: bool
+
+
+class GoodreadsLookupOut(BaseModel):
+    status: Literal["ok", "partial"]
+    source_url: str
+    draft: GoodreadsReleaseDraft
+    sources: dict[MetadataField, MetadataSource]
+    missing_fields: list[MetadataField]
+    warnings: list[str]
+    existing_releases: list[GoodreadsExistingRelease]

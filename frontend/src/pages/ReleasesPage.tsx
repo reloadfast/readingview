@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   BookMarked,
@@ -17,7 +17,6 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { Badge, Button, Input, Select, Skeleton } from "@/components/ui";
 import {
   useAddTrackedAuthor,
-  useCreateManualRelease,
   useManualReleases,
   usePatchRelease,
   useRefreshReleases,
@@ -25,14 +24,14 @@ import {
   useRemoveTrackedAuthor,
   useTrackedAuthors,
   useUpdateManualRelease,
-  useUploadManualReleaseCover,
 } from "@/hooks/useReleases";
 import { useSearchAuthors } from "@/hooks/useAuthors";
 import { cn } from "@/lib/utils";
+import { ManualReleaseEditor } from "@/components/releases/ManualReleaseEditor";
+import { ReleaseCreation } from "@/components/releases/ReleaseCreation";
 import type {
+  GoodreadsExistingRelease,
   ManualRelease,
-  ManualReleaseInput,
-  ManualReleaseMedium,
   ReleaseOut,
   TrackedAuthorOut,
 } from "@/lib/api";
@@ -536,196 +535,33 @@ function TrackedAuthorsTab() {
 // Manual tracking
 // ---------------------------------------------------------------------------
 
-const MEDIUMS: { value: ManualReleaseMedium; label: string }[] = [
-  { value: "audiobook", label: "Audiobook" },
-  { value: "ebook", label: "Ebook" },
-  { value: "hardcover", label: "Hardcover" },
-  { value: "paperback", label: "Paperback" },
-];
-
-function manualInput(entry?: ManualRelease): ManualReleaseInput {
-  if (!entry) return { media: [], status: "watching" };
-  return {
-    author: entry.author,
-    title: entry.title,
-    series: entry.series,
-    series_number: entry.series_number,
-    release_date: entry.release_date,
-    media: entry.media,
-    cover_url: entry.cover_url,
-    link_url: entry.link_url,
-    comments: entry.comments,
-    last_checked_at: entry.last_checked_at,
-    status: entry.status,
-  };
-}
-
-function ManualReleaseEditor({ entry, onDone }: { entry?: ManualRelease; onDone: () => void }) {
-  const [values, setValues] = useState<ManualReleaseInput>(() => manualInput(entry));
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const create = useCreateManualRelease();
-  const update = useUpdateManualRelease();
-  const upload = useUploadManualReleaseCover();
-  const pending = create.isPending || update.isPending || upload.isPending;
-  const error = create.error || update.error || upload.error;
-
-  function setText(field: keyof ManualReleaseInput, value: string) {
-    setValues((current) => ({ ...current, [field]: value || null }));
-  }
-
-  function setSeriesNumber(value: string) {
-    setValues((current) => ({
-      ...current,
-      series_number: value === "" ? null : Number(value),
-    }));
-  }
-
-  function toggleMedium(medium: ManualReleaseMedium) {
-    setValues((current) => {
-      const media = current.media ?? [];
-      return {
-        ...current,
-        media: media.includes(medium)
-          ? media.filter((item) => item !== medium)
-          : [...media, medium],
-      };
-    });
-  }
-
-  async function save() {
-    try {
-      const { last_checked_at, ...releaseValues } = values;
-      const payload = entry && last_checked_at === entry.last_checked_at ? releaseValues : values;
-      const saved = entry
-        ? await update.mutateAsync({ id: entry.id, ...payload })
-        : await create.mutateAsync(payload);
-      if (coverFile) await upload.mutateAsync({ id: saved.id, file: coverFile });
-      onDone();
-    } catch {
-      // Mutation error is displayed below.
-    }
-  }
-
-  return (
-    <div className="space-y-4 rounded-xl border border-border bg-surface p-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Input
-          value={values.author ?? ""}
-          onChange={(e) => setText("author", e.target.value)}
-          placeholder="Author"
-        />
-        <Input
-          value={values.title ?? ""}
-          onChange={(e) => setText("title", e.target.value)}
-          placeholder="Book title"
-        />
-        <Input
-          value={values.series ?? ""}
-          onChange={(e) => setText("series", e.target.value)}
-          placeholder="Series"
-        />
-        <Input
-          type="number"
-          step="any"
-          value={values.series_number ?? ""}
-          onChange={(e) => setSeriesNumber(e.target.value)}
-          placeholder="Series number"
-        />
-        <Input
-          value={values.release_date ?? ""}
-          onChange={(e) => setText("release_date", e.target.value)}
-          placeholder="Release date (YYYY or YYYY-MM-DD)"
-          pattern="\\d{4}(-\\d{2}-\\d{2})?"
-          title="Use YYYY or YYYY-MM-DD"
-        />
-        <Input
-          value={values.cover_url ?? ""}
-          onChange={(e) => setText("cover_url", e.target.value)}
-          placeholder="Cover image URL"
-        />
-        <Input
-          value={values.link_url ?? ""}
-          onChange={(e) => setText("link_url", e.target.value)}
-          placeholder="Relevant link"
-        />
-      </div>
-      <textarea
-        value={values.comments ?? ""}
-        onChange={(e) => setText("comments", e.target.value)}
-        placeholder="Comments"
-        className="min-h-20 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-accent"
-      />
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <span className="text-xs text-text-secondary">Medium</span>
-        {MEDIUMS.map((medium) => (
-          <label
-            key={medium.value}
-            className="flex items-center gap-1.5 text-sm text-text-secondary"
-          >
-            <input
-              type="checkbox"
-              checked={(values.media ?? []).includes(medium.value)}
-              onChange={() => toggleMedium(medium.value)}
-            />
-            {medium.label}
-          </label>
-        ))}
-        <Select
-          className="ml-auto"
-          value={values.status ?? "watching"}
-          onValueChange={(status) =>
-            setValues((current) => ({ ...current, status: status as ManualRelease["status"] }))
-          }
-          options={[
-            { value: "watching", label: "Watching" },
-            { value: "released", label: "Released" },
-            { value: "owned", label: "Owned" },
-          ]}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm text-text-secondary">
-          <span className="mr-2">Upload cover</span>
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        <button
-          onClick={() => setValues((current) => ({ ...current, last_checked_at: Date.now() }))}
-          className="text-xs text-accent hover:underline"
-        >
-          Mark checked today
-        </button>
-        {values.last_checked_at && (
-          <span className="text-xs text-text-secondary">
-            Checked {new Date(values.last_checked_at).toLocaleDateString()}
-          </span>
-        )}
-        <div className="ml-auto flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onDone}>
-            Cancel
-          </Button>
-          <Button size="sm" disabled={pending} onClick={() => void save()} pendingText="Saving…">
-            Save
-          </Button>
-        </div>
-      </div>
-      {error instanceof Error && <p className="text-sm text-red-400">{error.message}</p>}
-      <p className="text-xs text-text-secondary">
-        Duplicates are blocked by author, title, release date, and medium.
-      </p>
-    </div>
-  );
-}
-
-function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
+function ManualReleaseRow({
+  entry,
+  focusRequest = 0,
+}: {
+  entry: ManualRelease;
+  focusRequest?: number;
+}) {
   const [editing, setEditing] = useState(false);
+  const row = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focusRequest) return;
+    row.current?.focus({ preventScroll: true });
+    row.current?.scrollIntoView({ block: "center" });
+  }, [focusRequest]);
   const update = useUpdateManualRelease();
   const cover = entry.uploaded_cover_url ?? entry.cover_url;
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
+    <div
+      ref={row}
+      role="article"
+      aria-label={`Release: ${entry.title || "Untitled release"}`}
+      tabIndex={-1}
+      className={cn(
+        "border border-border rounded-xl overflow-hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent",
+        focusRequest > 0 && "ring-2 ring-accent"
+      )}
+    >
       <div className="flex gap-3 p-3">
         {cover ? (
           <img src={cover} alt="" className="h-16 w-12 rounded object-contain bg-background" />
@@ -736,6 +572,7 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium text-text-primary">{entry.title || "Untitled release"}</p>
             <Badge variant="neutral">{entry.status}</Badge>
+            {entry.archived && <Badge variant="neutral">Archived</Badge>}
             {entry.media.map((medium) => (
               <Badge key={medium} variant="neutral">
                 {medium}
@@ -805,16 +642,25 @@ function ManualReleaseRow({ entry }: { entry: ManualRelease }) {
   );
 }
 
-function ManualTrackingTab() {
+export function ManualTrackingTab() {
   const [adding, setAdding] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<{ id: number; request: number } | null>(null);
   const releases = useManualReleases(showArchived);
   const visible = (releases.data ?? []).filter(
     (entry) =>
       (showArchived || !entry.archived) &&
       (showArchived || showHistory || entry.status === "watching")
   );
+  function viewExisting(entry: GoodreadsExistingRelease) {
+    if (entry.archived) setShowArchived(true);
+    if (entry.status !== "watching") setShowHistory(true);
+    setFocusTarget((current) => ({ id: entry.id, request: (current?.request ?? 0) + 1 }));
+    if ((!entry.archived || showArchived) && !releases.data?.some((row) => row.id === entry.id)) {
+      void releases.refetch();
+    }
+  }
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -836,12 +682,21 @@ function ManualTrackingTab() {
             Show archived
           </label>
         </div>
-        <Button size="sm" onClick={() => setAdding(true)}>
+        <Button size="sm" disabled={adding} onClick={() => setAdding(true)}>
           <Plus className="mr-1 h-4 w-4" />
           Add release
         </Button>
       </div>
-      {adding && <ManualReleaseEditor onDone={() => setAdding(false)} />}
+      {adding && <ReleaseCreation onDone={() => setAdding(false)} onViewExisting={viewExisting} />}
+      {focusTarget &&
+        !releases.isFetching &&
+        !visible.some((entry) => entry.id === focusTarget.id) && (
+          <p role="status" className="text-sm text-text-secondary">
+            {releases.isError
+              ? "Could not load the existing entry. Try View existing again."
+              : "The existing entry is not visible. Try View existing again. Your draft is preserved."}
+          </p>
+        )}
       {releases.isLoading ? (
         <Skeleton className="h-40 w-full rounded-xl" />
       ) : visible.length === 0 ? (
@@ -851,7 +706,11 @@ function ManualTrackingTab() {
       ) : (
         <div className="space-y-3">
           {visible.map((entry) => (
-            <ManualReleaseRow key={entry.id} entry={entry} />
+            <ManualReleaseRow
+              key={entry.id}
+              entry={entry}
+              focusRequest={focusTarget?.id === entry.id ? focusTarget.request : 0}
+            />
           ))}
         </div>
       )}

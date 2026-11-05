@@ -102,6 +102,9 @@ export type AffinityPerson = components["schemas"]["AffinityPerson"];
 export type GenreCompletionCorrelation = components["schemas"]["GenreCompletionCorrelation"];
 export type DurationCompletionCorrelation = components["schemas"]["DurationCompletionCorrelation"];
 export type ExtraListening = components["schemas"]["ExtraListening"];
+export type GoodreadsLookupRequest = components["schemas"]["GoodreadsLookupRequest"];
+export type GoodreadsLookupResult = components["schemas"]["GoodreadsLookupOut"];
+export type GoodreadsExistingRelease = components["schemas"]["GoodreadsExistingRelease"];
 
 // ---------------------------------------------------------------------------
 // Core fetch helper
@@ -366,6 +369,17 @@ export function getManualReleases(includeArchived = false): Promise<ManualReleas
 
 export function createManualRelease(body: ManualReleaseInput): Promise<ManualRelease> {
   return apiFetch("/releases/manual", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function lookupGoodreadsRelease(
+  body: GoodreadsLookupRequest,
+  signal?: AbortSignal
+): Promise<GoodreadsLookupResult> {
+  return apiFetch("/releases/manual/lookup-goodreads", {
+    method: "POST",
+    body: JSON.stringify(body),
+    signal: signal ?? null,
+  });
 }
 
 export function updateManualRelease(id: number, body: ManualReleaseInput): Promise<ManualRelease> {

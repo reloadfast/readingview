@@ -690,6 +690,23 @@ export interface paths {
         patch: operations["patch_release_api_releases__release_id__patch"];
         trace?: never;
     };
+    "/api/releases/manual/lookup-goodreads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lookup Goodreads Release */
+        post: operations["lookup_goodreads_release_api_releases_manual_lookup_goodreads_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/releases/manual": {
         parameters: {
             query?: never;
@@ -1432,6 +1449,80 @@ export interface components {
             required_books_per_week?: number | null;
             /** Ineligibility Reason */
             ineligibility_reason?: string | null;
+        };
+        /** GoodreadsExistingRelease */
+        GoodreadsExistingRelease: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string | null;
+            /** Author */
+            author: string | null;
+            /** Release Date */
+            release_date: string | null;
+            /** Media */
+            media: ("audiobook" | "ebook" | "hardcover" | "paperback")[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "watching" | "released" | "owned";
+            /** Archived */
+            archived: boolean;
+        };
+        /** GoodreadsLookupOut */
+        GoodreadsLookupOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "partial";
+            /** Source Url */
+            source_url: string;
+            draft: components["schemas"]["GoodreadsReleaseDraft"];
+            /** Sources */
+            sources: {
+                [key: string]: "json_ld" | "next_data" | "open_graph";
+            };
+            /** Missing Fields */
+            missing_fields: ("title" | "author" | "series" | "series_number" | "release_date" | "media" | "cover_url")[];
+            /** Warnings */
+            warnings: string[];
+            /** Existing Releases */
+            existing_releases: components["schemas"]["GoodreadsExistingRelease"][];
+        };
+        /** GoodreadsLookupRequest */
+        GoodreadsLookupRequest: {
+            /** Url */
+            url: string;
+        };
+        /**
+         * GoodreadsReleaseDraft
+         * @description Editable creation fields; checked timestamps are assigned only on save.
+         */
+        GoodreadsReleaseDraft: {
+            /** Title */
+            title: string;
+            /** Author */
+            author: string | null;
+            /** Series */
+            series: string | null;
+            /** Series Number */
+            series_number: number | null;
+            /** Release Date */
+            release_date: string | null;
+            /** Media */
+            media: ("audiobook" | "ebook" | "hardcover" | "paperback")[];
+            /** Cover Url */
+            cover_url: string | null;
+            /** Link Url */
+            link_url: string;
+            /**
+             * Status
+             * @default watching
+             * @constant
+             */
+            status: "watching";
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3376,6 +3467,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReleaseOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    lookup_goodreads_release_api_releases_manual_lookup_goodreads_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoodreadsLookupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoodreadsLookupOut"];
                 };
             };
             /** @description Validation Error */

@@ -22,6 +22,8 @@ from ..models.authors import TrackedAuthor
 from ..models.releases import ManualRelease, Release
 from ..schemas.authors import TrackedAuthorOut
 from ..schemas.releases import (
+    GoodreadsLookupOut,
+    GoodreadsLookupRequest,
     ManualReleaseCreate,
     ManualReleaseOut,
     ManualReleasePatch,
@@ -30,6 +32,7 @@ from ..schemas.releases import (
     ReleaseOut,
     TrackAuthorRequest,
 )
+from ..services import goodreads_import
 from ..services import release_tracker as rt_svc
 from ..services.abs_cache import AbsDataCache
 
@@ -433,6 +436,18 @@ async def patch_release(
 
 
 # --- manual releases ---
+
+
+@router.post("/releases/manual/lookup-goodreads", response_model=GoodreadsLookupOut)
+async def lookup_goodreads_release(
+    body: GoodreadsLookupRequest,
+    db: AsyncSession = Depends(get_db),
+) -> GoodreadsLookupOut:
+    try:
+        return await goodreads_import.lookup_release(body.url, db)
+    except goodreads_import.GoodreadsImportError as exc:
+        code = {"invalid_url": 422, "timeout": 504, "unavailable": 502}[exc.reason]
+        raise HTTPException(status_code=code, detail=str(exc)) from exc
 
 
 @router.get("/releases/manual", response_model=list[ManualReleaseOut])

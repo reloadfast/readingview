@@ -5,6 +5,7 @@ import {
   getManualReleases,
   getReleases,
   getTrackedAuthors,
+  lookupGoodreadsRelease,
   patchRelease,
   refreshReleases,
   removeTrackedAuthor,
@@ -88,6 +89,14 @@ function useManualReleaseInvalidation() {
 export function useCreateManualRelease() {
   const invalidate = useManualReleaseInvalidation();
   return useMutation({ mutationFn: createManualRelease, onSuccess: invalidate });
+}
+
+export function useLookupGoodreadsRelease() {
+  return useMutation({
+    mutationFn: ({ url, signal }: { url: string; signal?: AbortSignal }) =>
+      lookupGoodreadsRelease({ url }, signal),
+    retry: false,
+  });
 }
 
 export function useUpdateManualRelease() {
